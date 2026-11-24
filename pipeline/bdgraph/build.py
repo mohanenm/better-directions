@@ -238,7 +238,8 @@ class Graph:
     city: City
     data: OsmData
     edges: list[Edge]
-    node_coords: dict[int, tuple[float, float]]
+    node_coords: dict[int, tuple[float, float]]  # every node used, including shape points
+    junctions: list[int]  # edge endpoints, sorted by OSM id: the graph's nodes
     dropped: Counter[str]
     excluded_nodes: Counter[str]
     component: dict[str, float]
@@ -391,9 +392,18 @@ def build_graph(city: City, osm_path: Path) -> Graph:
     excluded_nodes = Counter(r for r in node_reason.values() if r)
     used = {n for e in edges for n in e.nodes}
     node_coords = {n: node_coords[n] for n in sorted(used)}
+    junctions = sorted({e.nodes[0] for e in edges} | {e.nodes[-1] for e in edges})
     dropped_examples = {r: sorted(ids)[:EXAMPLES_PER_REASON] for r, ids in sorted(examples.items())}
     return Graph(
-        city, data, edges, node_coords, dropped, excluded_nodes, component, dropped_examples
+        city,
+        data,
+        edges,
+        node_coords,
+        junctions,
+        dropped,
+        excluded_nodes,
+        component,
+        dropped_examples,
     )
 
 
@@ -409,7 +419,16 @@ def _simplify(segments_by_way: list[list[Segment | None]], data: OsmData) -> lis
                 ways_at[s.b].add(s.way)
 
     def junction(n: int) -> bool:
-        return incidence[n] != 2 or len(ways_at[n]) > 1 or n in data.node_tags
+        # Any node a safety rule looks at stays a junction, so it's stored as a node and the
+        # router can re-check it. Plain shape points live only in the edge geometry.
+        return (
+            incidence[n] != 2
+            or len(ways_at[n]) > 1
+            or n in data.node_tags
+            or n in data.rail_nodes
+            or n in data.fast_nodes
+            or n in data.barrier_nodes
+        )
 
     edges: list[Edge] = []
     for segs in segments_by_way:
@@ -574,7 +593,7 @@ def main(argv: list[str] | None = None) -> None:
     size = write_graph(graph, out / "graph.bin")
     write_stats(graph, out, graph_bytes=size)
     print(f"Wrote {out / 'graph.bin'} ({size / 1e6:.2f} MB), {len(graph.edges)} edges, "
-          f"{len(graph.node_coords)} nodes", file=sys.stderr)  # fmt: skip
+          f"{len(graph.junctions)} nodes", file=sys.stderr)  # fmt: skip
 
 
 if __name__ == "__main__":

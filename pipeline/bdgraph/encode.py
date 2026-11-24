@@ -70,7 +70,7 @@ def _scaled(v: float) -> int:
 
 def encode_graph(graph: Graph) -> bytes:
     data = graph.data
-    node_ids = list(graph.node_coords)  # already sorted by OSM id
+    node_ids = graph.junctions  # edge endpoints, sorted by OSM id
     node_index = {n: i for i, n in enumerate(node_ids)}
 
     strings = _Interner("")

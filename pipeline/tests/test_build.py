@@ -291,3 +291,13 @@ def test_paths_in_parks_with_opening_hours_may_close(tmp_path):
     assert g.meta["areas"][g["edge_park"][e]]["opening_hours"] == "06:30-22:30"
     (e,) = edges_of_way(g, open_park)
     assert not g["edge_flags"][e] & FLAG_MAY_CLOSE
+
+
+def test_only_junctions_and_rule_relevant_points_are_nodes(tmp_path):
+    b = base_town()
+    b.node(130, 60, "K1")  # plain shape point
+    b.node(170, 40, "K2", barrier="bollard")  # tagged: must stay a node for the router re-check
+    b.way(["C1", "K1", "K2", "C2"], highway="path")
+    _, g = build(b, tmp_path)
+    # 8 corners + C1 + C2 (path ends) + K2. C0, C3 and K1 are shape points only.
+    assert g.meta["counts"]["nodes"] == 11
