@@ -15,6 +15,8 @@ import type { Collectible, Mode } from "./modes";
 export const MAX_WAYPOINTS = 8;
 export const MAX_ATTEMPTS = 14;
 const REUSE_PENALTY = 3;
+/** Reject an insertion if more than this share of the walk would retrace itself. */
+export const MAX_RETRACE_SHARE = 0.15;
 /** Walking distance is typically this much longer than the straight line (streets, rivers). */
 export const DETOUR_FACTOR = 1.3;
 
@@ -73,7 +75,8 @@ export function collectRoute(
   const rejected = new Set<string>();
   let seen = visited();
 
-  for (let attempt = 0; attempt < MAX_ATTEMPTS && stops.length - 2 < MAX_WAYPOINTS; attempt++) {
+  const maxWaypoints = collect.maxWaypoints ?? MAX_WAYPOINTS;
+  for (let attempt = 0; attempt < MAX_ATTEMPTS && stops.length - 2 < maxWaypoints; attempt++) {
     // Best value per extra metre, at the cheapest insertion position.
     let best: { c: Collectible; at: number; ratio: number } | null = null;
     for (const c of candidates) {
@@ -104,12 +107,30 @@ export function collectRoute(
       continue;
     }
     const [before, after] = legs2;
-    legs.splice(at, 1, before, after);
-    stops.splice(at + 1, 0, { enter: cIn, exit: cOut, path: c.path });
+    const trialLegs = [...legs.slice(0, at), before, after, ...legs.slice(at + 1)];
+    const trialStops = [...stops.slice(0, at + 1), { enter: cIn, exit: cOut, path: c.path }, ...stops.slice(at + 1)];
+    if (retraceShare(router, assemble(router, trialStops, trialLegs)) > MAX_RETRACE_SHARE) {
+      rejected.add(c.key); // an out-and-back to this feature would be dull
+      continue;
+    }
+    legs.splice(0, legs.length, ...trialLegs);
+    stops.splice(0, stops.length, ...trialStops);
     seen = visited();
     seen.add(c.key); // never insert the same feature twice
   }
   return assemble(router, stops, legs);
+}
+
+/** Share of a route's length on edges it walks more than once. */
+export function retraceShare(router: Router, route: Route): number {
+  const seen = new Set<number>();
+  let retraced = 0;
+  for (const d of route.dirEdges) {
+    const e = d >>> 1;
+    if (seen.has(e)) retraced += router.g.s.edge_length_m[e]!;
+    seen.add(e);
+  }
+  return route.lengthM > 0 ? retraced / route.lengthM : 0;
 }
 
 /** Two legs a -> b and c -> d whose total time fits the budget, or null. */
