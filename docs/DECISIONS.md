@@ -68,7 +68,7 @@ These don't loosen any rule, so they didn't need approval. Each is in `safety/ca
 
 - **Choice:** a single binary file: JSON meta followed by 8-byte-aligned typed-array sections. Coordinates are microdegrees, and geometry is varint-delta. Way and node tags are deduplicated into tagsets (see [GRAPH_FORMAT.md](GRAPH_FORMAT.md)).
 - **Alternatives:** GeoJSON (~10× bigger, slow to parse); protobuf or flatbuffers (a new dependency); separate files per array (more requests).
-- **Why:** zero-copy `TypedArray` views in the browser. The file keeps the raw safety-relevant tags, so the router re-runs exactly the same rules from `safety/cases.json`. Lyon is 6.6 MB raw, 2.2 MB gzipped. Only junctions and rule-relevant points are nodes; shape points live in the geometry stream.
+- **Why:** zero-copy `TypedArray` views in the browser. The file keeps the raw safety-relevant tags, so the router re-runs exactly the same rules from `safety/cases.json`. Lyon is 8.9 MB raw, 2.9 MB gzipped. Only junctions and rule-relevant points are nodes; shape points live in the geometry stream.
 - **Reversible:** the format is versioned (`BDG1`, version 1).
 
 ## D-009 No elevation data yet
@@ -87,9 +87,9 @@ These don't loosen any rule, so they didn't need approval. Each is in `safety/ca
 - **Why:** it errs towards warning people.
 - **Reversible:** easy.
 
-## D-011 Don't commit graph.bin until the railway-crossing question is settled
+## D-011 Commit graph.bin once the safety rules settled
 
-- **Choice:** the built graph goes to `app/public/data/lyon/graph.bin` but stays uncommitted for now.
-- **Alternatives:** commit it now (a 6.6 MB binary that will change as soon as Q-004 is answered).
-- **Why:** avoids stacking large binaries in git history. Once the rules settle, it will be committed, so CI and Pages don't need the 534 MB download.
+- **Choice:** the built graph (`app/public/data/lyon/graph.bin`, 8.9 MB) was held back until Q-004 to Q-006 were answered. It was committed afterwards, on 2026-11-24.
+- **Alternatives:** rebuild in CI (a 534 MB download on every run); Git LFS (Pages doesn't serve LFS files).
+- **Why:** CI and Pages use the committed graph, and the real-data test checks it matches a fresh build. Rebuild only when the data or rules change, to keep history small.
 - **Reversible:** yes.
