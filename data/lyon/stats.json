@@ -1,47 +1,54 @@
 {
   "city": "lyon",
   "graph": {
-    "nodes": 136049,
-    "edges": 177798,
-    "ways": 79827,
-    "length_km": 4361.2,
-    "bytes": 8896476,
-    "gzip_bytes": 2929538
+    "nodes": 136196,
+    "edges": 178002,
+    "ways": 79906,
+    "length_km": 4367.8,
+    "bytes": 9620040,
+    "gzip_bytes": 3085658
   },
   "connectivity": {
-    "nodes_before": 144858,
-    "nodes_kept": 136049,
-    "node_share": 0.9392,
-    "length_share": 0.961
+    "nodes_before": 144968,
+    "nodes_kept": 136196,
+    "node_share": 0.9395,
+    "length_share": 0.9612
+  },
+  "terrain": {
+    "source": "Elevation: IGN RGE ALTI\u00ae",
+    "edges_with_elevation_share": 1.0,
+    "edges_10pct_or_steeper": 1596,
+    "steepest_grade_pct": 70.5,
+    "steepest_name": ""
   },
   "edges_by_highway": {
     "footway": {
-      "edges": 101759,
-      "km": 2014.8
+      "edges": 101764,
+      "km": 2015.0
     },
     "residential": {
-      "edges": 17445,
+      "edges": 17446,
       "km": 642.7
     },
     "service": {
-      "edges": 21644,
-      "km": 589.9
+      "edges": 21816,
+      "km": 595.9
     },
     "unclassified": {
       "edges": 6629,
       "km": 250.0
     },
     "tertiary": {
-      "edges": 5706,
-      "km": 177.0
+      "edges": 5722,
+      "km": 177.2
     },
     "path": {
       "edges": 2924,
       "km": 140.3
     },
     "primary": {
-      "edges": 3971,
-      "km": 130.1
+      "edges": 3976,
+      "km": 130.3
     },
     "secondary": {
       "edges": 4123,
@@ -60,8 +67,8 @@
       "km": 48.8
     },
     "steps": {
-      "edges": 2351,
-      "km": 27.3
+      "edges": 2353,
+      "km": 27.4
     },
     "track": {
       "edges": 229,
@@ -84,7 +91,7 @@
       "km": 1.7
     },
     "tertiary_link": {
-      "edges": 62,
+      "edges": 65,
       "km": 0.7
     },
     "trunk_link": {
@@ -94,28 +101,32 @@
   },
   "features": {
     "building_passage": {
-      "edges": 491,
-      "km": 5.61
+      "edges": 492,
+      "km": 5.63
     },
     "corridor": {
       "edges": 3498,
       "km": 10.85
     },
     "covered": {
-      "edges": 184,
-      "km": 1.84
+      "edges": 185,
+      "km": 1.85
     },
     "through_building": {
-      "edges": 3253,
-      "km": 13.46
+      "edges": 3255,
+      "km": 13.49
+    },
+    "under_building": {
+      "edges": 162,
+      "km": 5.3
     },
     "may_close": {
-      "edges": 6370,
-      "km": 89.19
+      "edges": 6372,
+      "km": 89.21
     },
     "steps": {
-      "edges": 2351,
-      "km": 27.34
+      "edges": 2353,
+      "km": 27.35
     },
     "park_path": {
       "edges": 7704,
@@ -126,8 +137,8 @@
       "km": 247.54
     },
     "lit": {
-      "edges": 92545,
-      "km": 2105.49
+      "edges": 92579,
+      "km": 2106.62
     },
     "informal": {
       "edges": 98,
@@ -135,14 +146,14 @@
     }
   },
   "steps": {
-    "total_steps": 67812,
-    "estimated_edges": 809
+    "total_steps": 67851,
+    "estimated_edges": 811
   },
   "distinct": {
     "parks_on_paths": 312,
-    "buildings_passed_through": 255,
+    "buildings_passed_through": 257,
     "venues": {
-      "mall": 7,
+      "mall": 8,
       "station": 13
     }
   },
@@ -170,7 +181,7 @@
       "node:node_locked": 397,
       "node:railway_unmapped_crossing": 526,
       "railway_crossing_geometry": 401,
-      "through_building_unmapped": 1535
+      "through_building_unmapped": 1142
     },
     "dropped_examples": {
       "fast_road_crossing_geometry": [
@@ -258,14 +269,14 @@
         7953391
       ],
       "through_building_unmapped": [
-        4424264,
-        4424268,
-        5148792,
         42972568,
         50334338,
         50334340,
-        77629044,
-        78213723
+        89562049,
+        117069776,
+        129170447,
+        129170448,
+        129170798
       ]
     },
     "nodes_excluded": {
