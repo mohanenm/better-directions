@@ -5,11 +5,102 @@
 - [x] **Phase 0: Decisions.** Approved 2026-11-24.
 - [x] **Phase 1: Data pipeline.** Done 2026-11-24, including the approved rule changes Q-004 to Q-006.
 - [x] **Phase 2: Router core.** Done 2026-11-24.
-- [ ] Phase 3: The modes
+- [x] **Phase 3: The modes.** Done 2026-11-24.
 - [ ] Phase 4: The web page
 - [ ] Phase 5: Delight
 - [ ] Phase 6: GPS art (stretch)
 - [ ] Phase 7: Hardening and launch prep (no deploy)
+
+## Phase 3: The modes (2026-11-24)
+
+### Built (`app/src/modes/`)
+
+- **Feature index** (`features.ts`): trails, staircases (as climbable chains), parks, passages and trail stretches, plus junction degree and edge midpoints. Built once per graph.
+- **Cost of fun** (`stats.ts`): extra minutes, staircases, steps up/down, metres climbed, buildings walked through, roads under buildings (disclosed), malls, stations, trail share and stretches, parks, left/right/U-turns, doubling back, and closures with hours. Plus the one-line summary.
+- **The six modes** (`modes.ts`): Through buildings, Trail runner, Stairmaster, Park hopper, Never turn right, Scenic chaos (D-018 to D-020).
+- **Collecting search** (`collect.ts`) and **mode planner** (`plan-mode.ts`). The cost-profile and collected routes compete on the mode's fun score, and the winner passes the safety check and the detour cap.
+
+### Sample routes
+
+From `npm run samples`; all 36 are in [SAMPLE_ROUTES.md](SAMPLE_ROUTES.md).
+
+**Place des Terreaux → Place de la Croix-Rousse** (normal: 16 min)
+
+| Mode | Cost of fun |
+|---|---|
+| Through buildings | 25 min, 8 staircases, 310 steps up, **10 buildings walked through** |
+| Trail runner | 57 min, 8 staircases, 435 steps up, 2 trails, 1 park (28% trail) |
+| Stairmaster | 29 min, **9 staircases, 555 steps up**, 2 buildings walked through, 1 park |
+| Park hopper | 52 min, 9 staircases, 201 steps up, **8 parks** |
+| Never turn right | 20 min, 1 staircase, 107 steps up, 1 park, **26 left turns, 0 right** |
+| Scenic chaos (seed 7) | 56 min, 1 staircase, 443 steps up, 1 park |
+
+**Cathédrale Saint-Jean → Basilique de Fourvière** (normal: 23 min)
+
+| Mode | Cost of fun |
+|---|---|
+| Through buildings | 47 min, 8 staircases, 355 steps up, **6 buildings walked through**, 1 station |
+| Trail runner | 60 min, 14 staircases, 249 steps up, **4 trails**, 2 parks (32% trail) |
+| Stairmaster | 33 min, **10 staircases, 591 steps up**, 1 park |
+| Park hopper | 50 min, 11 staircases, 212 steps up, 2 trails, **6 parks** |
+| Never turn right | 30 min, 9 staircases, 302 steps up, **33 left turns, 0 right** |
+| Scenic chaos (seed 7) | 42 min, 5 staircases, 808 steps up |
+
+**Across all six sample trips:**
+
+| Mode | Range |
+|---|---|
+| Stairmaster | 8–16 staircases |
+| Park hopper | 5–8 parks |
+| Through buildings | 6–10 buildings walked through |
+| Trail runner | 28–64% trail |
+| Never turn right | 0 right turns on 5 of 6 trips (1 on the sixth) |
+| Scenic chaos | +16 to +40 min |
+
+### Tuning log (what changed and why)
+
+1. **Scenic chaos barely deviated** (0–3 min extra) with smooth weights alone, so I added seeded waypoints (D-020). Seeds then failed on longer trips, so waypoint distance was resized against the *spare* budget, and up to four seeded rounds were added.
+2. **Park hopper found 1 park** from Part-Dieu to Saint-Jean. A park waypoint was a node a route could touch without walking any park path, so the same park was re-inserted over and over. It's now a park path edge, and inserted features are marked visited. Result: 6 parks.
+3. **Trail runner reached 17% trail** on Terreaux to Croix-Rousse. Trail waypoints walked only a trail's middle edge while being valued at its full length. Waypoints became whole chains, which also made Stairmaster climb whole staircases. Result: 28%, and Stairmaster up to ~600 steps.
+4. **Waypoint legs searched the whole cap.** Budgeting them was the big speed win: median went from 119 ms to 41 ms, worst from 530 ms to 140 ms.
+5. **Doubling back:** tuned the reuse penalty (D-018).
+6. **Never turn right:** raised the penalty from 300 to 1,200 s.
+
+### Tests
+
+- **TypeScript (160 unit tests):** cost-of-fun stats on the mini-town (staircase and steps, traboule and closure note, the brief's exact summary line), trail classification, and all modes on the mini-town.
+- **Recognisability on six Lyon trips:**
+  - Stairmaster: ≥ 5 staircases and ≥ 100 steps up
+  - Park hopper: ≥ 4 parks
+  - Through buildings: ≥ 5 buildings walked through
+  - Trail runner: ≥ 25% trail, and more than normal
+  - Never turn right: ≤ 1 right turn, and no more than normal
+  - Scenic chaos: ≥ 4 distinct routes from 5 seeds, each with more than 5 minutes extra, reproducible per seed
+  - Every mode: within the cap, deterministic, and doubling back ≤ 25%
+- **Safety property test:** 3,000 random Lyon pairs (300 each for four synthetic models and all six modes with random seeds), plus 150 on a tampered graph. All safe, connected and within the cap; about 5 minutes.
+
+### Performance
+
+The six sample trips × six modes take median 41 ms, p90 99 ms, max 140 ms on a laptop; roughly 0.2–0.7 s on a mid-range phone. Phase 4 runs planning in a Web Worker, so the page never freezes.
+
+### Self-review
+
+- **Safety:** modes only change costs. Waypoint paths use only directions the audit allowed, and every assembled route goes through `assertRouteSafe` and the cap check. The property test covers every mode and random seeds.
+- **Safety, open:** collecting modes like places that close (parks with gates, traboules). They're flagged and listed with their hours, but the router doesn't check the clock (Q-009). Climbing is priced by the time cap, not capped separately (Q-010).
+- **Fun:** every mode is recognisable in its summary line, and the lines read well. One thing to watch in Phase 4, once routes are on a map: the remaining doubling back (worst 21%) is mostly dead-end staircases and park paths.
+
+### Decisions
+
+D-018 to D-021.
+
+### Open questions
+
+Q-009 (opening hours at route time) and Q-010 (an effort limit).
+
+### Skipped, and why
+
+- Directions with personality, and the stats card UI: Phase 4.
+- Snack tour: Phase 5. It needs café and bakery points added to the graph build, and the waypoint search is ready for it.
 
 ## Phase 2: Router core (2026-11-24)
 

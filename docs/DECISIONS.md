@@ -155,3 +155,48 @@ These don't loosen any rule, so they didn't need approval. Each is in `safety/ca
   - **Later:** Phase 3 adds the real modes to the property test, and Phase 7 reruns it at a much higher count.
 - **Alternatives:** unlimited pair distance (4× slower, for little extra coverage).
 - **Reversible:** env var and one constant.
+
+## D-018 Two kinds of mode: cost profiles, and collecting modes with waypoints
+
+- **Choice:**
+  - **Cost profiles:** every mode has one, a per-edge multiplier of walking time.
+  - **Collecting modes** (Stairmaster, Park hopper, Through buildings, and Trail runner as a second strategy) also run a greedy waypoint search:
+    - It picks the unvisited feature with the best value per extra metre, using a straight-line estimate × 1.3 for real walking.
+    - It inserts the feature where it adds least, then routes the two new legs for real, each limited to the remaining budget. If a fun leg won't fit, it retries as a time-efficient leg.
+    - It keeps the insertion only if the whole route fits the detour cap.
+    - Limits: 8 waypoints and 14 attempts.
+    - A waypoint is a whole chain of edges: a staircase climbed bottom to top, a trail end to end, a passage, or a park path.
+    - Edges already used on the route cost 3× in later legs, so routes loop rather than retrace. That value was tuned from 2.5×, 3× and 4×: 4× hurt trail share, while 3× halved doubling back at no fun cost.
+  - **Winner:** the planner keeps whichever of the cost-profile and collected routes scores higher on the mode's own fun score.
+- **Alternatives:** cost profiles only (they only pick up features already on the way); exact orienteering (NP-hard, and far too slow for a phone).
+- **Why:** "go out of the way for staircases" and "as many parks as possible" are collecting problems. On the six sample trips, typical plans take 41 ms median and 140 ms max on a laptop.
+- **Reversible:** each mode is a plain object in `modes/modes.ts`.
+
+## D-019 Never turn right = a heavy penalty, not a ban
+
+- **Choice:** +1,200 s of cost per right turn or U-turn, counted only at junctions where three or more ways meet. Following a curving street isn't a turn. A turn is a heading change over 30°.
+- **Alternatives:** forbid right turns outright (Phase 2 measured this as slow, and sometimes there's no route at all within the cap).
+- **Why:** there are zero right turns whenever possible. On sample trips that's 0 on five of six; the sixth (Part-Dieu to Saint-Jean, across both rivers) has 1 unavoidable right within the cap. The stats always say how many.
+- **Reversible:** one constant.
+
+## D-020 Scenic chaos = smooth seeded weights plus seeded waypoints
+
+- **Choice:**
+  - **Weights:** spatially smooth value noise from the seed, about 500 m blobs plus 150 m wiggles, giving per-edge weights of 0.25–4×.
+  - **Waypoints:** one or two random waypoints drawn from the seed mixed with the trip, sized to use 25–90% of the spare detour budget.
+  - **Legs** go under the weights, falling back to tamer legs, then fewer waypoints, then up to four fresh draws.
+- **Alternatives:** weights alone. Tried first, they gave 0–3 extra minutes, so the routes barely differed from normal.
+- **Why:** each seed now makes a visible, different adventure (+16 to +40 min on sample trips), and the same seed and trip always give the same route, so links are shareable. Mixing the trip into the seed means one seed doesn't make every trip go the same direction.
+- **Reversible:** `chaosWaypointRoute` in `modes/plan-mode.ts`.
+
+## D-021 What counts in the cost of fun
+
+- **Choice:**
+  - A *staircase* is a staircase way with at least 5 steps; kerbs don't count.
+  - Steps are *up* or *down* by the terrain data, otherwise *unknown*.
+  - *Trail* means dirt, gravel and similar surfaces, or a path or track with no paved surface mapped. A *trail stretch* is 150 m or more of continuous trail.
+  - *Buildings walked through* counts distinct buildings via mapped passages. Roads under buildings are counted separately and always disclosed.
+  - *Malls* and *stations* count distinct venues.
+  - *Doubling back* is metres on edges walked more than once.
+- **Why:** these read well in one line ("Normal: 16 min. Better: 29 min, 9 staircases, 555 steps up").
+- **Reversible:** `modes/stats.ts`.

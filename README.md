@@ -4,7 +4,18 @@ A deliberately silly walking-directions app. Pick a start and an end, choose a m
 
 > **For fun.** Use common sense, follow signs and local rules, and don't follow it anywhere that looks unsafe or closed.
 
-Status: work in progress. The data pipeline and router core are done; the modes are next. See [docs/PROGRESS.md](docs/PROGRESS.md).
+Status: work in progress. The data pipeline, router and modes are done; the web page is next. See [docs/PROGRESS.md](docs/PROGRESS.md).
+
+## The modes
+
+- **Through buildings:** traboules, arcades and mall corridors. Why go round when you can go through?
+- **Trail runner:** dirt and gravel over pavement.
+- **Stairmaster:** every staircase is a shortcut to glory. Climbed upwards, naturally.
+- **Park hopper:** collect them all. The parks, that is.
+- **Never turn right:** three lefts make a right.
+- **Scenic chaos:** same start, same end, a different adventure every seed.
+
+Every "better" route is capped at 4× the normal walking time, and never more than an hour, unless the normal walk is itself longer. See [docs/SAMPLE_ROUTES.md](docs/SAMPLE_ROUTES.md).
 
 ## Building the graph
 
@@ -23,6 +34,7 @@ PYTHONPATH=pipeline .venv/bin/python -m bdgraph.build cities/lyon.json
 npm ci
 npm run check   # typecheck, lint, tests (including the safety property test)
 npm run bench   # routing benchmark on the Lyon graph
+npm run samples # sample routes per mode -> docs/SAMPLE_ROUTES.md
 ```
 
 ## Licences
