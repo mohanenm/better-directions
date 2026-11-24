@@ -344,3 +344,26 @@ def test_footway_under_a_building_is_still_dropped(tmp_path):
     b.way(["C1", "C2"], highway="footway")
     graph, _ = build(b, tmp_path)
     assert graph.dropped["through_building_unmapped"] == 1
+
+
+def test_snack_stops_are_snapped_to_the_street_they_are_on(tmp_path):
+    from bdgraph.build import snack_kind
+
+    assert snack_kind({"shop": "bakery", "name": "B"}) == "bakery"
+    assert snack_kind({"amenity": "cafe", "name": "C"}) == "cafe"
+    assert snack_kind({"shop": "confectionery", "name": "S"}) == "chocolate"
+    assert snack_kind({"amenity": "cafe"}) is None  # unnamed
+    assert snack_kind({"amenity": "restaurant", "name": "R"}) is None
+
+    b = base_town()
+    b.nodes[b.node(305, 55)][2].update(
+        {"shop": "bakery", "name": "Near", "opening_hours": "07:00-19:30"}
+    )
+    b.nodes[b.node(150, 300)][2].update({"shop": "bakery", "name": "Far"})
+    _, g = build(b, tmp_path)
+    assert [p["name"] for p in g.meta["pois"]] == ["Near"]
+    poi = g.meta["pois"][0]
+    assert poi["opening_hours"] == "07:00-19:30"
+    # The bakery at (305, 55) is on Cross Street 3 (x = 300), not at a junction.
+    wi = g["edge_way"][poi["edge"]]
+    assert g.meta["strings"][g["way_name"][wi]] == "Cross Street 3"

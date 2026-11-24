@@ -8,7 +8,7 @@ from pathlib import Path
 import pytest
 from invariants import assert_output_is_safe
 
-from bdgraph.build import build_graph
+from bdgraph.build import attach_metadata, build_graph
 from bdgraph.city import load_city
 from bdgraph.decode import decode_graph
 from bdgraph.encode import encode_graph
@@ -27,9 +27,16 @@ pytestmark = [
 ]
 
 
+def full_build():
+    """Exactly what `python -m bdgraph.build` writes: graph plus source info and terrain."""
+    graph = build_graph(CITY, OSM)
+    attach_metadata(graph, ROOT / "data")
+    return graph
+
+
 @pytest.fixture(scope="module")
 def built():
-    graph = build_graph(CITY, OSM)
+    graph = full_build()
     return graph, encode_graph(graph)
 
 
@@ -55,16 +62,10 @@ def test_lyon_has_the_fun_stuff(built):
 
 def test_lyon_build_is_deterministic(built):
     _, blob = built
-    assert encode_graph(build_graph(CITY, OSM)) == blob
+    assert encode_graph(full_build()) == blob
 
 
 @pytest.mark.skipif(not COMMITTED.exists(), reason="no graph.bin built yet")
 def test_committed_graph_is_up_to_date(built):
     _, blob = built
-    g = decode_graph(COMMITTED.read_bytes())
-    fresh = decode_graph(blob)
-    # source metadata is added by the CLI only, so compare everything else.
-    g.meta.pop("source", None)
-    fresh.meta.pop("source", None)
-    assert g.meta == fresh.meta
-    assert g.sections == fresh.sections, "rebuild with: python -m bdgraph.build cities/lyon.json"
+    assert COMMITTED.read_bytes() == blob, "rebuild with: python -m bdgraph.build cities/lyon.json"

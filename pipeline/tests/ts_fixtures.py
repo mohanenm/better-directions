@@ -24,6 +24,7 @@ def minitown() -> OsmBuilder:
     - One-way footway C1 -> C2.
     - Stairs C2 - S - C3 (30 steps) inside Little Park.
     - Traboule: a building passage W - E through Traboule House.
+    - Snack stops: a bakery by C3 and a café by B2; a far-off bakery that's too far to snap.
     """
     b = OsmBuilder()
     for i in range(4):
@@ -46,6 +47,12 @@ def minitown() -> OsmBuilder:
     b.way(["W", "E"], highway="footway", tunnel="building_passage", name="Traboule")
     b.ring([(210, 40), (290, 40), (290, 60), (210, 60)], leisure="park", name="Little Park")
     b.ring([(20, 70), (45, 70), (45, 95), (20, 95)], building="yes", name="Traboule House")
+    for x, y, tags in (
+        (305, 55, {"shop": "bakery", "name": "Boulangerie Test", "opening_hours": "07:00-19:30"}),
+        (205, 105, {"amenity": "cafe", "name": "Café Test"}),
+        (150, 300, {"shop": "bakery", "name": "Too Far Bakery"}),
+    ):
+        b.nodes[b.node(x, y)][2].update(tags)
     return b
 
 

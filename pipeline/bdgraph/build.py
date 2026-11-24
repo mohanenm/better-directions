@@ -36,6 +36,7 @@ from bdgraph.geo import (
     Point,
     Polygon,
     haversine_m,
+    point_segment_distance,
     sample_points,
     segments_cross,
 )
@@ -98,10 +99,39 @@ class OsmData:
     fast_segments: list[tuple[Point, Point, int]] = field(default_factory=list)
     way_reasons: Counter[str] = field(default_factory=Counter)
     rail_values_crossed: Counter[str] = field(default_factory=Counter)
+    snacks: list[Snack] = field(default_factory=list)
 
 
 def _tags(obj) -> dict[str, str]:
     return {t.k: t.v for t in obj.tags}
+
+
+@dataclass(frozen=True)
+class Snack:
+    """A named place to eat something sweet or drink a coffee, for the snack tour."""
+
+    kind: str  # bakery | pastry | chocolate | ice_cream | cafe
+    name: str
+    lon: float
+    lat: float
+    opening_hours: str | None
+
+
+SNACK_SHOPS = {"bakery": "bakery", "pastry": "pastry", "confectionery": "chocolate",
+               "chocolate": "chocolate", "ice_cream": "ice_cream"}  # fmt: skip
+SNAP_SNACK_M = 40.0
+
+
+def snack_kind(tags: dict[str, str]) -> str | None:
+    if "name" not in tags:
+        return None
+    if tags.get("shop") in SNACK_SHOPS:
+        return SNACK_SHOPS[tags["shop"]]
+    if tags.get("amenity") == "ice_cream":
+        return "ice_cream"
+    if tags.get("amenity") == "cafe":
+        return "cafe"
+    return None
 
 
 def _area_kind(tags: dict[str, str]) -> str | None:
@@ -126,13 +156,26 @@ def read_osm(path: Path, proj: LocalProjection) -> OsmData:
     data = OsmData()
 
     # Pass 1: areas.
-    area_filter = osmium.filter.KeyFilter("leisure", "building", "shop", "public_transport")
+    area_filter = osmium.filter.KeyFilter(
+        "leisure", "building", "shop", "public_transport", "amenity"
+    )
     for obj in (
         osmium.FileProcessor(str(path))
         .with_areas(area_filter)
         .with_filter(osmium.filter.EntityFilter(osmium.osm.AREA))
     ):
         tags = _tags(obj)
+        snack = snack_kind(tags)
+        if snack:
+            for outer in obj.outer_rings():
+                pts = [(n.lon, n.lat) for n in outer][:-1]
+                if pts:
+                    lon = sum(x for x, _ in pts) / len(pts)
+                    lat = sum(y for _, y in pts) / len(pts)
+                    data.snacks.append(
+                        Snack(snack, tags["name"], lon, lat, tags.get("opening_hours"))
+                    )
+                break
         kind = _area_kind(tags)
         if kind is None:
             continue
@@ -161,9 +204,16 @@ def read_osm(path: Path, proj: LocalProjection) -> OsmData:
         osmium.FileProcessor(str(path)).with_locations().with_filter(osmium.filter.EmptyTagFilter())
     ):
         if obj.is_node():
-            tags = {k: v for k, v in _tags(obj).items() if k in NODE_KEYS}
+            all_tags = _tags(obj)
+            tags = {k: v for k, v in all_tags.items() if k in NODE_KEYS}
             if tags:
                 data.node_tags[obj.id] = tags
+            snack = snack_kind(all_tags)
+            if snack:
+                loc = obj.location
+                data.snacks.append(
+                    Snack(snack, all_tags["name"], loc.lon, loc.lat, all_tags.get("opening_hours"))
+                )
             continue
         if not obj.is_way():
             continue
@@ -249,6 +299,8 @@ class Graph:
     # Terrain: elevations in decimetres keyed by microdegree (lon, lat); None = no data.
     elevations: dict[tuple[int, int], int | None] = field(default_factory=dict)
     terrain: dict[str, str] = field(default_factory=dict)  # provider, licence, attribution
+    # Snack stops snapped to the street they're on: (edge index, Snack), sorted.
+    snack_stops: list[tuple[int, Snack]] = field(default_factory=list)
 
 
 class _Spatial:
@@ -402,6 +454,7 @@ def build_graph(city: City, osm_path: Path) -> Graph:
     used = {n for e in edges for n in e.nodes}
     node_coords = {n: node_coords[n] for n in sorted(used)}
     junctions = sorted({e.nodes[0] for e in edges} | {e.nodes[-1] for e in edges})
+    snack_stops = _snap_snacks(data.snacks, edges, node_coords, proj, bbox)
     dropped_examples = {r: sorted(ids)[:EXAMPLES_PER_REASON] for r, ids in sorted(examples.items())}
     return Graph(
         city,
@@ -413,7 +466,41 @@ def build_graph(city: City, osm_path: Path) -> Graph:
         excluded_nodes,
         component,
         dropped_examples,
+        snack_stops=snack_stops,
     )
+
+
+def _snap_snacks(
+    snacks: list[Snack],
+    edges: list[Edge],
+    node_coords: dict[int, tuple[float, float]],
+    proj: LocalProjection,
+    bbox: BBox,
+) -> list[tuple[int, Snack]]:
+    """Snap each snack stop to the nearest edge (the street it's on) within SNAP_SNACK_M."""
+    index = GridIndex(50.0)
+    shapes: list[list[Point]] = []
+    for ei, e in enumerate(edges):
+        pts = [proj(*node_coords[n]) for n in e.nodes]
+        shapes.append(pts)
+        xs = [x for x, _ in pts]
+        ys = [y for _, y in pts]
+        index.insert(ei, (min(xs), min(ys), max(xs), max(ys)))
+    out: dict[tuple[int, str, str], Snack] = {}
+    r = SNAP_SNACK_M
+    for snack in snacks:
+        if not bbox.contains(snack.lon, snack.lat):
+            continue
+        p = proj(snack.lon, snack.lat)
+        best, best_d = -1, r
+        for ei in sorted(index.query_bbox((p[0] - r, p[1] - r, p[0] + r, p[1] + r))):
+            pts = shapes[ei]
+            d = min(point_segment_distance(p, a, b) for a, b in pairwise(pts))
+            if d < best_d:
+                best, best_d = ei, d
+        if best != -1:
+            out.setdefault((best, snack.kind, snack.name), snack)
+    return [(ei, s) for (ei, _, _), s in sorted(out.items())]
 
 
 def _simplify(segments_by_way: list[list[Segment | None]], data: OsmData) -> list[Edge]:
@@ -603,6 +690,25 @@ def edge_may_close(edge: Edge, way: WayData, areas: list[AreaFeature]) -> bool:
     return edge.attrs.venue != -1 and safety.is_covered(tags)
 
 
+def attach_metadata(graph: Graph, data_dir: Path) -> None:
+    """Attach source info and terrain from data/<city>/ (what the CLI build embeds)."""
+    city_dir = data_dir / graph.city.id
+    source_json = city_dir / "source.json"
+    if source_json.exists():
+        src = json.loads(source_json.read_text(encoding="utf-8"))
+        graph.source = {k: src[k] for k in ("data_as_of", "dated_url") if k in src}
+    terrain_json = city_dir / "terrain.json"
+    cache = data_dir / "raw" / f"{graph.city.id}.elevation.bin"
+    if terrain_json.exists() and cache.exists():
+        from bdgraph.terrain import load_cache
+
+        t = json.loads(terrain_json.read_text(encoding="utf-8"))
+        graph.terrain = {k: t[k] for k in ("provider", "licence", "attribution")}
+        graph.elevations = load_cache(cache)
+    else:
+        print("No terrain cache: climb and descent will be unknown", file=sys.stderr)
+
+
 def main(argv: list[str] | None = None) -> None:
     from bdgraph.encode import write_graph
     from bdgraph.stats import write_stats
@@ -619,20 +725,7 @@ def main(argv: list[str] | None = None) -> None:
     out.mkdir(parents=True, exist_ok=True)
 
     graph = build_graph(city, osm)
-    source_json = Path("data") / city.id / "source.json"
-    if source_json.exists():
-        src = json.loads(source_json.read_text(encoding="utf-8"))
-        graph.source = {k: src[k] for k in ("data_as_of", "dated_url") if k in src}
-    terrain_json = Path("data") / city.id / "terrain.json"
-    cache = Path("data/raw") / f"{city.id}.elevation.bin"
-    if terrain_json.exists() and cache.exists():
-        from bdgraph.terrain import load_cache
-
-        t = json.loads(terrain_json.read_text(encoding="utf-8"))
-        graph.terrain = {k: t[k] for k in ("provider", "licence", "attribution")}
-        graph.elevations = load_cache(cache)
-    else:
-        print("No terrain cache: climb and descent will be unknown", file=sys.stderr)
+    attach_metadata(graph, Path("data"))
     size = write_graph(graph, out / "graph.bin")
     write_stats(graph, out, graph_bytes=size)
     print(f"Wrote {out / 'graph.bin'} ({size / 1e6:.2f} MB), {len(graph.edges)} edges, "

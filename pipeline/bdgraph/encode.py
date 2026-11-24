@@ -226,6 +226,11 @@ def encode_graph(graph: Graph) -> bytes:
         "tagsets": tagsets.items,
         "node_tagsets": node_tagsets.items,
         "areas": areas.items,
+        "pois": [
+            {"kind": snack.kind, "name": snack.name, "edge": ei}
+            | ({"opening_hours": snack.opening_hours} if snack.opening_hours else {})
+            for ei, snack in graph.snack_stops
+        ],
         "sections": [{"name": n, "type": t, "count": len(a)} for n, t, a in sections],
     }
     meta_bytes = json.dumps(meta, sort_keys=True, ensure_ascii=False, separators=(",", ":"))

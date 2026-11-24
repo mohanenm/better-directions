@@ -30,6 +30,7 @@ Each section is a typed array: `{ "name", "type", "count" }`, where type is one 
 | `strings` | Names and opening hours; index 0 is `""` |
 | `tagsets` | Deduplicated way tag subsets (safety and mode keys); index 0 is `{}` |
 | `node_tagsets` | Deduplicated node tag subsets (barrier, access, foot, railway, highway, crossing, locked, entrance); index 0 is `{}` |
+| `pois` | Snack stops for the snack tour: `{kind, name, edge, opening_hours?}`, where `kind` is `bakery`, `pastry`, `chocolate`, `ice_cream` or `cafe` and `edge` is the street the shop is on (the nearest edge within 40 m). Sorted by edge, then kind, then name. |
 | `areas` | Parks, venues and buildings that edges reference: `{kind, name, osm, opening_hours?}`, where `kind` is `park`, `mall`, `station` or `building` and `osm` is like `w123` or `r456`. Index 0 is `null` (none). |
 
 ## Sections
