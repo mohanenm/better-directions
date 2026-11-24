@@ -241,3 +241,44 @@ These don't loosen any rule, so they didn't need approval. Each is in `safety/ca
 - **Alternatives:** Playwright (a new dependency, not approved); plain headless screenshots (they hang on a continuously rendering map).
 - **Why:** real-browser coverage with no new dependency. It's local only; CI runs the static built-site checks.
 - **Reversible:** yes. Playwright could replace it if you approve it later.
+
+## D-027 Waypoint insertions may not make a route double back more than 15%
+
+- **Choice:** after routing the two new legs, the waypoint search assembles the trial route and rejects the insertion if more than 15% of its length retraces itself.
+- **Alternatives:** a heavier reuse penalty alone (Phase 3 showed 4× hurt trail share); removing waypoints after the fact.
+- **Why:** an out-and-back to one far passage reads badly on the map. The worst sample went from 21% to 14%, with the same fun counts, and planning got faster (median 34 ms).
+- **Reversible:** one constant.
+
+## D-028 Snack stops snap to the street they're on
+
+- **Choice:** named `shop=bakery|pastry|confectionery|chocolate|ice_cream` and `amenity=cafe|ice_cream` nodes and areas, snapped to the nearest *edge* within 40 m and stored as `meta.pois`. Lyon has 1,026: 441 bakeries, 413 cafés, 79 chocolatiers, 68 pâtisseries, 25 ice-cream shops.
+- **Alternatives:** snapping to the nearest junction, tried first. A shop mid-block was 50 m or more from any junction, or out of range.
+- **Why:** the snack tour then walks right past the shop, and visits are detected the same way as every other feature.
+- **Reversible:** yes.
+
+## D-029 Snack tour is a seventh mode
+
+- **Choice:** a collecting mode with at most 4 inserted stops. The score favours bakeries, pâtisseries, chocolatiers and ice cream over cafés, and caps the café count. Snack streets are cheap in the cost profile. Directions name the best shop on each stretch with its opening hours.
+- **Why:** the brief lists it under Delight. Lyon's density makes it cheap: +2 to +9 minutes for 3 to 20 snack stops.
+- **Reversible:** remove it from `MODES`.
+
+## D-030 Route names
+
+- **Choice:** names are deterministic, from the mode, the route's stats and a real place on the route (its biggest named staircase, or the park it spends longest in), with a seeded pick between templates. No trademarked slogans; I dropped one that was.
+- **Reversible:** `modes/names.ts`.
+
+## D-031 Share image drawn on the device
+
+- **Choice:**
+  - A 1080 × 1350 canvas: a snapshot of the map with both routes, the A/B markers drawn on (they're HTML on the page), the name, summary, three headline numbers, the legend, the novelty line and attribution.
+  - The map is re-rendered at a higher pixel ratio, up to 3×, just for the snapshot.
+  - Output goes through the system share sheet (`navigator.share` with files) or a download from a `blob:` URL.
+- **Alternatives:** a server-side renderer (there is no server); a static picture without the map (less fun).
+- **Why:** it's private and works offline, and the CSP already allows `blob:` images.
+- **Reversible:** yes.
+
+## D-032 Famous better routes
+
+- **Choice:** eight curated Lyon routes on the landing panel, covering every mode, between well-known public places. `app/test/famous.test.ts` checks each still lives up to its pitch on the current graph (e.g. Stair Assault ≥ 250 steps up, Sinister Circuit 0 right turns).
+- **Why:** so a data update can't quietly ruin a famous route.
+- **Reversible:** `app/src/ui/famous.ts`.

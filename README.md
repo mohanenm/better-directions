@@ -4,7 +4,7 @@ A deliberately silly walking-directions app. Pick a start and an end, choose a m
 
 > **For fun.** Use common sense, follow signs and local rules, and don't follow it anywhere that looks unsafe or closed.
 
-Status: work in progress. The data pipeline, router, modes and web page are done; delight features are next. See [docs/PROGRESS.md](docs/PROGRESS.md).
+Status: work in progress. Phases 0–5 are done: data pipeline, router, modes, web page and delight. GPS art and hardening are next. See [docs/PROGRESS.md](docs/PROGRESS.md).
 
 ## The modes
 
@@ -12,8 +12,11 @@ Status: work in progress. The data pipeline, router, modes and web page are done
 - **Trail runner:** dirt and gravel over pavement.
 - **Stairmaster:** every staircase is a shortcut to glory. Climbed upwards, naturally.
 - **Park hopper:** collect them all. The parks, that is.
+- **Snack tour:** a bakery a kilometre keeps the grumbles away.
 - **Never turn right:** three lefts make a right.
 - **Scenic chaos:** same start, same end, a different adventure every seed.
+
+The landing page has eight famous better routes, like the Fourvière Stair Assault and the Croissant Crawl. Every route gets a name, and can be shared as a link or as an image drawn on your phone.
 
 Every "better" route is capped at 4× the normal walking time, and never more than an hour, unless the normal walk is itself longer. See [docs/SAMPLE_ROUTES.md](docs/SAMPLE_ROUTES.md).
 

@@ -7,9 +7,69 @@
 - [x] **Phase 2: Router core.** Done 2026-11-24.
 - [x] **Phase 3: The modes.** Done 2026-11-24.
 - [x] **Phase 4: The web page.** Done 2026-11-24.
-- [ ] Phase 5: Delight
+- [x] **Phase 5: Delight.** Done 2026-11-24.
 - [ ] Phase 6: GPS art (stretch)
 - [ ] Phase 7: Hardening and launch prep (no deploy)
+
+## Phase 5: Delight (2026-11-24)
+
+### Built
+
+- **Route names** (D-030), shown above the summary.
+- **Share image** (D-031): drawn on the device, then shared or downloaded.
+- **Snack tour mode** (D-028, D-029): 1,026 snack stops in Lyon, snapped to their streets.
+- **Famous better routes** (D-032): eight cards on the landing panel, each tested against its pitch:
+
+  | Route | Name and result |
+  |---|---|
+  | The Fourvière Stair Assault | "Stairway to Somewhere": 33 min instead of 23, 10 staircases, 591 steps up |
+  | The Traboule Crawl | 25 min instead of 16, 10 buildings walked through |
+  | The Pentes Calf Crusher | 29 min instead of 16, 555 steps up |
+  | The Grand Park Tour | 58 min instead of 32, 5 parks |
+  | The Croissant Crawl | 18 min instead of 14, 4 bakeries, 2 pâtisseries, 1 chocolatier, 2 ice-cream shops, 5 cafés |
+  | The Rhône Dirt Dash | 59 min instead of 23, 6 trails |
+  | The Sinister Circuit | 33 min instead of 23, 32 left turns, 0 right |
+  | Chaos Route #42 | 47 min instead of 35 |
+
+- **Fun fix carried over from Phase 4:** a doubling-back guard (D-027). The worst sample route now retraces 14%, down from 21%.
+
+### Sample routes (snack tour)
+
+From [SAMPLE_ROUTES.md](SAMPLE_ROUTES.md), which now has names for every row.
+
+| Trip | Snack tour result |
+|---|---|
+| Bellecour → Terreaux | 18 min instead of 14: 4 bakeries, 2 pâtisseries, 1 chocolatier, 2 ice-cream shops, 5 cafés |
+| Part-Dieu → Saint-Jean | 40 min instead of 35: 4 bakeries, 2 pâtisseries, 1 chocolatier, 7 cafés |
+| Tête d'Or → Bellecour | 34 min instead of 32: 4 bakeries, 5 pâtisseries, 2 chocolatiers, 2 ice-cream shops, 7 cafés |
+
+### Tests
+
+- **TypeScript:** 200 tests in total. New:
+  - snack tour: stops at the fixture bakery, names it with its hours, counts it
+  - recognisability: ≥ 3 snack stops, more than normal, at least one sweet stop
+  - names: deterministic, and chaos names vary by seed
+  - all 8 famous routes against their pitches
+  - the property test now covers 7 modes (3,300 pairs plus the tampered graph)
+- **Python:** 181 tests. New: snack classification and snapping to the right street. The real-data test now requires the committed graph to match a full build (source info and terrain included) byte for byte. The old version skipped terrain, a gap since Phase 2, now closed.
+- **Browser smoke test:** five cases, all passing. The new one clicks a famous route, makes the share image, checks it's 1080 × 1350 with a real map snapshot, and saves it.
+
+### Performance
+
+The 42 sample plans take median 31 ms, p90 70 ms, max 98 ms on a laptop.
+
+### Self-review
+
+- **Safety:** the snack tour is a collecting mode like the others, inside the property test and the cap. Shop opening hours appear in the directions. The share image carries the novelty line and attribution, and the page says images show start and end points.
+- **Fun:** names land, famous routes are reliably good, and the share image looks like something you'd post. The snack tour may be the most practical mode of all, at +2 to +9 minutes.
+
+### Decisions
+
+D-027 to D-032.
+
+### Skipped, and why
+
+Nothing from the Phase 5 list. The GPS-art stretch goal is Phase 6.
 
 ## Phase 4: The web page (2026-11-24)
 
