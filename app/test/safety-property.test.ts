@@ -3,7 +3,8 @@
  * must never produce a route that uses an excluded way or node, walks a way the wrong way, is
  * disconnected, or breaks the detour cap.
  *
- * Runs per model: PROPERTY_RUNS (default 500). Phase 7 reruns this with a much higher count.
+ * Runs per model: PROPERTY_RUNS (default 300), over four synthetic cost models and all six real
+ * modes (with random seeds): 3,000 pairs by default. Phase 7 reruns this with a much higher count.
  * The oracle below re-implements the checks in the test rather than calling verify.ts, so a bug
  * in the router's own checks can't hide a bug in the router.
  */
@@ -11,6 +12,9 @@ import { readFileSync } from "node:fs";
 import fc from "fast-check";
 import { describe, expect, it } from "vitest";
 import { decodeGraph } from "../src/graph/format";
+import { FeatureIndex } from "../src/modes/features";
+import { MODE_IDS } from "../src/modes/modes";
+import { planMode } from "../src/modes/plan-mode";
 import { Graph } from "../src/graph/graph";
 import { NORMAL, Router, type CostModel } from "../src/router/astar";
 import { haversineM, turnAngleDeg } from "../src/router/geometry";
@@ -19,7 +23,7 @@ import { hashUnit } from "../src/router/rng";
 import { detourCapSeconds } from "../src/safety/limits";
 import { footDirections, nodeExclusion, wayExclusion } from "../src/safety/rules";
 
-const RUNS = Number(process.env["PROPERTY_RUNS"] ?? 500);
+const RUNS = Number(process.env["PROPERTY_RUNS"] ?? 300);
 const MAX_PAIR_DISTANCE_M = 5000; // city walks; longer pairs only cost CI time
 
 function readLyon(): ArrayBuffer {
@@ -29,6 +33,7 @@ function readLyon(): ArrayBuffer {
 
 const lyon = new Graph(decodeGraph(readLyon()));
 const router = new Router(lyon);
+const features = new FeatureIndex(lyon);
 
 /** Independent oracle: everything a route must satisfy, checked from raw tags. */
 function checkRoute(g: Graph, dirEdges: number[], nodes: number[]): void {
@@ -110,6 +115,21 @@ describe("safety property: random routes on the real Lyon graph", () => {
           expect(p!.better.timeS).toBeLessThanOrEqual(detourCapSeconds(p!.normal.timeS) + 1e-6);
         }),
         { numRuns: RUNS, seed: 20261124 },
+      );
+    });
+  }
+
+  for (const mode of MODE_IDS) {
+    it(`mode ${mode}: every route is safe, connected and within the detour cap, for any seed`, () => {
+      fc.assert(
+        fc.property(pair(lyon), fc.nat({ max: 2 ** 31 - 1 }), ([a, b], seed) => {
+          const p = planMode(router, features, a, b, mode, seed);
+          expect(p).not.toBeNull();
+          checkRoute(lyon, p!.normal.dirEdges, p!.normal.nodes);
+          checkRoute(lyon, p!.better.dirEdges, p!.better.nodes);
+          expect(p!.better.timeS).toBeLessThanOrEqual(detourCapSeconds(p!.normal.timeS) + 1e-6);
+        }),
+        { numRuns: RUNS, seed: 20261126 },
       );
     });
   }

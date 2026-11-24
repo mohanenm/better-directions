@@ -14,7 +14,8 @@
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "check": "npm run typecheck && npm run lint && npm run test",
-    "bench": "vitest run --config vitest.bench.config.ts --silent=false --disableConsoleIntercept"
+    "bench": "vitest run --config vitest.bench.config.ts app/bench/route.bench.ts --silent=false --disableConsoleIntercept",
+    "samples": "vitest run --config vitest.bench.config.ts app/bench/samples.bench.ts"
   },
   "devDependencies": {
     "@eslint/js": "10.0.1",
