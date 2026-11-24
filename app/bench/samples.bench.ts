@@ -76,7 +76,7 @@ it("sample routes", () => {
         s.underBuildings ? `${s.underBuildings} under a building` : "",
         s.mayClose.length ? `${s.mayClose.length} may close` : "",
       ].filter(Boolean);
-      lines.push(`| ${MODES[id].name} | ${p.summary} <br><sub>${detail.join(" · ")}</sub> | ${p.strategy} | ${ms.toFixed(0)} ms |`);
+      lines.push(`| ${MODES[id].name} | **${p.name}**. ${p.summary} <br><sub>${detail.join(" · ")}</sub> | ${p.strategy} | ${ms.toFixed(0)} ms |`);
     }
     lines.push("");
   }

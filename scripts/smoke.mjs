@@ -27,6 +27,7 @@ const CASES = [
     query: "?from=4.82740,45.76060&to=4.82250,45.76230&fromName=Cath%C3%A9drale%20Saint-Jean&toName=Basilique%20de%20Fourvi%C3%A8re&mode=buildings" },
   { name: "phone-empty", width: 420, height: 900, mobile: true, query: "", expectRoute: false },
   { name: "keyboard-only", width: 420, height: 2000, mobile: true, query: "", keyboard: true },
+  { name: "famous-and-share", width: 420, height: 3200, mobile: true, query: "", famous: true },
 ];
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -92,6 +93,10 @@ async function runCase(c) {
     if (!(await evaluate("document.getElementById('from-input').value")).includes("Bellecour")) problems.push("keyboard: start not chosen");
     if (!(await evaluate("document.getElementById('to-input').value")).includes("Terreaux")) problems.push("keyboard: end not chosen");
   }
+  if (c.famous) {
+    for (let i = 0; i < 60; i++) { await sleep(250); if ((await evaluate("document.getElementById('status').textContent")).startsWith("Pick a start")) break; }
+    await evaluate("document.querySelector('#famous-list button').click()");
+  }
   const wantRoute = c.expectRoute !== false;
   let status = "";
   for (let i = 0; i < 120; i++) {
@@ -100,6 +105,24 @@ async function runCase(c) {
     if (wantRoute ? status.startsWith("Route ready") : status.startsWith("Pick a start")) break;
   }
   await sleep(1500); // let the map draw the route
+  if (c.famous) {
+    await evaluate("document.getElementById('make-image').click()");
+    let ready = false;
+    for (let i = 0; i < 40 && !ready; i++) { await sleep(250); ready = await evaluate("!document.getElementById('share-image').hidden && document.getElementById('share-preview').complete && document.getElementById('share-preview').naturalWidth > 0"); }
+    const img = await evaluate(`(() => {
+      const img = document.getElementById('share-preview');
+      const c = document.createElement('canvas'); c.width = img.naturalWidth; c.height = img.naturalHeight;
+      const ctx = c.getContext('2d'); ctx.drawImage(img, 0, 0);
+      const px = ctx.getImageData(0, 100, c.width, 700).data; const colours = new Set();
+      for (let i = 0; i < px.length; i += 4 * 997) colours.add(px[i] + ',' + px[i + 1] + ',' + px[i + 2]);
+      return { w: img.naturalWidth, h: img.naturalHeight, colours: colours.size, name: document.getElementById('route-name').textContent, png: c.toDataURL('image/png').split(',')[1] };
+    })()`);
+    writeFileSync(join(OUT, "share-image.png"), Buffer.from(img.png, "base64"));
+    delete img.png;
+    if (!ready || img.w !== 1080 || img.h !== 1350) problems.push(`share image wrong size: ${JSON.stringify(img)}`);
+    if (img.colours < 20) problems.push(`share image map area looks blank (${img.colours} colours)`);
+    console.log(`  share image ${img.w}x${img.h}, ${img.colours} sampled colours, route "${img.name}"`);
+  }
   const shot = await send("Page.captureScreenshot", { format: "png" });
   writeFileSync(join(OUT, `${c.name}.png`), Buffer.from(shot.result.data, "base64"));
 
