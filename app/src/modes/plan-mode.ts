@@ -12,7 +12,8 @@ import { FLAT_SPEED_MS } from "../router/time";
 import { collectRoute, DETOUR_FACTOR, viaRoute } from "./collect";
 import type { FeatureIndex } from "./features";
 import { MODES, type ModeId } from "./modes";
-import { costOfFun, summarise, type CostOfFun } from "./stats";
+import { routeName } from "./names";
+import { costOfFun, snackSummary, summarise, type CostOfFun } from "./stats";
 
 export interface ModePlan {
   mode: ModeId;
@@ -24,6 +25,7 @@ export interface ModePlan {
   capSeconds: number;
   strategy: "cost-profile" | "collect" | "chaos-waypoints" | "normal";
   summary: string;
+  name: string;
 }
 
 export function planMode(
@@ -67,7 +69,12 @@ export function planMode(
 
   assertRouteSafe(router.g, better, base.capSeconds);
   const normalStats = costOfFun(fi, base.normal);
-  const extras = modeId === "no-right" ? [`${betterStats.leftTurns} left turns, ${betterStats.rightTurns} right`] : [];
+  const extras =
+    modeId === "no-right"
+      ? [`${betterStats.leftTurns} left turns, ${betterStats.rightTurns} right`]
+      : modeId === "snacks"
+        ? snackSummary(betterStats)
+        : [];
   return {
     mode: modeId,
     seed,
@@ -78,6 +85,7 @@ export function planMode(
     capSeconds: base.capSeconds,
     strategy,
     summary: summarise(normalStats, betterStats, extras),
+    name: routeName(fi, modeId, betterStats, better, seed),
   };
 }
 

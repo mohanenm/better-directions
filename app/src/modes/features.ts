@@ -2,6 +2,7 @@
  * Per-graph feature index, built once: what's a trail, where the staircases, parks and passages
  * are, and a good waypoint for visiting each. Modes and the cost-of-fun stats both read it.
  */
+import type { Poi } from "../graph/format";
 import type { Graph } from "../graph/graph";
 
 const UNPAVED = new Set([
@@ -67,6 +68,16 @@ export interface TrailStretch {
   path: number[];
 }
 
+export interface SnackStop {
+  index: number;
+  kind: Poi["kind"];
+  name: string;
+  edge: number;
+  /** An allowed direction of the shop's street, as a directed edge: the waypoint. */
+  dirEdge: number;
+  openingHours: string;
+}
+
 export class FeatureIndex {
   readonly isTrail: Uint8Array;
   readonly isPavedRoad: Uint8Array;
@@ -80,6 +91,9 @@ export class FeatureIndex {
   readonly parks: ParkInfo[] = [];
   readonly passages: PassageInfo[] = [];
   readonly trails: TrailStretch[] = [];
+  readonly snacks: SnackStop[] = [];
+  /** Edge -> snack stops on it. */
+  readonly snacksOnEdge = new Map<number, number[]>();
 
   constructor(readonly g: Graph) {
     const E = g.edgeCount;
@@ -169,6 +183,15 @@ export class FeatureIndex {
     for (const [area, best] of passageBest) {
       const dirEdge = g.allowedDirs[best.edge]! & 1 ? best.edge * 2 : best.edge * 2 + 1;
       this.passages.push({ area, name: g.area(area)?.name ?? "", dirEdge, lengthM: best.len, kind: best.kind });
+    }
+
+    for (const poi of g.meta.pois ?? []) {
+      const allowed = g.allowedDirs[poi.edge];
+      if (!allowed) continue; // the audit disabled its street
+      const index = this.snacks.length;
+      const dirEdge = allowed & 1 ? poi.edge * 2 : poi.edge * 2 + 1;
+      this.snacks.push({ index, kind: poi.kind, name: poi.name, edge: poi.edge, dirEdge, openingHours: poi.opening_hours ?? "" });
+      push(this.snacksOnEdge, poi.edge, index);
     }
 
     for (const [way, edges] of trailEdges) {

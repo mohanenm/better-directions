@@ -108,6 +108,16 @@ describe("each mode is recognisably itself on Lyon sample trips", () => {
     }
   });
 
+  it("Snack tour: at least 3 snack stops, more than the normal route, at least one bakery-type stop", () => {
+    const count = (s: { snacks: Record<string, number> }) => Object.values(s.snacks).reduce((a, b) => a + b, 0);
+    for (const p of plans("snacks")) {
+      expect(count(p.betterStats)).toBeGreaterThanOrEqual(3);
+      expect(count(p.betterStats)).toBeGreaterThan(count(p.normalStats));
+      const s = p.betterStats.snacks;
+      expect(s.bakery + s.pastry + s.chocolate + s.ice_cream).toBeGreaterThanOrEqual(1);
+    }
+  });
+
   it("Never turn right: at most one right turn, and fewer than the normal route", () => {
     for (const p of plans("no-right")) {
       expect(p.betterStats.rightTurns).toBeLessThanOrEqual(1);
@@ -134,6 +144,6 @@ describe("each mode is recognisably itself on Lyon sample trips", () => {
         expect(second[i]!.better.dirEdges).toEqual(p.better.dirEdges);
       });
     }
-    expect(Object.keys(MODES)).toHaveLength(6);
+    expect(Object.keys(MODES)).toHaveLength(7);
   });
 });

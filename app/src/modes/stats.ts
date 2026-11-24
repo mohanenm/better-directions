@@ -45,6 +45,9 @@ export interface CostOfFun {
   uTurns: number;
   /** Metres of the route on edges it walks more than once (doubling back). */
   retracedM: number;
+  /** Snack stops the route walks past, by kind, and their names in route order. */
+  snacks: Record<"bakery" | "pastry" | "chocolate" | "ice_cream" | "cafe", number>;
+  snackNames: string[];
   mayClose: ClosureNote[];
 }
 
@@ -56,6 +59,7 @@ export function costOfFun(fi: FeatureIndex, route: Route): CostOfFun {
     stepsUnknown: 0, climbM: 0, descentM: 0, buildings: 0, buildingNames: [], passageM: 0,
     underBuildings: 0, malls: 0, stations: 0, trailM: 0, trailShare: 0, trails: 0, parks: 0,
     parkNames: [], parkM: 0, leftTurns: 0, rightTurns: 0, uTurns: 0, retracedM: 0, mayClose: [],
+    snacks: { bakery: 0, pastry: 0, chocolate: 0, ice_cream: 0, cafe: 0 }, snackNames: [],
   };
   const staircases = new Set<number>();
   const buildings = new Map<number, string>();
@@ -71,6 +75,13 @@ export function costOfFun(fi: FeatureIndex, route: Route): CostOfFun {
     const len = g.s.edge_length_m[e]!;
     const flags = g.s.edge_flags[e]!;
     if (walked.has(e)) stats.retracedM += len;
+    else {
+      for (const si of fi.snacksOnEdge.get(e) ?? []) {
+        const snack = fi.snacks[si]!;
+        stats.snacks[snack.kind]++;
+        stats.snackNames.push(snack.name);
+      }
+    }
     walked.add(e);
     const climb = g.climb(e, forward);
     if (climb) {
@@ -165,4 +176,19 @@ export function summarise(normal: CostOfFun, better: CostOfFun, extras: string[]
   bits.push(...extras);
   const tail = bits.length ? `, ${bits.join(", ")}` : "";
   return `Normal: ${minutes(normal.timeS)} min. Better: ${minutes(better.timeS)} min${tail}.`;
+}
+
+const SNACK_WORDS: Record<keyof CostOfFun["snacks"], [string, string]> = {
+  bakery: ["bakery", "bakeries"],
+  pastry: ["pâtisserie", "pâtisseries"],
+  chocolate: ["chocolatier", "chocolatiers"],
+  ice_cream: ["ice-cream shop", "ice-cream shops"],
+  cafe: ["café", "cafés"],
+};
+
+/** "3 bakeries, 1 chocolatier, 2 cafés" */
+export function snackSummary(stats: CostOfFun): string[] {
+  return (Object.keys(SNACK_WORDS) as (keyof CostOfFun["snacks"])[])
+    .filter((k) => stats.snacks[k] > 0)
+    .map((k) => `${stats.snacks[k]} ${SNACK_WORDS[k][stats.snacks[k] === 1 ? 0 : 1]}`);
 }

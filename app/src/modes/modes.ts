@@ -13,7 +13,7 @@ import type { FeatureIndex } from "./features";
 import type { CostOfFun } from "./stats";
 import { TURN_DEG, U_TURN_DEG } from "./stats";
 
-export type ModeId = "buildings" | "trail" | "stairs" | "parks" | "no-right" | "chaos";
+export type ModeId = "buildings" | "trail" | "stairs" | "parks" | "snacks" | "no-right" | "chaos";
 
 /** A feature worth a detour: walk to the start of `path`, along it, and on from its end. */
 export interface Collectible {
@@ -33,6 +33,8 @@ export interface Mode {
   collect?: {
     candidates(fi: FeatureIndex): Collectible[];
     keysOf(fi: FeatureIndex, dirEdge: number): string[];
+    /** Most features to insert (defaults to the search's MAX_WAYPOINTS). */
+    maxWaypoints?: number;
   };
   /** Higher is more fun; compares a cost-profile route with a collected one. */
   score(stats: CostOfFun): number;
@@ -161,6 +163,32 @@ const parks: Mode = {
   score: (s) => s.parks * 10 + s.parkM / 100,
 };
 
+// --- Snack tour -----------------------------------------------------------------------------------
+
+const SNACK_VALUE = { bakery: 12, pastry: 12, chocolate: 10, ice_cream: 10, cafe: 7 } as const;
+
+const snacks: Mode = {
+  id: "snacks",
+  name: "Snack tour",
+  tagline: "A bakery a kilometre keeps the grumbles away.",
+  cost: (fi) =>
+    multiplier("snacks", 0.5, (g, d) => {
+      const e = d >>> 1;
+      if (fi.snacksOnEdge.has(e)) return 0.5; // window-shopping is half the fun
+      const hw = g.edgeTags(e)["highway"];
+      if (hw === "pedestrian" || hw === "living_street") return 0.8;
+      return fi.isPavedRoad[e] ? 1.1 : 1.0;
+    }),
+  collect: {
+    candidates: (fi) =>
+      fi.snacks.map((s) => ({ key: `k:${s.index}`, path: [s.dirEdge], value: SNACK_VALUE[s.kind] })),
+    keysOf: (fi, d) => (fi.snacksOnEdge.get(d >>> 1) ?? []).map((i) => `k:${i}`),
+    maxWaypoints: 4, // a walk with snacks, not a crawl
+  },
+  score: (s) =>
+    s.snacks.bakery * 10 + s.snacks.pastry * 10 + s.snacks.chocolate * 8 + s.snacks.ice_cream * 8 + Math.min(s.snacks.cafe, 4) * 4,
+};
+
 // --- Never turn right -----------------------------------------------------------------------------
 
 /** Seconds of "pain" per right turn or U-turn: big enough to avoid them almost always. */
@@ -248,6 +276,7 @@ export const MODES: Readonly<Record<ModeId, Mode>> = Object.freeze({
   trail,
   stairs,
   parks,
+  snacks,
   "no-right": noRight,
   chaos,
 });

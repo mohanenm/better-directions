@@ -48,3 +48,14 @@ describe("directions", () => {
     expect(genericName(undefined)).toBe("an unnamed street");
   });
 });
+
+describe("snack tour", () => {
+  it("stops at the bakery, names it with its hours, and counts it", () => {
+    const p = planMode(router, fi, at(0, 0), at(300, 100), "snacks", 1)!;
+    expect(p.betterStats.snacks.bakery).toBeGreaterThanOrEqual(1);
+    expect(p.summary).toMatch(/bakery/);
+    const steps = directions(fi, p, "A", "B");
+    expect(steps.some((s) => s.text.includes("Treat stop: Boulangerie Test (open 07:00-19:30)"))).toBe(true);
+    expect(fi.snacks.map((s) => s.name).sort()).toEqual(["Boulangerie Test", "Café Test"]); // the far one wasn't snapped
+  });
+});

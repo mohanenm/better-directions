@@ -12,6 +12,14 @@ export interface AreaRef {
   opening_hours?: string;
 }
 
+export interface Poi {
+  kind: "bakery" | "pastry" | "chocolate" | "ice_cream" | "cafe";
+  name: string;
+  /** The edge (street) the shop is on. */
+  edge: number;
+  opening_hours?: string;
+}
+
 export interface GraphMeta {
   format: string;
   version: number;
@@ -38,6 +46,8 @@ export interface GraphMeta {
   tagsets: Tags[];
   node_tagsets: Tags[];
   areas: (AreaRef | null)[];
+  /** Snack stops for the snack tour (absent in older graphs). */
+  pois?: Poi[];
   sections: { name: string; type: SectionType; count: number }[];
 }
 

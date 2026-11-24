@@ -72,6 +72,10 @@ const QUIPS: Record<ModeId | "normal", { start: string[]; arrive: string[] }> = 
     start: ["Gotta visit 'em all.", "Grass ahead. Lots of it."],
     arrive: ["Park passport: stamped.", "You are now 40% tree."],
   },
+  snacks: {
+    start: ["Pace yourself. There are pastries ahead.", "Stretchy trousers recommended."],
+    arrive: ["Fuelled and fulfilled.", "You walked it off. Mostly."],
+  },
   "no-right": {
     start: ["Right turns are cancelled. Lefts only from here.", "We've lost our right-turn privileges. Onward, leftward."],
     arrive: ["Not a single regret. Or right turn.", "Three lefts make a right, and you made them all."],
@@ -154,6 +158,22 @@ function groupRoute(fi: FeatureIndex, dirEdges: number[]): Group[] {
   return merged;
 }
 
+const SNACK_RANK = { bakery: 0, pastry: 1, chocolate: 2, ice_cream: 3, cafe: 4 } as const;
+
+/** The best snack stop along a group of edges that hasn't been mentioned yet. */
+function bestSnack(fi: FeatureIndex, grp: Group, seen: Set<number>) {
+  let best: (typeof fi.snacks)[number] | null = null;
+  for (const d of grp.dirEdges) {
+    for (const i of fi.snacksOnEdge.get(d >>> 1) ?? []) {
+      const s = fi.snacks[i]!;
+      if (seen.has(i)) continue;
+      if (!best || SNACK_RANK[s.kind] < SNACK_RANK[best.kind]) best = s;
+    }
+  }
+  if (best) for (const d of grp.dirEdges) for (const i of fi.snacksOnEdge.get(d >>> 1) ?? []) seen.add(i);
+  return best;
+}
+
 function turnPhrase(angle: number): string {
   const side = angle > 0 ? "right" : "left";
   const a = Math.abs(angle);
@@ -190,6 +210,7 @@ export function directions(fi: FeatureIndex, plan: ModePlan, fromName: string, t
 
   const groups = groupRoute(fi, route.dirEdges);
   let prevPark = 0;
+  const seenSnacks = new Set<number>();
   groups.forEach((grp, i) => {
     const first = grp.dirEdges[0]!;
     const at = g.nodeLonLat(g.tail(first));
@@ -240,6 +261,12 @@ export function directions(fi: FeatureIndex, plan: ModePlan, fromName: string, t
         text = `${onto} for ${Math.round(grp.lengthM)} m.`;
     }
 
+    if (plan.mode === "snacks") {
+      const stop = bestSnack(fi, grp, seenSnacks);
+      if (stop) {
+        text += ` Treat stop: ${stop.name}${stop.openingHours ? ` (open ${stop.openingHours})` : ""}.`;
+      }
+    }
     if (grp.park && grp.park !== prevPark) {
       const park = g.area(grp.park);
       text += ` You're in ${park?.name ?? "a park"}.`;
