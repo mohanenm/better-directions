@@ -4,7 +4,7 @@ A deliberately silly walking-directions app. Pick a start and an end, choose a m
 
 > **For fun.** Use common sense, follow signs and local rules, and don't follow it anywhere that looks unsafe or closed.
 
-Status: work in progress. Phases 0–5 are done: data pipeline, router, modes, web page and delight. GPS art and hardening are next. See [docs/PROGRESS.md](docs/PROGRESS.md).
+Status: work in progress. Phases 0–6 are done, including experimental GPS art. Hardening and launch prep are next. See [docs/PROGRESS.md](docs/PROGRESS.md).
 
 ## The modes
 
@@ -17,6 +17,10 @@ Status: work in progress. Phases 0–5 are done: data pipeline, router, modes, w
 - **Scenic chaos:** same start, same end, a different adventure every seed.
 
 The landing page has eight famous better routes, like the Fourvière Stair Assault and the Croissant Crawl. Every route gets a name, and can be shared as a link or as an image drawn on your phone.
+
+**GPS art (experimental):** walk a heart, a star, a square or a one-stroke letter, drawn with real streets. See [docs/GPS_ART.md](docs/GPS_ART.md).
+
+![GPS art drawn with Lyon's streets](docs/images/gps-art-sheet.png)
 
 Every "better" route is capped at 4× the normal walking time, and never more than an hour, unless the normal walk is itself longer. See [docs/SAMPLE_ROUTES.md](docs/SAMPLE_ROUTES.md).
 

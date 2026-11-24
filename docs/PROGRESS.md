@@ -8,8 +8,49 @@
 - [x] **Phase 3: The modes.** Done 2026-11-24.
 - [x] **Phase 4: The web page.** Done 2026-11-24.
 - [x] **Phase 5: Delight.** Done 2026-11-24.
-- [ ] Phase 6: GPS art (stretch)
+- [x] **Phase 6: GPS art (stretch).** Done 2026-11-24, experimental.
 - [ ] Phase 7: Hardening and launch prep (no deploy)
+
+## Phase 6: GPS art (2026-11-24)
+
+### Built
+
+- **Engine** (`app/src/art/`): shapes, plus fitting, tracing and scoring (D-033, D-034).
+- **App:** an experimental panel (D-035) with shareable links, directions and the share image.
+- **Write-up:** [GPS_ART.md](GPS_ART.md), including a contact sheet of real results.
+
+### Results
+
+130 of 135 attempts drawn on Lyon. Median likeness ranges from 64% (star) to 85% (letter L). The best drawings are 85–91%: a heart at Guillotière (85%), a square (87%), a triangle (85%), and the letters L (91%), V (88%) and N (86%). Planning takes median 115 ms.
+
+### Tests
+
+- **TypeScript:** 208 tests in total. New:
+  - shape validity, spur trimming, densifying, sizing
+  - a ≥ 70% square at Guillotière, within the hour, deterministic
+  - closed shapes loop back to the start
+  - art link round-trip and sanitising
+- **Safety property test:** GPS art from random start points × shapes × lengths (60 runs). Every drawing is checked by the independent oracle and the 60-minute limit.
+- **Browser smoke test:** a sixth case loads a shared heart link: 85% likeness, 3.8 km, 46 min.
+
+### Tuning log
+
+1. **Sizing in metres failed** 60% of attempts by blowing the hour. Switched to sizing by walk time: 129/135 drawn.
+2. **Anchored the shape's first point at the user's start** (it was the shape's centre), so walks begin where you are: 130/135 drawn.
+3. **Limited letters to ±10° rotation.** Tilted letters stopped reading as letters.
+
+### Self-review
+
+- **Safety:** drawings are ordinary router routes, so every exclusion, the audit and the final check apply. There's a hard 60-minute limit, and the property test covers it. Start points too far from paths give a clear error. Disclosures and closure notes appear on drawings too.
+- **Fun:** hearts and letters on real streets are a delight. Stars are rough. The "experimental" label and the wobble note set expectations.
+
+### Decisions
+
+D-033 to D-035.
+
+### Skipped, and why
+
+- Words (most letters need the pen lifted), user-drawn shapes, and key-point weighting. All are listed in GPS_ART.md as ideas, since the time spent on this stretch phase was limited on purpose.
 
 ## Phase 5: Delight (2026-11-24)
 

@@ -282,3 +282,25 @@ These don't loosen any rule, so they didn't need approval. Each is in `safety/ca
 - **Choice:** eight curated Lyon routes on the landing panel, covering every mode, between well-known public places. `app/test/famous.test.ts` checks each still lives up to its pitch on the current graph (e.g. Stair Assault ≥ 250 steps up, Sinister Circuit 0 right turns).
 - **Why:** so a data update can't quietly ruin a famous route.
 - **Reversible:** `app/src/ui/famous.ts`.
+
+## D-033 GPS art: corridor-cost tracing, sizing by walk time, a chamfer likeness score
+
+- **Choice:** the approach is described in [GPS_ART.md](GPS_ART.md). In short:
+  - Templates are scaled to a chosen walk length, anchored at the start, and placed by a point-cloud search.
+  - Corners are joined with corridor-cost router legs, and spurs are trimmed.
+  - Likeness is the symmetric mean distance relative to the shape's width.
+- **Alternatives:** snapping densified template points to nodes and routing between them (spiky, with lots of doubling back); free-form search such as simulated annealing (slow and unpredictable on a phone).
+- **Why:** it reuses the router, so all the safety layers apply. It takes 115 ms median and is predictable.
+- **Reversible:** it's self-contained in `app/src/art/`.
+
+## D-034 GPS art limit: 60 minutes, the same as the detour cap's maximum
+
+- **Choice:** `GPS_ART_MAX_SECONDS = DETOUR.maxSeconds`, enforced in the trace and in `assertRouteSafe`. Requested lengths are clamped to 15–55 minutes.
+- **Why:** a loop has no "normal route" to multiply, and the brief asks for a sane length. Reusing the existing hard limit adds no new rule.
+- **Reversible:** one constant, but it's a hard limit, so changing it is your call.
+
+## D-035 GPS art is an experimental panel, not an eighth mode
+
+- **Choice:** a collapsible "GPS art (experimental)" panel with a shape, a length and "Draw it from my start". The map shows the walk and the dashed ideal shape; the card shows likeness, walk time and average error, with a wobble disclaimer. Directions and the share image work as usual, and links use `?art=heart&len=40&from=…`.
+- **Alternatives:** an eighth mode card. But the input is different (no destination), so it would have confused the mode picker.
+- **Reversible:** yes.
