@@ -5,8 +5,8 @@
     "edges": 178002,
     "ways": 79906,
     "length_km": 4367.8,
-    "bytes": 9620040,
-    "gzip_bytes": 3085658
+    "bytes": 9712240,
+    "gzip_bytes": 3106764
   },
   "connectivity": {
     "nodes_before": 144968,
