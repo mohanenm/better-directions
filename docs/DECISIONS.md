@@ -71,7 +71,7 @@ These don't loosen any rule, so they didn't need approval. Each is in `safety/ca
 - **Why:** zero-copy `TypedArray` views in the browser. The file keeps the raw safety-relevant tags, so the router re-runs exactly the same rules from `safety/cases.json`. Lyon is 8.9 MB raw, 2.9 MB gzipped. Only junctions and rule-relevant points are nodes; shape points live in the geometry stream.
 - **Reversible:** the format is versioned (`BDG1`, version 1).
 
-## D-009 No elevation data yet
+## D-009 No elevation data yet (superseded by D-013)
 
 - **Choice:** slope comes only from `incline` tags and staircases. Step counts come from `step_count`, or are estimated at 0.3 m of run per step (marked as estimated).
 - **Alternatives:** a terrain model (IGN RGE ALTI, Copernicus GLO-30). That would be a new data source and download host, so it needs approval (see open questions).
@@ -100,3 +100,13 @@ These don't loosen any rule, so they didn't need approval. Each is in `safety/ca
 - **Alternatives:** keep every walkable way type. That would let indoor footways and stairs back in, which the brief forbids.
 - **Why:** a road inside a footprint is almost always a street running under the building. A footway inside one is usually an indoor route. The flag (`edge_flags` bit 5) lets the app disclose it, and modes decide whether it counts as fun.
 - **Reversible:** one set in `safety.py` plus cases.
+
+## D-013 Terrain: IGN RGE ALTI via the Géoplateforme point service (Q-008)
+
+- **Choice:** France's bare-earth terrain model (RGE ALTI, ~1 m), queried point by point through IGN's Géoplateforme altimetry service (`data.geopf.fr`). The service takes up to 5,000 points per POST, and we ask only for the points the graph uses: 246,965 for Lyon, about 50 requests with a 1 s pause between them. A separate setup step (`python -m bdgraph.terrain`) caches results in `data/raw/<city>.elevation.bin`. The build turns them into per-edge climb and descent in decimetres. Bridges, tunnels and levelled ways use their endpoints only. Missing values are "unknown", never guessed.
+- **Alternatives:**
+  - Copernicus GLO-30 or SRTM: global, but they're **surface** models, so in a dense city they put streets on rooftops.
+  - FABDEM: bare earth, but licensed CC BY-NC-SA.
+  - Downloading RGE ALTI tiles: multi-GB 7z archives, and it needs a raster library.
+- **Why:** correct bare-earth heights at stair resolution, no new dependency, a light load on the service, and an open licence (Licence Ouverte 2.0, attribution "IGN RGE ALTI®", shown in the app via `meta.terrain`). The provider is pluggable per city (`cities/<id>.json` → `terrain.provider`), so a non-French city can plug in its own national bare-earth service.
+- **Reversible:** remove the `terrain` section from the city config and every climb becomes unknown.

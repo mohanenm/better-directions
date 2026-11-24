@@ -13,7 +13,7 @@ from array import array
 from pathlib import Path
 
 from bdgraph import safety
-from bdgraph.build import WAY_KEYS, Graph, edge_may_close, edge_steps
+from bdgraph.build import WAY_KEYS, Graph, edge_climb, edge_may_close, edge_steps
 
 MAGIC = b"BDG1"
 VERSION = 1
@@ -33,6 +33,7 @@ CTX_ON_FAST_ROAD = 1 << 1
 CTX_ON_LINEAR_BARRIER = 1 << 2
 
 U16_MAX = 0xFFFF
+CLIMB_UNKNOWN = 0xFFFF
 
 
 class _Interner:
@@ -119,6 +120,7 @@ def encode_graph(graph: Graph) -> bytes:
     e_from, e_to, e_way = array("I"), array("I"), array("I")
     e_len, e_flags, e_steps = array("f"), array("B"), array("H")
     e_park, e_venue, e_building = array("H"), array("H"), array("H")
+    e_climb, e_descent = array("H"), array("H")
     e_geom = array("I", [0])
     geom = bytearray()
     for e in graph.edges:
@@ -139,6 +141,13 @@ def encode_graph(graph: Graph) -> bytes:
         e_len.append(e.length)
         e_flags.append(flags)
         e_steps.append(min(steps, U16_MAX))
+        climb = edge_climb(e, w, graph)
+        if climb is None:
+            e_climb.append(CLIMB_UNKNOWN)
+            e_descent.append(CLIMB_UNKNOWN)
+        else:
+            e_climb.append(min(climb[0], CLIMB_UNKNOWN - 1))
+            e_descent.append(min(climb[1], CLIMB_UNKNOWN - 1))
         e_park.append(area_ref(e.attrs.park))
         e_venue.append(area_ref(e.attrs.venue))
         e_building.append(
@@ -173,6 +182,8 @@ def encode_graph(graph: Graph) -> bytes:
         ("edge_park", "u16", e_park),
         ("edge_venue", "u16", e_venue),
         ("edge_building", "u16", e_building),
+        ("edge_climb_dm", "u16", e_climb),
+        ("edge_descent_dm", "u16", e_descent),
         ("edge_geom_offset", "u32", e_geom),
         ("geom", "u8", bytes(geom)),
         ("way_osm_id", "f64", way_osm),
@@ -191,6 +202,8 @@ def encode_graph(graph: Graph) -> bytes:
         },
         "attribution": graph.city.extract_attribution,
         "source": graph.source,
+        "terrain": graph.terrain,
+        "climb_unknown": CLIMB_UNKNOWN,
         "licence": graph.city.extract_licence,
         "coord_scale": COORD_SCALE,
         "counts": {"nodes": len(node_ids), "edges": len(graph.edges), "ways": len(used_ways)},

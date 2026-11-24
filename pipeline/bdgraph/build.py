@@ -246,6 +246,9 @@ class Graph:
     component: dict[str, float]
     dropped_examples: dict[str, list[int]] = field(default_factory=dict)
     source: dict[str, str] = field(default_factory=dict)  # from data/<city>/source.json
+    # Terrain: elevations in decimetres keyed by microdegree (lon, lat); None = no data.
+    elevations: dict[tuple[int, int], int | None] = field(default_factory=dict)
+    terrain: dict[str, str] = field(default_factory=dict)  # provider, licence, attribution
 
 
 class _Spatial:
@@ -558,6 +561,30 @@ def edge_steps(edge: Edge, way: WayData) -> tuple[int, bool]:
     return max(1, round(edge.length / STEP_RUN_M)), True
 
 
+def edge_climb(edge: Edge, way: WayData, graph: Graph) -> tuple[int, int] | None:
+    """(climb, descent) in decimetres walking the edge forward, or None if unknown.
+
+    Bridges, tunnels and anything on a mapped level use only their endpoints: the terrain model
+    under a bridge is the river, not the deck.
+    """
+    if not graph.elevations:
+        return None
+    nodes = edge.nodes
+    tags = way.tags
+    if _on_other_level(tags) or "level" in tags:
+        nodes = [nodes[0], nodes[-1]]
+    eles = []
+    for n in nodes:
+        lon, lat = graph.node_coords[n]
+        ele = graph.elevations.get((round(lon * 1_000_000), round(lat * 1_000_000)))
+        if ele is None:
+            return None
+        eles.append(ele)
+    climb = sum(max(0, b - a) for a, b in pairwise(eles))
+    descent = sum(max(0, a - b) for a, b in pairwise(eles))
+    return climb, descent
+
+
 def _has_closing_hours(opening_hours: str | None) -> bool:
     return opening_hours is not None and opening_hours.strip() != "24/7"
 
@@ -596,6 +623,16 @@ def main(argv: list[str] | None = None) -> None:
     if source_json.exists():
         src = json.loads(source_json.read_text(encoding="utf-8"))
         graph.source = {k: src[k] for k in ("data_as_of", "dated_url") if k in src}
+    terrain_json = Path("data") / city.id / "terrain.json"
+    cache = Path("data/raw") / f"{city.id}.elevation.bin"
+    if terrain_json.exists() and cache.exists():
+        from bdgraph.terrain import load_cache
+
+        t = json.loads(terrain_json.read_text(encoding="utf-8"))
+        graph.terrain = {k: t[k] for k in ("provider", "licence", "attribution")}
+        graph.elevations = load_cache(cache)
+    else:
+        print("No terrain cache: climb and descent will be unknown", file=sys.stderr)
     size = write_graph(graph, out / "graph.bin")
     write_stats(graph, out, graph_bytes=size)
     print(f"Wrote {out / 'graph.bin'} ({size / 1e6:.2f} MB), {len(graph.edges)} edges, "

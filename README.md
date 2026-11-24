@@ -11,7 +11,8 @@ Status: work in progress (Phase 1 of 7, the data pipeline). See [docs/PROGRESS.m
 ```sh
 python3.12 -m venv .venv
 .venv/bin/pip install -r requirements-dev.txt
-PYTHONPATH=pipeline .venv/bin/python -m bdgraph.fetch cities/lyon.json   # downloads ~534 MB once
+PYTHONPATH=pipeline .venv/bin/python -m bdgraph.fetch cities/lyon.json     # downloads ~534 MB once
+PYTHONPATH=pipeline .venv/bin/python -m bdgraph.terrain cities/lyon.json   # elevations from IGN, cached
 PYTHONPATH=pipeline .venv/bin/python -m bdgraph.build cities/lyon.json
 .venv/bin/python -m pytest
 ```
@@ -20,3 +21,4 @@ PYTHONPATH=pipeline .venv/bin/python -m bdgraph.build cities/lyon.json
 
 - Code: [MIT](LICENSE).
 - Map data: © OpenStreetMap contributors, available under the [ODbL](https://opendatacommons.org/licenses/odbl/1-0/).
+- Elevation (Lyon): IGN RGE ALTI®, [Licence Ouverte 2.0](https://www.etalab.gouv.fr/licence-ouverte-open-licence/).

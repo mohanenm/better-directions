@@ -84,8 +84,15 @@ Each question has a recommended answer and the assumption I'm working on until y
 
 </details>
 
-## Q-008 Elevation data (new data source, Big item 3)
+## Q-008 Elevation data: answered 2026-11-24, added
+
+- **Answer:** add a terrain source. Implemented with IGN RGE ALTI (see D-013): new host `data.geopf.fr`, build time only. 100% of Lyon's edges now have climb data.
+
+<details><summary>Original question</summary>
+
 
 - **Question:** add a terrain model so "steps climbed" and hill effort are real, rather than estimated from tags?
 - **Recommendation:** not now. `incline` tags and staircases are enough for Stairmaster. If wanted later: IGN RGE ALTI 5 m (Etalab open licence) or Copernicus GLO-30. Either means a new build-time download host.
 - **Assumption:** no elevation data.
+
+</details>

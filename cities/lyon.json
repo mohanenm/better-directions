@@ -7,7 +7,21 @@
     "licence": "ODbL 1.0",
     "attribution": "© OpenStreetMap contributors"
   },
-  "bbox": { "west": 4.77, "south": 45.70, "east": 4.93, "north": 45.81 },
-  "center": { "lon": 4.835, "lat": 45.762 },
-  "default_zoom": 14
+  "bbox": {
+    "west": 4.77,
+    "south": 45.7,
+    "east": 4.93,
+    "north": 45.81
+  },
+  "center": {
+    "lon": 4.835,
+    "lat": 45.762
+  },
+  "default_zoom": 14,
+  "terrain": {
+    "provider": "ign-rge-alti",
+    "resource": "ign_rge_alti_wld",
+    "licence": "Licence Ouverte 2.0 (Etalab): https://www.etalab.gouv.fr/licence-ouverte-open-licence/",
+    "attribution": "Elevation: IGN RGE ALTI®"
+  }
 }

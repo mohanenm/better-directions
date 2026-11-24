@@ -78,6 +78,30 @@ def compute_stats(graph: Graph, blob: bytes) -> dict:
         if tags.get("informal") == "yes":
             count("informal")
 
+    unknown = meta.get("climb_unknown", 0xFFFF)
+    known = steep = 0
+    steepest: tuple[float, int] = (0.0, -1)
+    for e in range(n_edges):
+        up, down = g["edge_climb_dm"][e], g["edge_descent_dm"][e]
+        if up == unknown:
+            continue
+        known += 1
+        length = g["edge_length_m"][e]
+        if length >= 20:
+            grade = max(up, down) / 10 / length
+            steep += grade >= 0.10
+            steepest = max(steepest, (grade, e))
+    steepest_name = (
+        meta["strings"][g["way_name"][g["edge_way"][steepest[1]]]] if steepest[1] >= 0 else ""
+    )
+    terrain = {
+        "source": meta.get("terrain", {}).get("attribution", "none"),
+        "edges_with_elevation_share": round(known / max(1, n_edges), 4),
+        "edges_10pct_or_steeper": steep,
+        "steepest_grade_pct": round(steepest[0] * 100, 1),
+        "steepest_name": steepest_name,
+    }
+
     venue_ids = {g["edge_venue"][e] for e in range(n_edges)} - {0}
     venues = Counter(areas[v]["kind"] for v in venue_ids)
 
@@ -92,6 +116,7 @@ def compute_stats(graph: Graph, blob: bytes) -> dict:
             "gzip_bytes": len(gzip.compress(blob, compresslevel=6, mtime=0)),
         },
         "connectivity": {k: round(v, 4) for k, v in graph.component.items()},
+        "terrain": terrain,
         "edges_by_highway": {
             k: {"edges": by_kind[k], "km": round(km_by_kind[k], 1)}
             for k in sorted(by_kind, key=lambda k: (-km_by_kind[k], k))
@@ -146,6 +171,11 @@ def render_markdown(stats: dict) -> str:
         f"| graph.bin | {g['bytes'] / 1e6:.2f} MB ({g['gzip_bytes'] / 1e6:.2f} MB gzipped) |",
         f"| Largest strongly connected component | {c['node_share']:.1%} of junctions, "
         f"{c['length_share']:.1%} of length (the rest is dropped) |",
+        f"| Terrain | {stats['terrain']['source']}: "
+        f"{stats['terrain']['edges_with_elevation_share']:.1%} of edges have climb data; "
+        f"{stats['terrain']['edges_10pct_or_steeper']:,} edges (20 m or longer) are 10%+ steep; "
+        f"steepest {stats['terrain']['steepest_grade_pct']}% "
+        f"({stats['terrain']['steepest_name'] or 'unnamed'}) |",
         "",
         "## Fun features",
         "",

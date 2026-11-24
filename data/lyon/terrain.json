@@ -1,0 +1,9 @@
+{
+  "provider": "ign-rge-alti",
+  "resource": "ign_rge_alti_wld",
+  "licence": "Licence Ouverte 2.0 (Etalab): https://www.etalab.gouv.fr/licence-ouverte-open-licence/",
+  "attribution": "Elevation: IGN RGE ALTI®",
+  "fetched": "2026-11-24",
+  "points": 246965,
+  "points_with_elevation": 246965
+}

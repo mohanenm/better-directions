@@ -23,6 +23,7 @@ Each section is a typed array: `{ "name", "type", "count" }`, where type is one 
 | `format`, `version` | `"better-directions-graph"`, `1` |
 | `city` | `id`, `name`, `bbox` (`west south east north`) |
 | `attribution`, `licence`, `source.data_as_of` | Shown in the app: "© OpenStreetMap contributors", ODbL, the OSM data date |
+| `terrain` | `provider`, `licence`, `attribution` of the elevation source (empty if none). The attribution must be shown in the app. |
 | `coord_scale` | `1000000`: coordinates are integer microdegrees (~0.1 m) |
 | `counts` | `nodes`, `edges`, `ways` |
 | `flags.edge`, `flags.node_ctx` | Bit values for `edge_flags` and `node_ctx` (below) |
@@ -44,6 +45,7 @@ Each section is a typed array: `{ "name", "type", "count" }`, where type is one 
 | `edge_flags` | u8 | edge | Bit 0: walkable forward. Bit 1: walkable backward. Bit 2: step count estimated. Bit 3: may be closed (corridors, passages through buildings, covered ways in malls or stations, anything with `opening_hours`, paths in parks with `opening_hours`). Bit 4: passes through a building via a mapped passage. Bit 5: a road running under a building with no tunnel tag (kept, but the app must disclose it). |
 | `edge_steps` | u16 | edge | Steps on this edge (staircases only). From `step_count`, split across edges by length, or estimated at 0.3 m per step. |
 | `edge_park`, `edge_venue`, `edge_building` | u16 | edge | Index into `areas` (0 = none). `edge_building` is set for passages through a building (bit 4) and roads under one (bit 5). |
+| `edge_climb_dm`, `edge_descent_dm` | u16 | edge | Metres ×10 climbed and descended walking the edge forward (swap them for backward). `65535` (`meta.climb_unknown`) means unknown. Bridges, tunnels and levelled ways use endpoints only. |
 | `edge_geom_offset` | u32 | edge + 1 | Byte offsets into `geom` |
 | `geom` | u8 | | Intermediate points per edge, endpoints excluded: zigzag-varint deltas (lon, then lat) in microdegrees, starting from the `from` node |
 | `way_osm_id` | f64 | way | OSM way id (exact as a double up to 2^53) |
