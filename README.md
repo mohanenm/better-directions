@@ -4,7 +4,7 @@ A deliberately silly walking-directions app. Pick a start and an end, choose a m
 
 > **For fun.** Use common sense, follow signs and local rules, and don't follow it anywhere that looks unsafe or closed.
 
-Status: work in progress (Phase 1 of 7, the data pipeline). See [docs/PROGRESS.md](docs/PROGRESS.md).
+Status: work in progress. The data pipeline and router core are done; the modes are next. See [docs/PROGRESS.md](docs/PROGRESS.md).
 
 ## Building the graph
 
@@ -15,6 +15,14 @@ PYTHONPATH=pipeline .venv/bin/python -m bdgraph.fetch cities/lyon.json     # dow
 PYTHONPATH=pipeline .venv/bin/python -m bdgraph.terrain cities/lyon.json   # elevations from IGN, cached
 PYTHONPATH=pipeline .venv/bin/python -m bdgraph.build cities/lyon.json
 .venv/bin/python -m pytest
+```
+
+## Router (TypeScript)
+
+```sh
+npm ci
+npm run check   # typecheck, lint, tests (including the safety property test)
+npm run bench   # routing benchmark on the Lyon graph
 ```
 
 ## Licences

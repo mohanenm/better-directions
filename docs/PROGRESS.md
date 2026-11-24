@@ -4,12 +4,79 @@
 
 - [x] **Phase 0: Decisions.** Approved 2026-11-24.
 - [x] **Phase 1: Data pipeline.** Done 2026-11-24, including the approved rule changes Q-004 to Q-006.
-- [ ] Phase 2: Router core
+- [x] **Phase 2: Router core.** Done 2026-11-24.
 - [ ] Phase 3: The modes
 - [ ] Phase 4: The web page
 - [ ] Phase 5: Delight
 - [ ] Phase 6: GPS art (stretch)
 - [ ] Phase 7: Hardening and launch prep (no deploy)
+
+## Phase 2: Router core (2026-11-24)
+
+### Built (TypeScript, `app/src/`)
+
+- **Graph decoder** (`graph/format.ts`) and **graph class** (`graph/graph.ts`): zero-copy views, CSR adjacency, edge geometry, climb, and bearings (precomputed, for turn-aware modes).
+- **Load-time safety audit:** every way tagset, node (with context bits), direction flag and building flag is re-checked against the TypeScript rules (`safety/rules.ts`). Those rules pass the same 121 shared cases as the Python build.
+- **A\* over directed edges** (`router/astar.ts`): pluggable cost models, turn-aware by construction, an enforced admissibility contract, reused buffers and deterministic tie-breaks.
+- **Walking time** (`router/time.ts`): Tobler's function on terrain grade, per-step stair times.
+- **Planner** (`router/planner.ts`): normal plus better route, with the detour cap (`safety/limits.ts`: 4×, at most 60 min) enforced by pruning, then blending, then falling back to the normal route.
+- **Final route check** (`router/verify.ts`), seeded hash RNG (`router/rng.ts`), and nearest-node lookup (`router/snap.ts`).
+- **CI workflow:** `.github/workflows/ci.yml`. Not pushed, so it has never run.
+
+### Also this round (follow-ups to Phase 1, approved by you)
+
+- **Roads under buildings** (Q-007) are kept with flag bit 5, so the app can disclose them. That's 162 Lyon edges, 5.3 km.
+- **Terrain** (Q-008): IGN RGE ALTI via `data.geopf.fr`, covering 100% of Lyon's edges with climb data. Plausibility check: the biggest staircase is the Montée Nicolas de Lange up to Fourvière, 562 steps and 68 m up.
+- The Lyon graph is now 9.62 MB raw, 3.09 MB gzipped.
+
+### Tests
+
+- **TypeScript (148 unit tests, 0.3 s):**
+  - shared safety cases
+  - the decoder, including rejecting bad files
+  - the audit on tampered graphs (a private way, a locked node, lying direction flags)
+  - known routes on the mini-town (the diagonal, no private shortcut, the one-way)
+  - stairs timing, the cost-model contract, and turn-aware routing
+  - Tobler on the sloped grid: east (uphill) is more than 20% slower than west
+  - detour cap maths and an adversary that forces the cap to act
+  - seeded determinism
+- **Safety property test (~2.3 min):**
+  - 2,000 random Lyon pairs across four models, plus 250 on a tampered graph, checked by an independent oracle
+  - no unsafe route and no cap breach
+  - the real graph passes the audit with 0 violations
+- **Python:** 171 fixture tests (0.4 s), plus 5 real-data tests (63 s). The fixture tests include a check that the TypeScript fixture graphs are current.
+
+### Performance (`npm run bench`, Apple laptop)
+
+| | |
+|---|---|
+| Load + audit | 112 ms |
+| Router setup | 25 ms |
+| Normal route, 0.5–3 km | median 3.9 ms, p90 10 ms, max 31 ms |
+| Full plan (normal + random-weights better), 0.5–3 km | median 14 ms, p90 30 ms, max 55 ms |
+
+A mid-range phone should be roughly 5× slower, which is still well under 1 s. Phase 7 measures on a real low-end phone.
+
+### Self-review
+
+- **Safety:**
+  - Three layers in the app: audit, search filter, final check (D-016).
+  - The tampered-graph property test shows a bad file can't route through disabled ways or nodes.
+  - The detour cap is frozen constants, not a parameter.
+  - Snapping only picks nodes with walkable edges.
+- **Found:** a "forbid right turns" model is the slowest (~80 ms per plan). When a capped search can't finish, the planner tries blends before falling back. Phase 3's real mode will penalise right turns instead of forbidding them, which also keeps routes possible.
+- **Found:** a 70% "steepest edge" in the terrain stats, probably a path below a retaining wall where the bare-earth model jumps. The router naturally avoids it (Tobler makes it very slow). Phase 3 will check whether it distorts Stairmaster.
+- **Fun:** not testable until Phase 3's modes exist. The core already supports everything they need: turn angles, seeds, climb, steps, parks, buildings, venues.
+
+### Decisions
+
+D-012 to D-017.
+
+### Skipped, and why
+
+- Sample routes per mode: Phase 3.
+- Real-phone timing: Phase 7.
+- Running CI: needs a push, which is a big item.
 
 ## Phase 1: Data pipeline (2026-11-24)
 

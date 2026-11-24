@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { CostModelError, NORMAL, Router, type CostModel } from "../src/router/astar";
 import { turnAngleDeg } from "../src/router/geometry";
+import { hashUnit } from "../src/router/rng";
 import { FLAT_SPEED_MS, edgeTimeSeconds, toblerKmh } from "../src/router/time";
 import { loadFixture, nodeAt, wayNames } from "./helpers";
 
@@ -97,5 +98,38 @@ describe("turn angles", () => {
     // Reversing both edges mirrors the turn.
     const back = turnAngleDeg(grid, r.dirEdges[1]! ^ 1, r.dirEdges[0]! ^ 1);
     expect(back).toBeCloseTo(-angle, 3);
+  });
+});
+
+describe("seeded determinism", () => {
+  const grid = loadFixture("grid.bin");
+  const seeded = (seed: number): CostModel => ({
+    id: `seed-${seed}`,
+    turnAware: false,
+    minCostPerSecond: 0.2,
+    edgeCost: (_g, d, t) => t * (0.2 + 4 * hashUnit(seed, d >>> 1)),
+  });
+
+  it("the same seed gives the same route, on a fresh router too", () => {
+    const a = new Router(grid).route(nodeAt(grid, 0, 0), nodeAt(grid, 400, 400), seeded(7))!;
+    const b = new Router(grid).route(nodeAt(grid, 0, 0), nodeAt(grid, 400, 400), seeded(7))!;
+    expect(b.dirEdges).toEqual(a.dirEdges);
+  });
+
+  it("different seeds explore different routes", () => {
+    const router = new Router(grid);
+    const routes = new Set(
+      [1, 2, 3, 4, 5, 6, 7, 8].map((s) => router.route(nodeAt(grid, 0, 0), nodeAt(grid, 400, 400), seeded(s))!.dirEdges.join(",")),
+    );
+    expect(routes.size).toBeGreaterThan(3);
+  });
+
+  it("hashUnit is stable across calls and in [0, 1)", () => {
+    expect(hashUnit(42, 99)).toBe(hashUnit(42, 99));
+    for (let i = 0; i < 1000; i++) {
+      const v = hashUnit(i, i * 31);
+      expect(v).toBeGreaterThanOrEqual(0);
+      expect(v).toBeLessThan(1);
+    }
   });
 });

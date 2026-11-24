@@ -110,3 +110,48 @@ These don't loosen any rule, so they didn't need approval. Each is in `safety/ca
   - Downloading RGE ALTI tiles: multi-GB 7z archives, and it needs a raster library.
 - **Why:** correct bare-earth heights at stair resolution, no new dependency, a light load on the service, and an open licence (Licence Ouverte 2.0, attribution "IGN RGE ALTI®", shown in the app via `meta.terrain`). The provider is pluggable per city (`cities/<id>.json` → `terrain.provider`), so a non-French city can plug in its own national bare-earth service.
 - **Reversible:** remove the `terrain` section from the city config and every climb becomes unknown.
+
+## D-014 Lint: allow `!` non-null assertions in TypeScript
+
+- **Choice:** typescript-eslint's strict preset, minus `no-non-null-assertion`.
+- **Alternatives:** keep the rule and write `?? 0` or guards on every typed-array read.
+- **Why:** with `noUncheckedIndexedAccess`, every typed-array read in the hot loops is `T | undefined`. The bounds come from the decoded format, which is checked at load. Fake fallbacks would hide real bugs, and `!` is the honest annotation.
+- **Reversible:** one line in `eslint.config.js`.
+
+## D-015 Router design
+
+- **Choice:**
+  - **Search:** A* over *directed edges*, so every mode, turn-aware or not, uses one search.
+  - **Cost models:** each declares `minCostPerSecond`. The heuristic is straight-line distance at the model's top walking speed (6 km/h) times that minimum, so it stays admissible. The router throws if a model undercuts it.
+  - **Walking time:** Tobler's hiking function on the edge's net grade from terrain. Stairs take 0.6 s per step up, 0.45 s down, 0.55 s if the direction is unknown.
+  - **Detour cap:** `max(normal, min(4 × normal, 60 min))`, as frozen constants in `safety/limits.ts`. The planner prunes partial routes that can't finish under the cap. If the result is still over, it blends time back in (λ = 1, 4, 16, 64), and failing that it returns the normal route.
+  - **Final check:** every route passes `assertRouteSafe`, which re-runs the rules from tags.
+- **Alternatives:**
+  - Node-based A* with a separate turn-aware variant (two searches to keep correct).
+  - Bidirectional search (awkward with turn costs).
+  - Resource-constrained exact search for the cap (much slower; blending plus the final check already guarantees the cap).
+- **Why:** one simple, deterministic search. Typical plans take ~14 ms median on a laptop.
+- **Reversible:** cost models are plain objects; the search is ~150 lines.
+
+## D-016 Three layers of safety checks in the app
+
+- **Choice:**
+  1. A **load-time audit** re-runs every rule on the decoded file and disables failing edges, nodes and directions.
+  2. The **search** only relaxes directions the audit allowed.
+  3. **`assertRouteSafe`** re-checks the final route from raw tags, plus connectivity and the cap.
+  The property test uses its own fourth oracle.
+- **Alternatives:** trust the build.
+- **Why:** the brief asks for defence in depth. The audit costs ~110 ms at load, and the final check costs microseconds.
+- **Reversible:** yes, but don't.
+
+## D-017 Property test scope and CI
+
+- **Choice:**
+  - **Pairs:** random Lyon pairs within 5 km.
+  - **Models:** normal, seeded random weights, never-right (right turns forbidden), and an adversarial model that craves passages, roads under buildings, stairs and may-close edges.
+  - **Runs:** 500 per model (`PROPERTY_RUNS`), plus 250 on a tampered graph (1 in 15 tagsets made private, 1 in 50 nodes locked).
+  - **Speed:** ~2.3 minutes locally.
+  - **CI:** GitHub Actions with pinned action SHAs, `contents: read` and no persisted credentials. The workflow file exists but has never been pushed, so it has never run.
+  - **Later:** Phase 3 adds the real modes to the property test, and Phase 7 reruns it at a much higher count.
+- **Alternatives:** unlimited pair distance (4× slower, for little extra coverage).
+- **Reversible:** env var and one constant.
