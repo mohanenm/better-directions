@@ -26,3 +26,70 @@ Each entry: the choice, the alternatives, why, and how reversible it is.
 - **Alternatives:** serve one `.pmtiles` file and read it with range requests.
 - **Why:** tested on 2026-11-24 against a real PMTiles file on Pages (`pmtiles.io/protomaps(vector)ODbL_firenze.pmtiles`). When the request carries `Accept-Encoding: gzip`, which browsers always send and scripts cannot remove, Pages gzips the whole file and applies the range to the compressed stream. The total length changes from 6,601,156 to 6,602,554 bytes and the body starts with gzip magic `1f8b` instead of `PMTiles`. Mid-file ranges therefore decode to garbage.
 - **Reversible:** yes, if GitHub changes this behaviour; re-run the curl check in the proposal.
+
+## D-004 Build tooling: Python 3.12 in a project venv, pinned dev requirements
+
+- **Choice:** `.venv` with Homebrew's Python 3.12. `requirements-dev.txt` pins `osmium`, `pytest` and `ruff`; ruff and pytest are configured in `pyproject.toml`.
+- **Alternatives:** system Python 3.9 (end of life); uv or Poetry (extra tools nobody asked for).
+- **Why:** it's the smallest setup that is reproducible in CI with `actions/setup-python`.
+- **Reversible:** easy.
+
+## D-005 Greater Lyon crop, whole ways kept
+
+- **Choice:** bbox 4.77–4.93 E, 45.70–45.81 N (~12 × 12 km: Lyon, Villeurbanne, and the edges of neighbouring towns). The crop keeps every way touching the bbox whole, plus the nodes it references. The graph itself only uses segments inside the bbox.
+- **Alternatives:** the administrative boundary polygon (oddly shaped, and it splits Villeurbanne off); a smaller centre-only box (loses Parc de la Tête d'Or and the hills' edges).
+- **Why:** areas such as parks and buildings stay complete, so containment tests are right at the edges. The crop is 21 MB and takes ~3 minutes; the build takes 30 s.
+- **Reversible:** edit `cities/lyon.json` and re-run the setup step.
+
+## D-006 Extra exclusions stricter than the brief
+
+These don't loosen any rule, so they didn't need approval. Each is in `safety/cases.json`.
+
+- `foot=use_sidepath` excluded, like `foot=no`.
+- `highway=proposed` treated like construction.
+- Cycleways and bridleways need explicit `foot=yes|designated|permissive`. France's default is no pedestrians on cycleways.
+- Escalators with unknown direction (`conveying=yes|reversible`) excluded; directional ones are one-way.
+- `sac_scale` beyond `mountain_hiking`, and `trail_visibility=bad|horrible|no`, excluded.
+- Nodes: `access=private|no` (unless `foot` explicitly permits), `foot=no|private`, `locked=yes` and `crossing=no` block passage.
+- Nodes shared with a wall, fence or hedge block passage unless tagged as a gate or other opening.
+- Nodes shared with an excluded motorway or trunk block passage unless tagged as a crossing or traffic signals.
+- **Geometric checks:** a walkable segment that crosses a railway track or excluded fast road at grade with no shared node is dropped. So is one that lies inside a building footprint without being a mapped passage (sampled every 4 m, ignoring points within 0.75 m of a wall, so sidewalks drawn on facades survive).
+- Under the strict reading, `access=no` + `foot=yes` stays excluded, and only `covered=yes` (not `covered=arcade`) counts as a covered passage.
+- **Reversible:** each is one rule plus one case.
+
+## D-007 Keep only the largest strongly connected component
+
+- **Choice:** drop everything outside the largest strongly connected component, respecting pedestrian one-ways.
+- **Alternatives:** the weakly connected component (the router could then get stuck, e.g. at the bottom of a one-way escalator); keep everything and handle failures at query time.
+- **Why:** every start/end pair is routable, which makes the property test meaningful and the app predictable.
+- **Reversible:** easy.
+
+## D-008 Graph file design
+
+- **Choice:** a single binary file: JSON meta followed by 8-byte-aligned typed-array sections. Coordinates are microdegrees, and geometry is varint-delta. Way and node tags are deduplicated into tagsets (see [GRAPH_FORMAT.md](GRAPH_FORMAT.md)).
+- **Alternatives:** GeoJSON (~10× bigger, slow to parse); protobuf or flatbuffers (a new dependency); separate files per array (more requests).
+- **Why:** zero-copy `TypedArray` views in the browser. The file keeps the raw safety-relevant tags, so the router re-runs exactly the same rules from `safety/cases.json`. Lyon is 6.6 MB raw, 2.2 MB gzipped. Only junctions and rule-relevant points are nodes; shape points live in the geometry stream.
+- **Reversible:** the format is versioned (`BDG1`, version 1).
+
+## D-009 No elevation data yet
+
+- **Choice:** slope comes only from `incline` tags and staircases. Step counts come from `step_count`, or are estimated at 0.3 m of run per step (marked as estimated).
+- **Alternatives:** a terrain model (IGN RGE ALTI, Copernicus GLO-30). That would be a new data source and download host, so it needs approval (see open questions).
+- **Reversible:** add an elevation pass later; the format has room via a new section.
+
+## D-010 Parks, venues and "may close"
+
+- **Choice:**
+  - **Parks:** `leisure=park`.
+  - **Venues:** `shop=mall` areas and `building=train_station` (or areas tagged both `railway=station` and `public_transport=station`).
+  - **"May be closed" flag:** corridors, any passage through a building, covered ways inside a mall or station, anything with `opening_hours`, and paths inside parks that have `opening_hours` (Lyon's big parks lock their gates at night).
+- **Alternatives:** include `leisure=garden` (many are private); a narrower "may close" (would miss traboule doors that lock at night).
+- **Why:** it errs towards warning people.
+- **Reversible:** easy.
+
+## D-011 Don't commit graph.bin until the railway-crossing question is settled
+
+- **Choice:** the built graph goes to `app/public/data/lyon/graph.bin` but stays uncommitted for now.
+- **Alternatives:** commit it now (a 6.6 MB binary that will change as soon as Q-004 is answered).
+- **Why:** avoids stacking large binaries in git history. Once the rules settle, it will be committed, so CI and Pages don't need the 534 MB download.
+- **Reversible:** yes.

@@ -1,0 +1,8 @@
+{
+  "provider": "Geofabrik",
+  "dated_url": "https://download.geofabrik.de/europe/france/rhone-alpes/rhone-alpes-261123.osm.pbf",
+  "data_as_of": "2026-11-23T21:21:17Z",
+  "licence": "ODbL 1.0",
+  "attribution": "\u00a9 OpenStreetMap contributors",
+  "cropped_sha256": "261e419910fdde7095e1c8938cd429eb57c9f4f3ca5894adc38981da856bc502"
+}
