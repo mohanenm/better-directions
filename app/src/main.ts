@@ -2,6 +2,7 @@
  * Page controller. Everything runs on the device: the planner in a Web Worker, place search over
  * a local list, and location only when the user taps "Use my location".
  */
+import { CITY, cityData } from "./city";
 import "./style.css";
 import { SHAPE_IDS, SHAPES, type ShapeId } from "./art/shapes";
 import { MODE_IDS, MODES, type ModeId } from "./modes/modes";
@@ -36,7 +37,7 @@ function setStatus(text: string, error = false): void {
 // --- Worker ------------------------------------------------------------------------------------
 
 const worker = new Worker(new URL("./worker.ts", import.meta.url), { type: "module" });
-setStatus("Loading the map of Lyon…");
+setStatus(`Loading the map of ${CITY.name} (about 3 MB the first time)…`);
 
 worker.addEventListener("message", (event: MessageEvent<FromWorker>) => {
   const msg = event.data;
@@ -52,6 +53,7 @@ worker.addEventListener("message", (event: MessageEvent<FromWorker>) => {
 
 function onReady(ready: ReadyInfo): void {
   info = ready;
+  document.documentElement.dataset["loadTimings"] = JSON.stringify(ready.timings);
   if (ready.dataAsOf) $("#data-date").textContent = `, data as of ${ready.dataAsOf.slice(0, 10)}`;
   if (ready.terrainAttribution) $("#terrain-credit").textContent = ready.terrainAttribution;
   Object.assign(state, parseLink(window.location.search, ready.bbox));
@@ -131,7 +133,7 @@ function locate(end: End): void {
       const point: [number, number] = [pos.coords.longitude, pos.coords.latitude];
       const b = info?.bbox;
       if (b && (point[0] < b.west || point[0] > b.east || point[1] < b.south || point[1] > b.north)) {
-        setStatus("You seem to be outside Lyon. Better Directions only knows Lyon for now.", true);
+        setStatus(`You seem to be outside ${CITY.name}. Better Directions only knows ${CITY.name} for now.`, true);
         return;
       }
       setEnd(end, point, "My location");
@@ -329,7 +331,7 @@ function requestArt(): void {
   const len = document.querySelector<HTMLInputElement>(`input[name="art-len"][value="${state.artMinutes}"]`);
   if (len) len.checked = true;
   $<HTMLDetailsElement>("#art").open = true;
-  setStatus(`Drawing a ${SHAPES[state.art].label.toLowerCase()} with Lyon's streets…`);
+  setStatus(`Drawing a ${SHAPES[state.art].label.toLowerCase()} with ${CITY.name}'s streets…`);
   worker.postMessage({ type: "art", id: requestId, start: state.from, fromName: state.fromName ?? "your start", shape: state.art, minutes: state.artMinutes });
 }
 
@@ -379,7 +381,7 @@ $("#famous-list").replaceChildren(
 
 // --- Places --------------------------------------------------------------------------------------
 
-fetch(`${import.meta.env.BASE_URL}data/lyon/places.json`)
+fetch(cityData("places.json"))
   .then((res) => (res.ok ? res.json() : []))
   .then((list: Place[]) => {
     places = list;

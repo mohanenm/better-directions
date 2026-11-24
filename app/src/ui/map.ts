@@ -2,6 +2,7 @@
  * The map: MapLibre with the self-hosted Protomaps basemap (tiles, fonts and sprites all served
  * by this site), plus the two routes and the start/end markers.
  */
+import { CITY } from "../city";
 import { layers, namedFlavor } from "@protomaps/basemaps";
 import {
   LngLatBounds,
@@ -51,7 +52,7 @@ export function createMap(container: HTMLElement, bbox: Bbox): RouteMap {
           bounds: [bbox.west, bbox.south, bbox.east, bbox.north],
         },
       },
-      layers: layers("protomaps", namedFlavor("light"), { lang: "fr" }),
+      layers: layers("protomaps", namedFlavor("light"), { lang: CITY.labelLang }),
     },
     bounds: [bbox.west, bbox.south, bbox.east, bbox.north],
     maxBounds: [bbox.west - 0.03, bbox.south - 0.02, bbox.east + 0.03, bbox.north + 0.02],

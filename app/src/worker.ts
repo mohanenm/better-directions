@@ -2,6 +2,7 @@
  * Planning worker: loads the graph once, then plans routes on request. Runs off the main thread
  * so the page never freezes. Everything happens on the device; nothing is sent anywhere.
  */
+import { cityData } from "./city";
 import { drawShape } from "./art/fit";
 import { SHAPES } from "./art/shapes";
 import { Graph, type LonLat } from "./graph/graph";
@@ -19,10 +20,16 @@ let state: { g: Graph; router: Router; fi: FeatureIndex; index: NodeIndex } | nu
 const post = (msg: FromWorker) => self.postMessage(msg);
 
 async function init(): Promise<void> {
-  const res = await fetch(`${import.meta.env.BASE_URL}data/lyon/graph.bin`);
+  const t0 = performance.now();
+  const res = await fetch(cityData("graph.bin"));
   if (!res.ok) throw new Error(`Couldn't load the map data (${res.status}).`);
-  const g = Graph.fromBuffer(await res.arrayBuffer());
+  const buffer = await res.arrayBuffer();
+  const t1 = performance.now();
+  const g = Graph.fromBuffer(buffer);
+  const t2 = performance.now();
   state = { g, router: new Router(g), fi: new FeatureIndex(g), index: new NodeIndex(g) };
+  const t3 = performance.now();
+  const timings = { fetchMs: Math.round(t1 - t0), decodeAuditMs: Math.round(t2 - t1), indexMs: Math.round(t3 - t2), graphBytes: buffer.byteLength };
   post({
     type: "ready",
     info: {
@@ -32,6 +39,7 @@ async function init(): Promise<void> {
       terrainAttribution: g.meta.terrain.attribution ?? "",
       dataAsOf: g.meta.source.data_as_of ?? "",
       violations: g.violations.length,
+      timings,
     },
   });
 }

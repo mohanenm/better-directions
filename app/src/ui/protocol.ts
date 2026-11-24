@@ -11,6 +11,8 @@ export interface ReadyInfo {
   terrainAttribution: string;
   dataAsOf: string;
   violations: number;
+  /** Milliseconds spent loading in the worker (for performance checks). */
+  timings: { fetchMs: number; decodeAuditMs: number; indexMs: number; graphBytes: number };
 }
 
 export interface PlanRequest {

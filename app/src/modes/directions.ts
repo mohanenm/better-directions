@@ -58,7 +58,7 @@ const GENERIC_NAMES: Record<string, string> = {
 
 const QUIPS: Record<ModeId | "normal" | "art", { start: string[]; arrive: string[] }> = {
   art: {
-    start: ["Somewhere above you, a satellite is about to be impressed.", "You are the pen. Lyon is the paper."],
+    start: ["Somewhere above you, a satellite is about to be impressed.", "You are the pen. The city is the paper."],
     arrive: ["Masterpiece complete. Check your GPS app.", "Art delivered, one step at a time."],
   },
   buildings: {

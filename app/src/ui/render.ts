@@ -1,4 +1,5 @@
 /** Renders a planned route as text: summary, stats, notes and step-by-step directions. */
+import { CITY } from "../city";
 import type { CostOfFun } from "../modes/stats";
 import type { Step } from "../modes/directions";
 import type { ArtResultMsg, PlanResult } from "./protocol";
@@ -67,11 +68,11 @@ export function renderResult(r: PlanResult, onStep: (at: [number, number]) => vo
 }
 
 export function artSummary(r: ArtResultMsg): string {
-  return `A ${r.label.toLowerCase()} drawn with Lyon's streets: ${r.likeness}% likeness, ${(r.stats.lengthM / 1000).toFixed(1)} km, ${Math.max(1, Math.round(r.stats.timeS / 60))} min.`;
+  return `A ${r.label.toLowerCase()} drawn with ${CITY.name}'s streets: ${r.likeness}% likeness, ${(r.stats.lengthM / 1000).toFixed(1)} km, ${Math.max(1, Math.round(r.stats.timeS / 60))} min.`;
 }
 
 export function artName(r: ArtResultMsg): string {
-  return `The Lyon ${r.label.replace("Letter ", "")}`;
+  return `The ${CITY.name} ${r.label.replace("Letter ", "")}`;
 }
 
 function artStats(r: ArtResultMsg): [string, string][] {
