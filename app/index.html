@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <meta name="referrer" content="no-referrer">
+    <meta name="color-scheme" content="light">
+    <title>Better Directions: the long way round, on purpose</title>
+    <meta name="description" content="A deliberately silly walking router for Lyon: up every staircase, through every traboule, across every park. For fun.">
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+    <script type="module" src="/src/main.ts"></script>
+  </head>
+  <body>
+    <a class="skip-link" href="#planner">Skip to the route planner</a>
+
+    <header class="banner">
+      <h1>Better <span>Directions</span></h1>
+      <p class="novelty" id="novelty"><strong>For fun.</strong> Use common sense, follow signs and local rules, and don't follow it anywhere that looks unsafe or closed.</p>
+    </header>
+
+    <main class="layout">
+      <div id="map" class="map" role="region" aria-label="Map of Lyon. Choose places with the search fields, or tap the map. Arrow keys pan, plus and minus zoom." tabindex="0"></div>
+
+      <section id="panel" class="panel" aria-labelledby="planner-title">
+        <h2 id="planner-title" class="visually-hidden">Plan a better route</h2>
+
+        <form id="planner" class="planner" novalidate>
+          <div class="endpoint" data-end="from">
+            <label for="from-input">From</label>
+            <div class="combo">
+              <input id="from-input" type="text" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="from-list" autocomplete="off" placeholder="Search Lyon places, or tap the map" spellcheck="false">
+              <ul id="from-list" class="options" role="listbox" aria-label="Matching places" hidden></ul>
+            </div>
+            <div class="endpoint-actions">
+              <button type="button" class="link-button" data-action="locate">Use my location</button>
+              <button type="button" class="link-button" data-action="centre">Use map centre</button>
+            </div>
+          </div>
+
+          <div class="endpoint" data-end="to">
+            <label for="to-input">To</label>
+            <div class="combo">
+              <input id="to-input" type="text" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="to-list" autocomplete="off" placeholder="Search Lyon places, or tap the map" spellcheck="false">
+              <ul id="to-list" class="options" role="listbox" aria-label="Matching places" hidden></ul>
+            </div>
+            <div class="endpoint-actions">
+              <button type="button" class="link-button" data-action="centre">Use map centre</button>
+              <button type="button" class="link-button" data-action="swap">Swap start and end</button>
+            </div>
+          </div>
+
+          <fieldset class="modes">
+            <legend>How should it be better?</legend>
+            <div class="mode-grid" id="mode-grid"></div>
+          </fieldset>
+
+          <div class="seed-row" id="seed-row" hidden>
+            <span>Chaos seed <output id="seed-value" for="shuffle">1</output></span>
+            <button type="button" id="shuffle" class="secondary">Roll a new adventure</button>
+          </div>
+
+          <button type="submit" class="go" id="go">Find the better route</button>
+        </form>
+
+        <div id="status" class="status" role="status" aria-live="polite"></div>
+        <div id="announcer" class="visually-hidden" aria-live="polite"></div>
+
+        <section id="result" class="result" aria-labelledby="result-title" hidden tabindex="-1">
+          <h2 id="result-title">The cost of fun</h2>
+          <p class="summary" id="summary"></p>
+          <div class="legend" aria-hidden="true">
+            <span class="swatch normal"></span> Normal route
+            <span class="swatch better"></span> Better route
+          </div>
+          <dl class="stats" id="stats"></dl>
+          <p class="late-hint" id="late-hint" hidden>It's late. Some parks and passages on this route may already be locked: check the notes below.</p>
+          <ul class="notes" id="notes" aria-label="Things to know"></ul>
+          <div class="share-row">
+            <button type="button" id="share" class="secondary">Share this route</button>
+            <span class="share-note">The link includes your start and end points.</span>
+          </div>
+          <h3>Step by step</h3>
+          <ol class="steps" id="steps"></ol>
+        </section>
+      </section>
+    </main>
+
+    <footer class="attribution">
+      <p>
+        Map data © <a href="https://www.openstreetmap.org/copyright" rel="noopener noreferrer" target="_blank">OpenStreetMap contributors</a> (ODbL)<span id="data-date"></span>
+        · Basemap by <a href="https://protomaps.com" rel="noopener noreferrer" target="_blank">Protomaps</a>
+        · <span id="terrain-credit">Elevation: IGN RGE ALTI®</span>
+      </p>
+      <p>Private by design: no cookies, no tracking, and your route is planned on your device. Nothing leaves your phone.</p>
+    </footer>
+  </body>
+</html>

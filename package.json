@@ -15,7 +15,11 @@
     "typecheck": "tsc --noEmit",
     "check": "npm run typecheck && npm run lint && npm run test",
     "bench": "vitest run --config vitest.bench.config.ts app/bench/route.bench.ts --silent=false --disableConsoleIntercept",
-    "samples": "vitest run --config vitest.bench.config.ts app/bench/samples.bench.ts"
+    "samples": "vitest run --config vitest.bench.config.ts app/bench/samples.bench.ts",
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "smoke": "node scripts/smoke.mjs"
   },
   "devDependencies": {
     "@eslint/js": "10.0.1",
@@ -24,6 +28,11 @@
     "fast-check": "4.11.0",
     "typescript": "6.0.3",
     "typescript-eslint": "8.74.0",
+    "vite": "8.3.8",
     "vitest": "5.1.1"
+  },
+  "dependencies": {
+    "@protomaps/basemaps": "5.7.2",
+    "maplibre-gl": "6.19.0"
   }
 }

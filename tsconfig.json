@@ -15,5 +15,5 @@
     "noEmit": true,
     "types": ["node"]
   },
-  "include": ["app/src", "app/test", "app/bench", "vitest.config.ts", "vitest.bench.config.ts", "eslint.config.js"]
+  "include": ["app/src", "app/test", "app/bench", "vite.config.ts", "vitest.config.ts", "vitest.bench.config.ts", "eslint.config.js"]
 }
