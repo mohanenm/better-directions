@@ -28,6 +28,8 @@ const CASES = [
   { name: "phone-empty", width: 420, height: 900, mobile: true, query: "", expectRoute: false },
   { name: "keyboard-only", width: 420, height: 2000, mobile: true, query: "", keyboard: true },
   { name: "famous-and-share", width: 420, height: 3200, mobile: true, query: "", famous: true },
+  { name: "gps-art-heart", width: 1280, height: 900, mobile: false,
+    query: "?from=4.84500,45.75100&fromName=Guilloti%C3%A8re&art=heart&len=55" },
 ];
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -102,7 +104,7 @@ async function runCase(c) {
   for (let i = 0; i < 120; i++) {
     await sleep(250);
     status = (await evaluate("(document.getElementById('announcer')?.textContent || document.getElementById('status')?.textContent) ?? ''")) ?? "";
-    if (wantRoute ? status.startsWith("Route ready") : status.startsWith("Pick a start")) break;
+    if (wantRoute ? /^(Route|Drawing) ready/.test(status) : status.startsWith("Pick a start")) break;
   }
   await sleep(1500); // let the map draw the route
   if (c.famous) {
@@ -134,9 +136,10 @@ async function runCase(c) {
     noStorage: await evaluate("localStorage.length === 0 && sessionStorage.length === 0"),
   };
   if (wantRoute) {
-    checks.route = status.startsWith("Route ready");
+    checks.route = /^(Route|Drawing) ready/.test(status);
     checks.steps = (await evaluate("document.querySelectorAll('#steps li').length")) > 2;
-    checks.summary = /Normal: \d+ min\. Better: \d+ min/.test((await evaluate("document.getElementById('summary').textContent")) ?? "");
+    const summary = (await evaluate("document.getElementById('summary').textContent")) ?? "";
+    checks.summary = /Normal: \d+ min\. Better: \d+ min/.test(summary) || /likeness/.test(summary);
     checks.seedRowHiddenUnlessChaos = await evaluate("(getComputedStyle(document.getElementById('seed-row')).display === 'none') === !location.search.includes('mode=chaos')");
   }
   for (const [k, ok] of Object.entries(checks)) if (!ok) problems.push(`check failed: ${k}`);
