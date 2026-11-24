@@ -1,115 +1,933 @@
 {
   "about": "Shared safety conformance cases. The Python graph build and the TypeScript router must both return exactly these results. 'excluded' is the reason string, or null if allowed. Never edit a case to make a test pass without the project owner's approval if it loosens a rule.",
   "ways": [
-    {"name": "plain footway", "tags": {"highway": "footway"}, "excluded": null},
-    {"name": "residential street", "tags": {"highway": "residential"}, "excluded": null},
-    {"name": "primary road", "tags": {"highway": "primary"}, "excluded": null},
-    {"name": "steps", "tags": {"highway": "steps", "step_count": "42"}, "excluded": null},
-    {"name": "park path, unpaved", "tags": {"highway": "path", "surface": "dirt"}, "excluded": null},
-    {"name": "not a highway", "tags": {"building": "yes"}, "excluded": "not_highway"},
-    {"name": "waterway", "tags": {"waterway": "river"}, "excluded": "not_highway"},
-
-    {"name": "access=private", "tags": {"highway": "footway", "access": "private"}, "excluded": "access"},
-    {"name": "access=no", "tags": {"highway": "service", "access": "no"}, "excluded": "access"},
-    {"name": "access=no beats foot=yes (strict reading)", "tags": {"highway": "footway", "access": "no", "foot": "yes"}, "excluded": "access"},
-    {"name": "access=private beats foot=yes", "tags": {"highway": "path", "access": "private", "foot": "yes"}, "excluded": "access"},
-    {"name": "foot=no", "tags": {"highway": "residential", "foot": "no"}, "excluded": "foot"},
-    {"name": "foot=private", "tags": {"highway": "track", "foot": "private"}, "excluded": "foot"},
-    {"name": "foot=use_sidepath (stricter)", "tags": {"highway": "secondary", "foot": "use_sidepath"}, "excluded": "foot"},
-    {"name": "access=permissive is fine", "tags": {"highway": "footway", "access": "permissive"}, "excluded": null},
-    {"name": "access=customers is fine", "tags": {"highway": "service", "access": "customers"}, "excluded": null},
-
-    {"name": "motorway", "tags": {"highway": "motorway"}, "excluded": "fast_road"},
-    {"name": "motorway_link", "tags": {"highway": "motorway_link"}, "excluded": "fast_road"},
-    {"name": "trunk", "tags": {"highway": "trunk"}, "excluded": "fast_road"},
-    {"name": "trunk_link", "tags": {"highway": "trunk_link"}, "excluded": "fast_road"},
-    {"name": "trunk with sidewalk=separate is not walkable itself", "tags": {"highway": "trunk", "sidewalk": "separate"}, "excluded": "fast_road"},
-    {"name": "trunk with sidewalk=no", "tags": {"highway": "trunk", "sidewalk": "no"}, "excluded": "fast_road"},
-    {"name": "trunk with foot=designated is not foot=yes (strict)", "tags": {"highway": "trunk", "foot": "designated"}, "excluded": "fast_road"},
-    {"name": "trunk with foot=yes", "tags": {"highway": "trunk", "foot": "yes"}, "excluded": null},
-    {"name": "trunk with sidewalk=both", "tags": {"highway": "trunk", "sidewalk": "both"}, "excluded": null},
-    {"name": "trunk_link with sidewalk:right=yes", "tags": {"highway": "trunk_link", "sidewalk:right": "yes"}, "excluded": null},
-    {"name": "trunk with sidewalk but foot=no", "tags": {"highway": "trunk", "sidewalk": "both", "foot": "no"}, "excluded": "foot"},
-
-    {"name": "highway=construction", "tags": {"highway": "construction"}, "excluded": "construction"},
-    {"name": "construction=* on a footway", "tags": {"highway": "footway", "construction": "footway"}, "excluded": "construction"},
-    {"name": "construction=yes", "tags": {"highway": "residential", "construction": "yes"}, "excluded": "construction"},
-    {"name": "highway=proposed", "tags": {"highway": "proposed"}, "excluded": "construction"},
-
-    {"name": "railway=rail", "tags": {"railway": "rail"}, "excluded": "not_highway"},
-    {"name": "highway with railway=tram", "tags": {"highway": "residential", "railway": "tram"}, "excluded": "railway"},
-    {"name": "railway=platform (strict: any railway=*)", "tags": {"highway": "platform", "railway": "platform"}, "excluded": "railway"},
-    {"name": "rail trail with railway=abandoned (strict)", "tags": {"highway": "path", "railway": "abandoned"}, "excluded": "railway"},
-    {"name": "bus platform", "tags": {"highway": "platform", "public_transport": "platform"}, "excluded": null},
-
-    {"name": "cycleway without foot permission", "tags": {"highway": "cycleway"}, "excluded": "no_foot_permission"},
-    {"name": "cycleway with foot=yes", "tags": {"highway": "cycleway", "foot": "yes"}, "excluded": null},
-    {"name": "cycleway with foot=designated", "tags": {"highway": "cycleway", "foot": "designated", "segregated": "yes"}, "excluded": null},
-    {"name": "bridleway without foot permission", "tags": {"highway": "bridleway"}, "excluded": "no_foot_permission"},
-    {"name": "raceway", "tags": {"highway": "raceway"}, "excluded": "highway_kind"},
-    {"name": "bus_guideway", "tags": {"highway": "bus_guideway"}, "excluded": "highway_kind"},
-    {"name": "busway", "tags": {"highway": "busway"}, "excluded": "highway_kind"},
-    {"name": "via_ferrata", "tags": {"highway": "via_ferrata"}, "excluded": "highway_kind"},
-    {"name": "highway=road (unknown class)", "tags": {"highway": "road"}, "excluded": "highway_kind"},
-    {"name": "abandoned highway", "tags": {"highway": "abandoned"}, "excluded": "highway_kind"},
-
-    {"name": "building passage", "tags": {"highway": "footway", "tunnel": "building_passage"}, "excluded": null},
-    {"name": "private building passage", "tags": {"highway": "footway", "tunnel": "building_passage", "access": "private"}, "excluded": "access"},
-    {"name": "corridor", "tags": {"highway": "corridor", "level": "0"}, "excluded": null},
-    {"name": "corridor, access=permissive", "tags": {"highway": "corridor", "access": "permissive"}, "excluded": null},
-    {"name": "private corridor", "tags": {"highway": "corridor", "access": "private"}, "excluded": "access"},
-    {"name": "indoor=corridor footway", "tags": {"highway": "footway", "indoor": "corridor"}, "excluded": null},
-    {"name": "indoor=yes footway is not a corridor", "tags": {"highway": "footway", "indoor": "yes"}, "excluded": "indoor_not_corridor"},
-    {"name": "indoor=room", "tags": {"highway": "footway", "indoor": "room"}, "excluded": "indoor_not_corridor"},
-    {"name": "indoor=area", "tags": {"highway": "pedestrian", "indoor": "area"}, "excluded": "indoor_not_corridor"},
-    {"name": "indoor=no", "tags": {"highway": "footway", "indoor": "no"}, "excluded": null},
-    {"name": "covered arcade", "tags": {"highway": "footway", "covered": "yes"}, "excluded": null},
-
-    {"name": "escalator up the way", "tags": {"highway": "steps", "conveying": "forward"}, "excluded": null},
-    {"name": "escalator, direction unknown (stricter)", "tags": {"highway": "steps", "conveying": "yes"}, "excluded": "escalator_direction_unknown"},
-    {"name": "reversible escalator (stricter)", "tags": {"highway": "steps", "conveying": "reversible"}, "excluded": "escalator_direction_unknown"},
-
-    {"name": "hiking path", "tags": {"highway": "path", "sac_scale": "hiking"}, "excluded": null},
-    {"name": "alpine path (stricter)", "tags": {"highway": "path", "sac_scale": "alpine_hiking"}, "excluded": "sac_scale"},
-    {"name": "invisible trail (stricter)", "tags": {"highway": "path", "trail_visibility": "bad"}, "excluded": "trail_visibility"}
+    {
+      "name": "plain footway",
+      "tags": {
+        "highway": "footway"
+      },
+      "excluded": null
+    },
+    {
+      "name": "residential street",
+      "tags": {
+        "highway": "residential"
+      },
+      "excluded": null
+    },
+    {
+      "name": "primary road",
+      "tags": {
+        "highway": "primary"
+      },
+      "excluded": null
+    },
+    {
+      "name": "steps",
+      "tags": {
+        "highway": "steps",
+        "step_count": "42"
+      },
+      "excluded": null
+    },
+    {
+      "name": "park path, unpaved",
+      "tags": {
+        "highway": "path",
+        "surface": "dirt"
+      },
+      "excluded": null
+    },
+    {
+      "name": "not a highway",
+      "tags": {
+        "building": "yes"
+      },
+      "excluded": "not_highway"
+    },
+    {
+      "name": "waterway",
+      "tags": {
+        "waterway": "river"
+      },
+      "excluded": "not_highway"
+    },
+    {
+      "name": "access=private",
+      "tags": {
+        "highway": "footway",
+        "access": "private"
+      },
+      "excluded": "access"
+    },
+    {
+      "name": "access=no",
+      "tags": {
+        "highway": "service",
+        "access": "no"
+      },
+      "excluded": "access"
+    },
+    {
+      "name": "access=no beats foot=yes (strict reading)",
+      "tags": {
+        "highway": "footway",
+        "access": "no",
+        "foot": "yes"
+      },
+      "excluded": "access"
+    },
+    {
+      "name": "access=private beats foot=yes",
+      "tags": {
+        "highway": "path",
+        "access": "private",
+        "foot": "yes"
+      },
+      "excluded": "access"
+    },
+    {
+      "name": "foot=no",
+      "tags": {
+        "highway": "residential",
+        "foot": "no"
+      },
+      "excluded": "foot"
+    },
+    {
+      "name": "foot=private",
+      "tags": {
+        "highway": "track",
+        "foot": "private"
+      },
+      "excluded": "foot"
+    },
+    {
+      "name": "foot=use_sidepath (stricter)",
+      "tags": {
+        "highway": "secondary",
+        "foot": "use_sidepath"
+      },
+      "excluded": "foot"
+    },
+    {
+      "name": "access=permissive is fine",
+      "tags": {
+        "highway": "footway",
+        "access": "permissive"
+      },
+      "excluded": null
+    },
+    {
+      "name": "access=customers is fine",
+      "tags": {
+        "highway": "service",
+        "access": "customers"
+      },
+      "excluded": null
+    },
+    {
+      "name": "motorway",
+      "tags": {
+        "highway": "motorway"
+      },
+      "excluded": "fast_road"
+    },
+    {
+      "name": "motorway_link",
+      "tags": {
+        "highway": "motorway_link"
+      },
+      "excluded": "fast_road"
+    },
+    {
+      "name": "trunk",
+      "tags": {
+        "highway": "trunk"
+      },
+      "excluded": "fast_road"
+    },
+    {
+      "name": "trunk_link",
+      "tags": {
+        "highway": "trunk_link"
+      },
+      "excluded": "fast_road"
+    },
+    {
+      "name": "trunk with sidewalk=separate is not walkable itself",
+      "tags": {
+        "highway": "trunk",
+        "sidewalk": "separate"
+      },
+      "excluded": "fast_road"
+    },
+    {
+      "name": "trunk with sidewalk=no",
+      "tags": {
+        "highway": "trunk",
+        "sidewalk": "no"
+      },
+      "excluded": "fast_road"
+    },
+    {
+      "name": "trunk with foot=designated is not foot=yes (strict)",
+      "tags": {
+        "highway": "trunk",
+        "foot": "designated"
+      },
+      "excluded": "fast_road"
+    },
+    {
+      "name": "trunk with foot=yes",
+      "tags": {
+        "highway": "trunk",
+        "foot": "yes"
+      },
+      "excluded": null
+    },
+    {
+      "name": "trunk with sidewalk=both",
+      "tags": {
+        "highway": "trunk",
+        "sidewalk": "both"
+      },
+      "excluded": null
+    },
+    {
+      "name": "trunk_link with sidewalk:right=yes",
+      "tags": {
+        "highway": "trunk_link",
+        "sidewalk:right": "yes"
+      },
+      "excluded": null
+    },
+    {
+      "name": "trunk with sidewalk but foot=no",
+      "tags": {
+        "highway": "trunk",
+        "sidewalk": "both",
+        "foot": "no"
+      },
+      "excluded": "foot"
+    },
+    {
+      "name": "highway=construction",
+      "tags": {
+        "highway": "construction"
+      },
+      "excluded": "construction"
+    },
+    {
+      "name": "construction=* on a footway",
+      "tags": {
+        "highway": "footway",
+        "construction": "footway"
+      },
+      "excluded": "construction"
+    },
+    {
+      "name": "construction=yes",
+      "tags": {
+        "highway": "residential",
+        "construction": "yes"
+      },
+      "excluded": "construction"
+    },
+    {
+      "name": "highway=proposed",
+      "tags": {
+        "highway": "proposed"
+      },
+      "excluded": "construction"
+    },
+    {
+      "name": "railway=rail",
+      "tags": {
+        "railway": "rail"
+      },
+      "excluded": "not_highway"
+    },
+    {
+      "name": "highway with railway=tram",
+      "tags": {
+        "highway": "residential",
+        "railway": "tram"
+      },
+      "excluded": "railway"
+    },
+    {
+      "name": "railway=platform (strict: any railway=*)",
+      "tags": {
+        "highway": "platform",
+        "railway": "platform"
+      },
+      "excluded": "railway"
+    },
+    {
+      "name": "rail trail with railway=abandoned (strict)",
+      "tags": {
+        "highway": "path",
+        "railway": "abandoned"
+      },
+      "excluded": "railway"
+    },
+    {
+      "name": "bus platform",
+      "tags": {
+        "highway": "platform",
+        "public_transport": "platform"
+      },
+      "excluded": null
+    },
+    {
+      "name": "cycleway without foot permission",
+      "tags": {
+        "highway": "cycleway"
+      },
+      "excluded": "no_foot_permission"
+    },
+    {
+      "name": "cycleway with foot=yes",
+      "tags": {
+        "highway": "cycleway",
+        "foot": "yes"
+      },
+      "excluded": null
+    },
+    {
+      "name": "cycleway with foot=designated",
+      "tags": {
+        "highway": "cycleway",
+        "foot": "designated",
+        "segregated": "yes"
+      },
+      "excluded": null
+    },
+    {
+      "name": "bridleway without foot permission",
+      "tags": {
+        "highway": "bridleway"
+      },
+      "excluded": "no_foot_permission"
+    },
+    {
+      "name": "raceway",
+      "tags": {
+        "highway": "raceway"
+      },
+      "excluded": "highway_kind"
+    },
+    {
+      "name": "bus_guideway",
+      "tags": {
+        "highway": "bus_guideway"
+      },
+      "excluded": "highway_kind"
+    },
+    {
+      "name": "busway",
+      "tags": {
+        "highway": "busway"
+      },
+      "excluded": "highway_kind"
+    },
+    {
+      "name": "via_ferrata",
+      "tags": {
+        "highway": "via_ferrata"
+      },
+      "excluded": "highway_kind"
+    },
+    {
+      "name": "highway=road (unknown class)",
+      "tags": {
+        "highway": "road"
+      },
+      "excluded": "highway_kind"
+    },
+    {
+      "name": "abandoned highway",
+      "tags": {
+        "highway": "abandoned"
+      },
+      "excluded": "highway_kind"
+    },
+    {
+      "name": "building passage",
+      "tags": {
+        "highway": "footway",
+        "tunnel": "building_passage"
+      },
+      "excluded": null
+    },
+    {
+      "name": "private building passage",
+      "tags": {
+        "highway": "footway",
+        "tunnel": "building_passage",
+        "access": "private"
+      },
+      "excluded": "access"
+    },
+    {
+      "name": "corridor",
+      "tags": {
+        "highway": "corridor",
+        "level": "0"
+      },
+      "excluded": null
+    },
+    {
+      "name": "corridor, access=permissive",
+      "tags": {
+        "highway": "corridor",
+        "access": "permissive"
+      },
+      "excluded": null
+    },
+    {
+      "name": "private corridor",
+      "tags": {
+        "highway": "corridor",
+        "access": "private"
+      },
+      "excluded": "access"
+    },
+    {
+      "name": "indoor=corridor footway",
+      "tags": {
+        "highway": "footway",
+        "indoor": "corridor"
+      },
+      "excluded": null
+    },
+    {
+      "name": "highway=corridor with indoor=yes (approved Q-005)",
+      "tags": {
+        "highway": "corridor",
+        "indoor": "yes",
+        "level": "0"
+      },
+      "excluded": null
+    },
+    {
+      "name": "highway=corridor with indoor=yes, private",
+      "tags": {
+        "highway": "corridor",
+        "indoor": "yes",
+        "access": "private"
+      },
+      "excluded": "access"
+    },
+    {
+      "name": "indoor=yes steps are not a corridor",
+      "tags": {
+        "highway": "steps",
+        "indoor": "yes"
+      },
+      "excluded": "indoor_not_corridor"
+    },
+    {
+      "name": "indoor=yes footway is not a corridor",
+      "tags": {
+        "highway": "footway",
+        "indoor": "yes"
+      },
+      "excluded": "indoor_not_corridor"
+    },
+    {
+      "name": "indoor=room",
+      "tags": {
+        "highway": "footway",
+        "indoor": "room"
+      },
+      "excluded": "indoor_not_corridor"
+    },
+    {
+      "name": "indoor=area",
+      "tags": {
+        "highway": "pedestrian",
+        "indoor": "area"
+      },
+      "excluded": "indoor_not_corridor"
+    },
+    {
+      "name": "indoor=no",
+      "tags": {
+        "highway": "footway",
+        "indoor": "no"
+      },
+      "excluded": null
+    },
+    {
+      "name": "covered arcade",
+      "tags": {
+        "highway": "footway",
+        "covered": "yes"
+      },
+      "excluded": null
+    },
+    {
+      "name": "escalator up the way",
+      "tags": {
+        "highway": "steps",
+        "conveying": "forward"
+      },
+      "excluded": null
+    },
+    {
+      "name": "escalator, direction unknown (stricter)",
+      "tags": {
+        "highway": "steps",
+        "conveying": "yes"
+      },
+      "excluded": "escalator_direction_unknown"
+    },
+    {
+      "name": "reversible escalator (stricter)",
+      "tags": {
+        "highway": "steps",
+        "conveying": "reversible"
+      },
+      "excluded": "escalator_direction_unknown"
+    },
+    {
+      "name": "hiking path",
+      "tags": {
+        "highway": "path",
+        "sac_scale": "hiking"
+      },
+      "excluded": null
+    },
+    {
+      "name": "alpine path (stricter)",
+      "tags": {
+        "highway": "path",
+        "sac_scale": "alpine_hiking"
+      },
+      "excluded": "sac_scale"
+    },
+    {
+      "name": "invisible trail (stricter)",
+      "tags": {
+        "highway": "path",
+        "trail_visibility": "bad"
+      },
+      "excluded": "trail_visibility"
+    }
   ],
   "through_building": [
-    {"name": "plain footway", "tags": {"highway": "footway"}, "allowed": false},
-    {"name": "building passage", "tags": {"highway": "footway", "tunnel": "building_passage"}, "allowed": true},
-    {"name": "covered=yes", "tags": {"highway": "footway", "covered": "yes"}, "allowed": true},
-    {"name": "covered=arcade (strict: only covered=yes)", "tags": {"highway": "footway", "covered": "arcade"}, "allowed": false},
-    {"name": "corridor", "tags": {"highway": "corridor"}, "allowed": true},
-    {"name": "indoor=corridor", "tags": {"highway": "footway", "indoor": "corridor"}, "allowed": true},
-    {"name": "tunnel below", "tags": {"highway": "footway", "tunnel": "yes", "layer": "-1"}, "allowed": true},
-    {"name": "bridge above", "tags": {"highway": "footway", "bridge": "yes", "layer": "1"}, "allowed": true},
-    {"name": "level=-1 alone is still inside", "tags": {"highway": "footway", "level": "-1"}, "allowed": false}
+    {
+      "name": "plain footway",
+      "tags": {
+        "highway": "footway"
+      },
+      "allowed": false
+    },
+    {
+      "name": "building passage",
+      "tags": {
+        "highway": "footway",
+        "tunnel": "building_passage"
+      },
+      "allowed": true
+    },
+    {
+      "name": "covered=yes",
+      "tags": {
+        "highway": "footway",
+        "covered": "yes"
+      },
+      "allowed": true
+    },
+    {
+      "name": "covered=arcade (strict: only covered=yes)",
+      "tags": {
+        "highway": "footway",
+        "covered": "arcade"
+      },
+      "allowed": false
+    },
+    {
+      "name": "corridor",
+      "tags": {
+        "highway": "corridor"
+      },
+      "allowed": true
+    },
+    {
+      "name": "indoor=corridor",
+      "tags": {
+        "highway": "footway",
+        "indoor": "corridor"
+      },
+      "allowed": true
+    },
+    {
+      "name": "tunnel below",
+      "tags": {
+        "highway": "footway",
+        "tunnel": "yes",
+        "layer": "-1"
+      },
+      "allowed": true
+    },
+    {
+      "name": "bridge above",
+      "tags": {
+        "highway": "footway",
+        "bridge": "yes",
+        "layer": "1"
+      },
+      "allowed": true
+    },
+    {
+      "name": "level=-1 alone is still inside",
+      "tags": {
+        "highway": "footway",
+        "level": "-1"
+      },
+      "allowed": false
+    }
   ],
   "nodes": [
-    {"name": "plain node", "tags": {}, "context": {}, "excluded": null},
-    {"name": "gate with access=private", "tags": {"barrier": "gate", "access": "private"}, "context": {}, "excluded": "node_access"},
-    {"name": "bollard access=no foot=yes", "tags": {"barrier": "bollard", "access": "no", "foot": "yes"}, "context": {}, "excluded": null},
-    {"name": "foot=no node", "tags": {"barrier": "gate", "foot": "no"}, "context": {}, "excluded": "node_foot"},
-    {"name": "locked gate", "tags": {"barrier": "gate", "locked": "yes"}, "context": {}, "excluded": "node_locked"},
-    {"name": "crossing=no", "tags": {"crossing": "no"}, "context": {}, "excluded": "node_crossing_no"},
-    {"name": "untagged node on a railway", "tags": {}, "context": {"on_railway": true}, "excluded": "railway_unmapped_crossing"},
-    {"name": "railway=level_crossing", "tags": {"railway": "level_crossing"}, "context": {"on_railway": true}, "excluded": null},
-    {"name": "railway=crossing", "tags": {"railway": "crossing"}, "context": {"on_railway": true}, "excluded": null},
-    {"name": "railway=crossing with foot=no", "tags": {"railway": "crossing", "foot": "no"}, "context": {"on_railway": true}, "excluded": "node_foot"},
-    {"name": "level_crossing with access=no", "tags": {"railway": "level_crossing", "access": "no"}, "context": {"on_railway": true}, "excluded": "node_access"},
-    {"name": "tram_level_crossing (strict: not in the allowed list)", "tags": {"railway": "tram_level_crossing"}, "context": {"on_railway": true}, "excluded": "railway_unmapped_crossing"},
-    {"name": "tram_crossing (strict)", "tags": {"railway": "tram_crossing"}, "context": {"on_railway": true}, "excluded": "railway_unmapped_crossing"},
-    {"name": "untagged node on a trunk", "tags": {}, "context": {"on_fast_road": true}, "excluded": "fast_road_unmarked_crossing"},
-    {"name": "marked crossing on a trunk", "tags": {"highway": "crossing", "crossing": "marked"}, "context": {"on_fast_road": true}, "excluded": null},
-    {"name": "signals on a trunk", "tags": {"highway": "traffic_signals"}, "context": {"on_fast_road": true}, "excluded": null},
-    {"name": "node where a fence meets a path", "tags": {}, "context": {"on_linear_barrier": true}, "excluded": "barrier_no_opening"},
-    {"name": "gate in a fence", "tags": {"barrier": "gate"}, "context": {"on_linear_barrier": true}, "excluded": null}
+    {
+      "name": "plain node",
+      "tags": {},
+      "context": {},
+      "excluded": null
+    },
+    {
+      "name": "gate with access=private",
+      "tags": {
+        "barrier": "gate",
+        "access": "private"
+      },
+      "context": {},
+      "excluded": "node_access"
+    },
+    {
+      "name": "bollard access=no foot=yes",
+      "tags": {
+        "barrier": "bollard",
+        "access": "no",
+        "foot": "yes"
+      },
+      "context": {},
+      "excluded": null
+    },
+    {
+      "name": "foot=no node",
+      "tags": {
+        "barrier": "gate",
+        "foot": "no"
+      },
+      "context": {},
+      "excluded": "node_foot"
+    },
+    {
+      "name": "locked gate",
+      "tags": {
+        "barrier": "gate",
+        "locked": "yes"
+      },
+      "context": {},
+      "excluded": "node_locked"
+    },
+    {
+      "name": "crossing=no",
+      "tags": {
+        "crossing": "no"
+      },
+      "context": {},
+      "excluded": "node_crossing_no"
+    },
+    {
+      "name": "untagged node on a railway",
+      "tags": {},
+      "context": {
+        "on_railway": true
+      },
+      "excluded": "railway_unmapped_crossing"
+    },
+    {
+      "name": "railway=level_crossing",
+      "tags": {
+        "railway": "level_crossing"
+      },
+      "context": {
+        "on_railway": true
+      },
+      "excluded": null
+    },
+    {
+      "name": "railway=crossing",
+      "tags": {
+        "railway": "crossing"
+      },
+      "context": {
+        "on_railway": true
+      },
+      "excluded": null
+    },
+    {
+      "name": "railway=crossing with foot=no",
+      "tags": {
+        "railway": "crossing",
+        "foot": "no"
+      },
+      "context": {
+        "on_railway": true
+      },
+      "excluded": "node_foot"
+    },
+    {
+      "name": "level_crossing with access=no",
+      "tags": {
+        "railway": "level_crossing",
+        "access": "no"
+      },
+      "context": {
+        "on_railway": true
+      },
+      "excluded": "node_access"
+    },
+    {
+      "name": "tram_level_crossing (approved Q-004)",
+      "tags": {
+        "railway": "tram_level_crossing"
+      },
+      "context": {
+        "on_railway": true
+      },
+      "excluded": null
+    },
+    {
+      "name": "tram_crossing (approved Q-004)",
+      "tags": {
+        "railway": "tram_crossing"
+      },
+      "context": {
+        "on_railway": true
+      },
+      "excluded": null
+    },
+    {
+      "name": "tram_crossing with foot=no",
+      "tags": {
+        "railway": "tram_crossing",
+        "foot": "no"
+      },
+      "context": {
+        "on_railway": true
+      },
+      "excluded": "node_foot"
+    },
+    {
+      "name": "tram_level_crossing with access=private",
+      "tags": {
+        "railway": "tram_level_crossing",
+        "access": "private"
+      },
+      "context": {
+        "on_railway": true
+      },
+      "excluded": "node_access"
+    },
+    {
+      "name": "railway=switch is not a crossing",
+      "tags": {
+        "railway": "switch"
+      },
+      "context": {
+        "on_railway": true
+      },
+      "excluded": "railway_unmapped_crossing"
+    },
+    {
+      "name": "combined value is not a mapped crossing (strict)",
+      "tags": {
+        "railway": "tram_level_crossing;tram_crossing"
+      },
+      "context": {
+        "on_railway": true
+      },
+      "excluded": "railway_unmapped_crossing"
+    },
+    {
+      "name": "untagged node on a trunk",
+      "tags": {},
+      "context": {
+        "on_fast_road": true
+      },
+      "excluded": "fast_road_unmarked_crossing"
+    },
+    {
+      "name": "marked crossing on a trunk",
+      "tags": {
+        "highway": "crossing",
+        "crossing": "marked"
+      },
+      "context": {
+        "on_fast_road": true
+      },
+      "excluded": null
+    },
+    {
+      "name": "signals on a trunk",
+      "tags": {
+        "highway": "traffic_signals"
+      },
+      "context": {
+        "on_fast_road": true
+      },
+      "excluded": null
+    },
+    {
+      "name": "node where a fence meets a path",
+      "tags": {},
+      "context": {
+        "on_linear_barrier": true
+      },
+      "excluded": "barrier_no_opening"
+    },
+    {
+      "name": "gate in a fence",
+      "tags": {
+        "barrier": "gate"
+      },
+      "context": {
+        "on_linear_barrier": true
+      },
+      "excluded": null
+    }
   ],
   "directions": [
-    {"name": "two-way footway", "tags": {"highway": "footway"}, "forward": true, "backward": true},
-    {"name": "oneway footway", "tags": {"highway": "footway", "oneway": "yes"}, "forward": true, "backward": false},
-    {"name": "oneway road doesn't bind pedestrians", "tags": {"highway": "residential", "oneway": "yes"}, "forward": true, "backward": true},
-    {"name": "oneway:foot=-1 on a road", "tags": {"highway": "residential", "oneway:foot": "-1"}, "forward": false, "backward": true},
-    {"name": "escalator backward", "tags": {"highway": "steps", "conveying": "backward"}, "forward": false, "backward": true},
-    {"name": "foot:backward=no", "tags": {"highway": "path", "foot:backward": "no"}, "forward": true, "backward": false}
+    {
+      "name": "two-way footway",
+      "tags": {
+        "highway": "footway"
+      },
+      "forward": true,
+      "backward": true
+    },
+    {
+      "name": "oneway footway",
+      "tags": {
+        "highway": "footway",
+        "oneway": "yes"
+      },
+      "forward": true,
+      "backward": false
+    },
+    {
+      "name": "oneway road doesn't bind pedestrians",
+      "tags": {
+        "highway": "residential",
+        "oneway": "yes"
+      },
+      "forward": true,
+      "backward": true
+    },
+    {
+      "name": "oneway:foot=-1 on a road",
+      "tags": {
+        "highway": "residential",
+        "oneway:foot": "-1"
+      },
+      "forward": false,
+      "backward": true
+    },
+    {
+      "name": "escalator backward",
+      "tags": {
+        "highway": "steps",
+        "conveying": "backward"
+      },
+      "forward": false,
+      "backward": true
+    },
+    {
+      "name": "foot:backward=no",
+      "tags": {
+        "highway": "path",
+        "foot:backward": "no"
+      },
+      "forward": true,
+      "backward": false
+    }
+  ],
+  "track_ways": [
+    {
+      "name": "rail",
+      "tags": {
+        "railway": "rail"
+      },
+      "track": true
+    },
+    {
+      "name": "tram",
+      "tags": {
+        "railway": "tram"
+      },
+      "track": true
+    },
+    {
+      "name": "abandoned (strict: still a track for crossings)",
+      "tags": {
+        "railway": "abandoned"
+      },
+      "track": true
+    },
+    {
+      "name": "unknown value (strict default)",
+      "tags": {
+        "railway": "something_new"
+      },
+      "track": true
+    },
+    {
+      "name": "platform",
+      "tags": {
+        "railway": "platform"
+      },
+      "track": false
+    },
+    {
+      "name": "subway_entrance (approved Q-006)",
+      "tags": {
+        "railway": "subway_entrance"
+      },
+      "track": false
+    },
+    {
+      "name": "train_station_entrance (approved Q-006)",
+      "tags": {
+        "railway": "train_station_entrance"
+      },
+      "track": false
+    },
+    {
+      "name": "funicular_entrance (approved Q-006)",
+      "tags": {
+        "railway": "funicular_entrance"
+      },
+      "track": false
+    },
+    {
+      "name": "tram_stop (approved Q-006)",
+      "tags": {
+        "railway": "tram_stop"
+      },
+      "track": false
+    },
+    {
+      "name": "not a railway",
+      "tags": {
+        "highway": "footway"
+      },
+      "track": false
+    }
   ]
 }

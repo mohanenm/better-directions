@@ -48,3 +48,8 @@ def test_every_way_reason_is_covered():
         "trail_visibility",
     }
     assert reasons == expected
+
+
+@pytest.mark.parametrize("case", CASES["track_ways"], ids=lambda c: c["name"])
+def test_track_way_cases(case):
+    assert safety.is_track_railway_way(case["tags"]) is case["track"]

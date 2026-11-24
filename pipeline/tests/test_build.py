@@ -301,3 +301,21 @@ def test_only_junctions_and_rule_relevant_points_are_nodes(tmp_path):
     _, g = build(b, tmp_path)
     # 8 corners + C1 + C2 (path ends) + K2. C0, C3 and K1 are shape points only.
     assert g.meta["counts"]["nodes"] == 11
+
+
+def test_mapped_tram_crossing_connects_but_unmapped_one_cuts(tmp_path):
+    b = base_town()
+    b.ways.clear()
+    b.node(250, -50, "T0")
+    b.node(250, 0, "TA", railway="tram_level_crossing")
+    b.node(250, 100, "TB")  # untagged: not a mapped crossing
+    b.node(250, 150, "T1")
+    b.way(["A0", "A1", "A2", "TA", "A3"], highway="residential")
+    b.way(["B0", "B1", "B2", "TB", "B3"], highway="residential")
+    for i in range(4):
+        b.way([f"A{i}", f"C{i}", f"B{i}"], highway="residential")
+    b.way(["T0", "TA", "TB", "T1"], railway="tram")
+    graph, g = build(b, tmp_path)
+    assert graph.dropped["node:railway_unmapped_crossing"] == 2  # both segments touching TB
+    assert graph.component["node_share"] == 1.0
+    assert_output_is_safe(g)

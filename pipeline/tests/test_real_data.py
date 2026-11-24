@@ -18,9 +18,8 @@ CITY = load_city(ROOT / "cities" / "lyon.json")
 OSM = ROOT / "data" / "raw" / "lyon.osm.pbf"
 COMMITTED = ROOT / "app" / "public" / "data" / "lyon" / "graph.bin"
 
-# Under the strict reading of the railway rule, tram lines cut Lyon into pieces and only ~73%
-# of the network is in the largest component. See docs/OPEN_QUESTIONS.md (Q-004).
-MIN_COMPONENT_SHARE = 0.70
+# Mapped tram crossings count as crossings (Q-004), so ~95% of the network is one component.
+MIN_COMPONENT_SHARE = 0.93
 
 pytestmark = [
     pytest.mark.real_data,

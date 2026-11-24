@@ -93,8 +93,9 @@ def way_exclusion(tags: Tags) -> str | None:
         return "highway_kind"
 
     indoor = tags.get("indoor")
-    if indoor is not None and indoor not in ("no", CORRIDOR_INDOOR):
+    if hw != "corridor" and indoor is not None and indoor not in ("no", CORRIDOR_INDOOR):
         # Inside a building but not a mapped corridor: never through a building otherwise.
+        # highway=corridor qualifies whatever its indoor value (approved 2026-11-24, Q-005).
         return "indoor_not_corridor"
 
     conveying = tags.get("conveying")
@@ -166,7 +167,11 @@ def foot_directions(tags: Tags) -> tuple[bool, bool]:
 
 # --- Node rules --------------------------------------------------------------------------------
 
-RAILWAY_CROSSINGS = frozenset({"crossing", "level_crossing"})
+# Mapped crossings. The tram values are OSM's tags for pedestrian and road crossings of tram
+# tracks (approved 2026-11-24, Q-004). Foot access is still checked by node_exclusion.
+RAILWAY_CROSSINGS = frozenset(
+    {"crossing", "level_crossing", "tram_crossing", "tram_level_crossing"}
+)
 
 # Railway features that aren't tracks; a node shared with them isn't a track crossing.
 RAILWAY_NON_TRACK = frozenset(
@@ -180,6 +185,11 @@ RAILWAY_NON_TRACK = frozenset(
         "signal_box",
         "turntable",
         "traverser",
+        # Entrances and stops aren't rails (approved 2026-11-24, Q-006).
+        "subway_entrance",
+        "train_station_entrance",
+        "funicular_entrance",
+        "tram_stop",
     }
 )
 
