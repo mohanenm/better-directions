@@ -3,6 +3,7 @@
  * Works on a static host with no server routing. Coordinates are rounded to 5 decimals (~1 m)
  * and must fall inside the city's bbox; anything invalid is ignored rather than trusted.
  */
+import { SHAPE_IDS, type ShapeId } from "../art/shapes";
 import { MODE_IDS, type ModeId } from "../modes/modes";
 
 export interface Bbox {
@@ -19,7 +20,12 @@ export interface LinkState {
   toName: string | null;
   mode: ModeId;
   seed: number;
+  /** GPS art: the shape to draw from `from`, and the walk length in minutes. */
+  art: ShapeId | null;
+  artMinutes: number;
 }
+
+export const ART_LENGTHS = [25, 40, 55] as const;
 
 export const DEFAULT_MODE: ModeId = "stairs";
 const MAX_NAME = 80;
@@ -52,6 +58,8 @@ export function parseLink(search: string, bbox: Bbox): LinkState {
     toName: parseName(q.get("toName")),
     mode: (MODE_IDS as string[]).includes(mode ?? "") ? (mode as ModeId) : DEFAULT_MODE,
     seed: Number.isInteger(seed) && seed > 0 && seed < 2 ** 31 ? seed : 1,
+    art: (SHAPE_IDS as string[]).includes(q.get("art") ?? "") ? (q.get("art") as ShapeId) : null,
+    artMinutes: (ART_LENGTHS as readonly number[]).includes(Number(q.get("len"))) ? Number(q.get("len")) : 40,
   };
 }
 
@@ -59,6 +67,13 @@ const fmt = (p: [number, number]) => `${p[0].toFixed(5)},${p[1].toFixed(5)}`;
 
 export function serializeLink(state: LinkState): string {
   const q = new URLSearchParams();
+  if (state.art) {
+    if (state.from) q.set("from", fmt(state.from));
+    if (state.fromName) q.set("fromName", state.fromName);
+    q.set("art", state.art);
+    q.set("len", String(state.artMinutes));
+    return `?${q.toString()}`;
+  }
   if (state.from) q.set("from", fmt(state.from));
   if (state.to) q.set("to", fmt(state.to));
   if (state.fromName) q.set("fromName", state.fromName);

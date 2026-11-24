@@ -4,8 +4,15 @@
  * system share sheet or downloaded.
  */
 import type { Map as MapLibreMap } from "maplibre-gl";
-import type { PlanResult } from "./protocol";
-import { statItems } from "./render";
+/** What the share image shows: works for routes and for GPS art. */
+export interface ShareCard {
+  name: string;
+  summary: string;
+  chips: [string, string][];
+  from: [number, number];
+  to: [number, number];
+  legend: [string, string];
+}
 
 export const SHARE_W = 1080;
 export const SHARE_H = 1350;
@@ -13,7 +20,7 @@ const MAP_H = 820;
 const FONT = 'system-ui, -apple-system, "Segoe UI", Roboto, sans-serif';
 
 /** Copy the map's WebGL canvas during a render (the buffer is valid only then), plus markers. */
-function snapshotMap(map: MapLibreMap, ctx: CanvasRenderingContext2D, r: PlanResult): Promise<boolean> {
+function snapshotMap(map: MapLibreMap, ctx: CanvasRenderingContext2D, r: ShareCard): Promise<boolean> {
   return new Promise((resolve) => {
     const timer = setTimeout(() => resolve(false), 3000);
     map.once("render", () => {
@@ -69,7 +76,7 @@ function wrap(ctx: CanvasRenderingContext2D, text: string, maxWidth: number): st
   return lines;
 }
 
-export async function renderShareImage(map: MapLibreMap, r: PlanResult): Promise<Blob> {
+export async function renderShareImage(map: MapLibreMap, r: ShareCard): Promise<Blob> {
   const canvas = document.createElement("canvas");
   canvas.width = SHARE_W;
   canvas.height = SHARE_H;
@@ -108,8 +115,7 @@ export async function renderShareImage(map: MapLibreMap, r: PlanResult): Promise
     y += 46;
   }
   // Three headline numbers as chips.
-  const extra = Math.round((r.betterStats.timeS - r.normalStats.timeS) / 60);
-  const chips: [string, string][] = [["Extra time", `+${extra} min`], ...statItems(r).slice(2, 4)];
+  const chips = r.chips;
   const chipW = (SHARE_W - 80 - 2 * 20) / 3;
   const chipY = Math.max(y + 10, SHARE_H - 330);
   chips.slice(0, 3).forEach(([label, value], i) => {
@@ -143,8 +149,8 @@ export async function renderShareImage(map: MapLibreMap, r: PlanResult): Promise
   ctx.setLineDash([]);
   ctx.font = `600 28px ${FONT}`;
   ctx.fillStyle = "#16131c";
-  ctx.fillText("Better route", 125, y + 10);
-  ctx.fillText("Normal route", 465, y + 10);
+  ctx.fillText(r.legend[0], 125, y + 10);
+  ctx.fillText(r.legend[1], 465, y + 10);
 
   ctx.font = `400 22px ${FONT}`;
   ctx.fillStyle = "#4b4656";

@@ -3,13 +3,14 @@
  * a local list, and location only when the user taps "Use my location".
  */
 import "./style.css";
+import { SHAPE_IDS, SHAPES, type ShapeId } from "./art/shapes";
 import { MODE_IDS, MODES, type ModeId } from "./modes/modes";
 import { attachCombo } from "./ui/combo";
 import { FAMOUS_ROUTES } from "./ui/famous";
 import { createMap, type RouteMap } from "./ui/map";
-import type { FromWorker, PlanResult, ReadyInfo } from "./ui/protocol";
-import { renderResult } from "./ui/render";
-import { renderShareImage } from "./ui/share-image";
+import type { ArtResultMsg, FromWorker, PlanResult, ReadyInfo } from "./ui/protocol";
+import { artCard, planCard, renderArt, renderResult } from "./ui/render";
+import { renderShareImage, type ShareCard } from "./ui/share-image";
 import type { Place } from "./ui/search";
 import { parseLink, serializeLink, type LinkState } from "./ui/url";
 
@@ -20,12 +21,12 @@ const statusEl = $("#status");
 const resultEl = $("#result");
 const goButton = $<HTMLButtonElement>("#go");
 
-const state: LinkState = { from: null, to: null, fromName: null, toName: null, mode: "stairs", seed: 1 };
+const state: LinkState = { from: null, to: null, fromName: null, toName: null, mode: "stairs", seed: 1, art: null, artMinutes: 40 };
 let places: Place[] = [];
 let routeMap: RouteMap | null = null;
 let info: ReadyInfo | null = null;
 let requestId = 0;
-let lastResult: PlanResult | null = null;
+let lastCard: ShareCard | null = null;
 
 function setStatus(text: string, error = false): void {
   statusEl.textContent = text;
@@ -45,7 +46,8 @@ worker.addEventListener("message", (event: MessageEvent<FromWorker>) => {
   else if (msg.type === "error") {
     goButton.disabled = false;
     setStatus(msg.message, true);
-  } else onPlan(msg.result);
+  } else if (msg.type === "art") onArt(msg.result);
+  else onPlan(msg.result);
 });
 
 function onReady(ready: ReadyInfo): void {
@@ -56,8 +58,9 @@ function onReady(ready: ReadyInfo): void {
   routeMap = createMap($("#map"), ready.bbox);
   routeMap.onTap(onMapTap);
   syncInputs();
-  setStatus(state.from && state.to ? "" : "Pick a start and an end: search above, or tap the map.");
-  if (state.from && state.to) requestPlan();
+  setStatus(state.from && (state.to || state.art) ? "" : "Pick a start and an end: search above, or tap the map.");
+  if (state.art && state.from) requestArt();
+  else if (state.from && state.to) requestPlan();
 }
 
 // --- Choosing start and end ----------------------------------------------------------------------
@@ -165,6 +168,7 @@ for (const id of MODE_IDS) {
   grid.append(wrap);
   radio.addEventListener("change", () => {
     state.mode = id as ModeId;
+    state.art = null;
     updateSeedRow();
     writeLink();
     if (state.from && state.to) requestPlan();
@@ -194,6 +198,7 @@ $<HTMLFormElement>("#planner").addEventListener("submit", (e) => {
 
 function requestPlan(): void {
   if (!info) return;
+  state.art = null;
   if (!state.from || !state.to) {
     setStatus("Pick both a start and an end first.", true);
     return;
@@ -215,7 +220,7 @@ function requestPlan(): void {
 
 function onPlan(result: PlanResult): void {
   goButton.disabled = false;
-  lastResult = result;
+  lastCard = planCard(result);
   // Store the snapped points (on a path), not the exact tap or GPS fix.
   state.from = result.from;
   state.to = result.to;
@@ -238,10 +243,10 @@ function writeLink(): void {
 }
 
 $("#share").addEventListener("click", async () => {
-  if (!lastResult) return;
+  if (!lastCard) return;
   const url = window.location.href;
   try {
-    if (navigator.share) await navigator.share({ title: "Better Directions", text: lastResult.summary, url });
+    if (navigator.share) await navigator.share({ title: "Better Directions", text: lastCard.summary, url });
     else {
       await navigator.clipboard.writeText(url);
       setStatus("Link copied.");
@@ -264,11 +269,11 @@ function clearShareImage(): void {
 }
 
 $("#make-image").addEventListener("click", async () => {
-  if (!lastResult || !routeMap) return;
+  if (!lastCard || !routeMap) return;
   clearShareImage();
   setStatus("Drawing your share image…");
   try {
-    shareBlob = await renderShareImage(routeMap.map, lastResult);
+    shareBlob = await renderShareImage(routeMap.map, lastCard);
     shareUrl = URL.createObjectURL(shareBlob);
     $<HTMLImageElement>("#share-preview").src = shareUrl;
     $<HTMLAnchorElement>("#share-image-download").href = shareUrl;
@@ -280,11 +285,11 @@ $("#make-image").addEventListener("click", async () => {
 });
 
 $("#share-image-share").addEventListener("click", async () => {
-  if (!shareBlob || !lastResult) return;
+  if (!shareBlob || !lastCard) return;
   const file = new File([shareBlob], "better-directions.png", { type: "image/png" });
   try {
     if (navigator.canShare?.({ files: [file] })) {
-      await navigator.share({ files: [file], title: lastResult.name, text: lastResult.summary });
+      await navigator.share({ files: [file], title: lastCard.name, text: lastCard.summary });
     } else {
       $<HTMLAnchorElement>("#share-image-download").click();
     }
@@ -292,6 +297,57 @@ $("#share-image-share").addEventListener("click", async () => {
     // Share sheet closed: nothing to do.
   }
 });
+
+// --- GPS art ---------------------------------------------------------------------------------------
+
+const artShape = $<HTMLSelectElement>("#art-shape");
+artShape.replaceChildren(
+  ...SHAPE_IDS.map((id) => {
+    const o = document.createElement("option");
+    o.value = id;
+    o.textContent = SHAPES[id].label;
+    return o;
+  }),
+);
+
+$<HTMLFormElement>("#art-form").addEventListener("submit", (e) => {
+  e.preventDefault();
+  if (!state.from) {
+    setStatus("Pick a From point first: the drawing starts there.", true);
+    input("from").focus();
+    return;
+  }
+  state.art = artShape.value as ShapeId;
+  state.artMinutes = Number(document.querySelector<HTMLInputElement>('input[name="art-len"]:checked')?.value ?? 40);
+  requestArt();
+});
+
+function requestArt(): void {
+  if (!info || !state.from || !state.art) return;
+  requestId++;
+  artShape.value = state.art;
+  const len = document.querySelector<HTMLInputElement>(`input[name="art-len"][value="${state.artMinutes}"]`);
+  if (len) len.checked = true;
+  $<HTMLDetailsElement>("#art").open = true;
+  setStatus(`Drawing a ${SHAPES[state.art].label.toLowerCase()} with Lyon's streets…`);
+  worker.postMessage({ type: "art", id: requestId, start: state.from, fromName: state.fromName ?? "your start", shape: state.art, minutes: state.artMinutes });
+}
+
+function onArt(result: ArtResultMsg): void {
+  goButton.disabled = false;
+  lastCard = artCard(result);
+  state.from = result.start;
+  routeMap?.setMarker("from", result.start);
+  const end = result.line.at(-1)!;
+  routeMap?.setMarker("to", SHAPES[result.shape].closed ? null : end);
+  writeLink();
+  routeMap?.setRoutes(result.template, result.line);
+  renderArt(result, (at) => routeMap?.flyTo(at));
+  clearShareImage();
+  resultEl.hidden = false;
+  setStatus("");
+  $("#announcer").textContent = `Drawing ready. ${lastCard.summary} Step-by-step directions follow the stats.`;
+}
 
 // --- Famous better routes --------------------------------------------------------------------------
 

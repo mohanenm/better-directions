@@ -62,6 +62,22 @@
           <button type="submit" class="go" id="go">Find the better route</button>
         </form>
 
+        <details class="art" id="art">
+          <summary>GPS art (experimental): draw a shape with your walk</summary>
+          <form id="art-form" class="art-form" novalidate>
+            <p class="art-help">Starts from your <em>From</em> point and loops back, or ends where the letter ends.</p>
+            <label for="art-shape">Shape</label>
+            <select id="art-shape"></select>
+            <fieldset class="art-length">
+              <legend>Walk length</legend>
+              <label><input type="radio" name="art-len" value="25"> Short, about 25 min</label>
+              <label><input type="radio" name="art-len" value="40" checked> Medium, about 40 min</label>
+              <label><input type="radio" name="art-len" value="55"> Long, about 55 min</label>
+            </fieldset>
+            <button type="submit" class="secondary">Draw it from my start</button>
+          </form>
+        </details>
+
         <div id="status" class="status" role="status" aria-live="polite"></div>
         <div id="announcer" class="visually-hidden" aria-live="polite"></div>
 
@@ -69,8 +85,8 @@
           <h2 id="result-title" class="route-name"><span class="visually-hidden">Your route: </span><span id="route-name"></span></h2>
           <p class="summary" id="summary"></p>
           <div class="legend" aria-hidden="true">
-            <span class="swatch normal"></span> Normal route
-            <span class="swatch better"></span> Better route
+            <span class="swatch normal"></span> <span id="legend-normal">Normal route</span>
+            <span class="swatch better"></span> <span id="legend-better">Better route</span>
           </div>
           <dl class="stats" id="stats"></dl>
           <p class="late-hint" id="late-hint" hidden>It's late. Some parks and passages on this route may already be locked: check the notes below.</p>

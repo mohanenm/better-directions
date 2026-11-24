@@ -2,13 +2,16 @@
  * Planning worker: loads the graph once, then plans routes on request. Runs off the main thread
  * so the page never freezes. Everything happens on the device; nothing is sent anywhere.
  */
+import { drawShape } from "./art/fit";
+import { SHAPES } from "./art/shapes";
 import { Graph, type LonLat } from "./graph/graph";
-import { directions } from "./modes/directions";
+import { describeRoute, directions } from "./modes/directions";
 import { FeatureIndex } from "./modes/features";
 import { planMode } from "./modes/plan-mode";
 import { Router, type Route } from "./router/astar";
 import { NodeIndex } from "./router/snap";
-import type { FromWorker, PlanRequest } from "./ui/protocol";
+import { costOfFun } from "./modes/stats";
+import type { ArtRequestMsg, FromWorker, PlanRequest } from "./ui/protocol";
 
 const SNAP_LIMIT_M = 300;
 
@@ -76,9 +79,44 @@ function plan(req: PlanRequest): void {
   });
 }
 
-self.addEventListener("message", (event: MessageEvent<PlanRequest>) => {
+function art(req: ArtRequestMsg): void {
+  if (!state) throw new Error("Still loading the map data.");
+  const { g, router, fi, index } = state;
+  const t0 = performance.now();
+  if (!(req.shape in SHAPES)) throw new Error("Unknown shape.");
+  const minutes = Math.max(15, Math.min(55, req.minutes));
+  const r = drawShape(router, fi, index, { shape: req.shape, start: req.start as LonLat, minutes });
+  if (!r) throw new Error("Couldn't fit that shape around here. Try another start point, shape or length.");
+  const shape = SHAPES[req.shape];
+  post({
+    type: "art",
+    id: req.id,
+    result: {
+      shape: req.shape,
+      label: shape.label,
+      minutes,
+      start: g.nodeLonLat(r.route.nodes[0]!),
+      line: line(g, r.route),
+      template: r.template,
+      likeness: r.likeness,
+      meanErrorM: r.meanErrorM,
+      maxErrorM: r.maxErrorM,
+      stats: costOfFun(fi, r.route),
+      steps: describeRoute(fi, r.route, {
+        quips: "art",
+        seed: r.route.dirEdges.length,
+        fromName: req.fromName,
+        arriveText: shape.closed ? `Back where you started: ${shape.label.toLowerCase()} complete.` : `${shape.label}: done.`,
+      }),
+      ms: Math.round(performance.now() - t0),
+    },
+  });
+}
+
+self.addEventListener("message", (event: MessageEvent<PlanRequest | ArtRequestMsg>) => {
   try {
-    plan(event.data);
+    if (event.data.type === "art") art(event.data);
+    else plan(event.data);
   } catch (err) {
     post({ type: "error", id: event.data.id, message: err instanceof Error ? err.message : String(err) });
   }

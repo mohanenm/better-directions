@@ -1,6 +1,8 @@
 /** Renders a planned route as text: summary, stats, notes and step-by-step directions. */
 import type { CostOfFun } from "../modes/stats";
-import type { PlanResult } from "./protocol";
+import type { Step } from "../modes/directions";
+import type { ArtResultMsg, PlanResult } from "./protocol";
+import type { ShareCard } from "./share-image";
 
 const el = <K extends keyof HTMLElementTagNameMap>(tag: K, text?: string, className?: string) => {
   const node = document.createElement(tag);
@@ -33,31 +35,70 @@ export function isLate(now = new Date()): boolean {
   return h >= 21 || h < 7;
 }
 
-export function renderResult(r: PlanResult, onStep: (at: [number, number]) => void): void {
-  const get = (id: string) => document.getElementById(id)!;
-  get("route-name").textContent = r.name;
-  get("summary").textContent = r.summary;
+const get = (id: string) => document.getElementById(id)!;
 
+function renderCard(name: string, summary: string, stats: [string, string][], b: CostOfFun, extraNotes: string[], steps: Step[], legend: [string, string], onStep: (at: [number, number]) => void): void {
+  get("route-name").textContent = name;
+  get("summary").textContent = summary;
+  get("legend-better").textContent = legend[0];
+  get("legend-normal").textContent = legend[1];
   get("stats").replaceChildren(
-    ...statItems(r).map(([k, v]) => {
+    ...stats.map(([k, v]) => {
       const wrap = el("div");
       wrap.append(el("dt", k), el("dd", v));
       return wrap;
     }),
   );
 
-  const notes: string[] = [];
-  if (r.betterStats.underBuildings) {
+  const notes: string[] = [...extraNotes];
+  if (b.underBuildings) {
     notes.push("This route passes under a building where no tunnel is mapped. Check it's open to walkers.");
   }
-  for (const c of r.betterStats.mayClose) {
+  for (const c of b.mayClose) {
     notes.push(`${c.name} may be closed outside opening hours${c.openingHours ? ` (${c.openingHours})` : ""}.`);
   }
   get("notes").replaceChildren(...notes.map((t) => el("li", t)));
-  get("late-hint").hidden = !(isLate() && r.betterStats.mayClose.length > 0);
+  get("late-hint").hidden = !(isLate() && b.mayClose.length > 0);
+  renderSteps(steps, onStep);
+}
 
+export function renderResult(r: PlanResult, onStep: (at: [number, number]) => void): void {
+  renderCard(r.name, r.summary, statItems(r), r.betterStats, [], r.steps, ["Better route", "Normal route"], onStep);
+}
+
+export function artSummary(r: ArtResultMsg): string {
+  return `A ${r.label.toLowerCase()} drawn with Lyon's streets: ${r.likeness}% likeness, ${(r.stats.lengthM / 1000).toFixed(1)} km, ${Math.max(1, Math.round(r.stats.timeS / 60))} min.`;
+}
+
+export function artName(r: ArtResultMsg): string {
+  return `The Lyon ${r.label.replace("Letter ", "")}`;
+}
+
+function artStats(r: ArtResultMsg): [string, string][] {
+  return [
+    ["Likeness", `${r.likeness}%`],
+    ["Walk", `${Math.max(1, Math.round(r.stats.timeS / 60))} min · ${(r.stats.lengthM / 1000).toFixed(1)} km`],
+    ["Off the ideal line", `${r.meanErrorM} m on average`],
+  ];
+}
+
+export function renderArt(r: ArtResultMsg, onStep: (at: [number, number]) => void): void {
+  const notes = ["Experimental: streets rarely match a shape exactly, so expect wobbles. The dashed line is the ideal shape."];
+  renderCard(artName(r), artSummary(r), artStats(r), r.stats, notes, r.steps, ["Your walk", "Ideal shape"], onStep);
+}
+
+export function planCard(r: PlanResult): ShareCard {
+  const extra = Math.round((r.betterStats.timeS - r.normalStats.timeS) / 60);
+  return { name: r.name, summary: r.summary, chips: [["Extra time", `+${extra} min`], ...statItems(r).slice(2, 4)], from: r.from, to: r.to, legend: ["Better route", "Normal route"] };
+}
+
+export function artCard(r: ArtResultMsg): ShareCard {
+  return { name: artName(r), summary: artSummary(r), chips: artStats(r).slice(0, 2).concat([["Shape", r.label]]), from: r.start, to: r.line.at(-1)!, legend: ["Your walk", "Ideal shape"] };
+}
+
+function renderSteps(steps: Step[], onStep: (at: [number, number]) => void): void {
   get("steps").replaceChildren(
-    ...r.steps.map((s) => {
+    ...steps.map((s) => {
       const li = el("li");
       const button = el("button", s.text);
       button.type = "button";

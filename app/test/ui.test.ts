@@ -6,7 +6,7 @@ const BBOX = { west: 4.77, south: 45.7, east: 4.93, north: 45.81 };
 
 describe("shareable links", () => {
   it("round-trips start, end, mode and seed", () => {
-    const state = { from: [4.832, 45.7578] as [number, number], to: [4.8336, 45.7675] as [number, number], fromName: "Place Bellecour", toName: "Place des Terreaux", mode: "chaos" as const, seed: 42 };
+    const state = { from: [4.832, 45.7578] as [number, number], to: [4.8336, 45.7675] as [number, number], fromName: "Place Bellecour", toName: "Place des Terreaux", mode: "chaos" as const, seed: 42, art: null, artMinutes: 40 };
     const parsed = parseLink(serializeLink(state), BBOX);
     expect(parsed).toEqual(state);
   });
@@ -21,7 +21,7 @@ describe("shareable links", () => {
   });
 
   it("only includes the seed for scenic chaos", () => {
-    expect(serializeLink({ from: null, to: null, fromName: null, toName: null, mode: "parks", seed: 9 })).toBe("?mode=parks");
+    expect(serializeLink({ from: null, to: null, fromName: null, toName: null, mode: "parks", seed: 9, art: null, artMinutes: 40 })).toBe("?mode=parks");
   });
 });
 
@@ -40,5 +40,16 @@ describe("place search", () => {
   it("ranks prefix matches first and needs two characters", () => {
     expect(searchPlaces(places, "pa")[0]!.name).toBe("Parc de la Tête d'Or");
     expect(searchPlaces(places, "p")).toEqual([]);
+  });
+});
+
+describe("GPS art links", () => {
+  it("round-trip shape and length, and ignore unknown shapes and lengths", () => {
+    const link = serializeLink({ from: [4.832, 45.7578], to: [4.84, 45.76], fromName: "Place Bellecour", toName: null, mode: "stairs", seed: 1, art: "heart", artMinutes: 55 });
+    expect(link).toBe("?from=4.83200%2C45.75780&fromName=Place+Bellecour&art=heart&len=55");
+    const parsed = parseLink(link, BBOX);
+    expect(parsed.art).toBe("heart");
+    expect(parsed.artMinutes).toBe(55);
+    expect(parseLink("?art=swastika&len=999", BBOX)).toMatchObject({ art: null, artMinutes: 40 });
   });
 });

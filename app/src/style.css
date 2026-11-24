@@ -105,6 +105,15 @@ button.secondary { background: var(--paper); color: var(--accent); border: 1px s
 .status { min-height: 1.5rem; margin: 0.75rem 0; color: var(--ink-soft); }
 .status.error { color: #9f1239; font-weight: 600; }
 
+/* --- GPS art --- */
+.art { margin-top: 1rem; border: 1px solid var(--line); border-radius: var(--radius); padding: 0.5rem 0.75rem; }
+.art summary { cursor: pointer; font-weight: 650; }
+.art-form { display: grid; gap: 0.5rem; margin-top: 0.5rem; }
+.art-help { margin: 0; font-size: 0.85rem; color: var(--ink-soft); }
+.art-form select { font: inherit; padding: 0.5rem; border-radius: 8px; border: 1px solid var(--line); }
+.art-length { border: 0; padding: 0; margin: 0; display: grid; gap: 0.2rem; }
+.art-length legend { font-weight: 650; margin-bottom: 0.2rem; }
+
 /* --- Result --- */
 .result { border-top: 1px solid var(--line); padding-top: 0.75rem; }
 .result:focus { outline: none; }

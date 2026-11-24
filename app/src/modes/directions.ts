@@ -10,6 +10,7 @@ import { turnAngleDeg } from "../router/geometry";
 import { hashUnit } from "../router/rng";
 import type { FeatureIndex } from "./features";
 import type { ModeId } from "./modes";
+import type { Route } from "../router/astar";
 import type { ModePlan } from "./plan-mode";
 import { minutes } from "./stats";
 
@@ -55,7 +56,11 @@ const GENERIC_NAMES: Record<string, string> = {
   platform: "the platform",
 };
 
-const QUIPS: Record<ModeId | "normal", { start: string[]; arrive: string[] }> = {
+const QUIPS: Record<ModeId | "normal" | "art", { start: string[]; arrive: string[] }> = {
+  art: {
+    start: ["Somewhere above you, a satellite is about to be impressed.", "You are the pen. Lyon is the paper."],
+    arrive: ["Masterpiece complete. Check your GPS app.", "Art delivered, one step at a time."],
+  },
   buildings: {
     start: ["Doors are for amateurs. Let's go through things.", "Today, walls are merely suggestions (mapped ones only)."],
     arrive: ["You went through it all. Literally.", "Architecture: experienced from the inside."],
@@ -195,9 +200,29 @@ function closureNote(fi: FeatureIndex, grp: Group): string | null {
 }
 
 export function directions(fi: FeatureIndex, plan: ModePlan, fromName: string, toName: string): Step[] {
+  const time = `${minutes(plan.better.timeS)} min instead of ${minutes(plan.normal.timeS)}`;
+  return describeRoute(fi, plan.better, {
+    quips: plan.mode,
+    seed: plan.seed,
+    fromName,
+    arriveText: `Arrive at ${toName}: ${time}.`,
+  });
+}
+
+export interface DescribeOptions {
+  quips: ModeId | "art";
+  seed: number;
+  fromName: string;
+  /** First sentence of the arrival step (a quip follows). */
+  arriveText: string;
+}
+
+/** Step-by-step directions for any route. */
+export function describeRoute(fi: FeatureIndex, route: Route, opts: DescribeOptions): Step[] {
   const g = fi.g;
-  const route = plan.better;
-  const quips = QUIPS[plan.mode];
+  const plan = { mode: opts.quips, seed: opts.seed };
+  const fromName = opts.fromName;
+  const quips = QUIPS[opts.quips];
   const steps: Step[] = [];
   const startAt = g.nodeLonLat(route.nodes[0]!);
   steps.push({
@@ -278,10 +303,9 @@ export function directions(fi: FeatureIndex, plan: ModePlan, fromName: string, t
   });
 
   const endAt = g.nodeLonLat(route.nodes.at(-1)!);
-  const time = `${minutes(plan.better.timeS)} min instead of ${minutes(plan.normal.timeS)}`;
   steps.push({
     kind: "arrive",
-    text: `Arrive at ${toName}: ${time}. ${pick(quips.arrive, plan.seed, 2)}`,
+    text: `${opts.arriveText} ${pick(quips.arrive, plan.seed, 2)}`,
     distanceM: 0,
     at: endAt,
     notes: [],
