@@ -1,0 +1,142 @@
+/**
+ * The hard safety rules, TypeScript side. Mirrors pipeline/bdgraph/safety.py exactly; both must
+ * pass every case in safety/cases.json. No mode, weight or setting can change these.
+ */
+
+import type { Tags } from "../graph/format";
+
+const WALKABLE_HIGHWAYS = new Set([
+  "footway", "path", "pedestrian", "steps", "corridor", "living_street", "track", "platform",
+  "residential", "service", "unclassified",
+  "tertiary", "tertiary_link", "secondary", "secondary_link", "primary", "primary_link",
+]);
+const NEEDS_FOOT_PERMISSION = new Set(["cycleway", "bridleway"]);
+const FAST_ROADS = new Set(["motorway", "motorway_link", "trunk", "trunk_link"]);
+const FORBIDDEN_ACCESS = new Set(["private", "no"]);
+const FORBIDDEN_FOOT = new Set(["no", "private", "use_sidepath"]);
+const FOOT_PERMITTED = new Set(["yes", "designated", "permissive"]);
+const SIDEWALK_PRESENT = new Set(["both", "left", "right", "yes"]);
+const OK_SAC_SCALES = new Set(["hiking", "mountain_hiking"]);
+const BAD_TRAIL_VISIBILITY = new Set(["bad", "horrible", "no"]);
+
+const UNDER_BUILDING_ROADS = new Set([
+  "residential", "service", "unclassified", "living_street",
+  "tertiary", "tertiary_link", "secondary", "secondary_link", "primary", "primary_link",
+  "trunk", "trunk_link", "motorway", "motorway_link",
+]);
+
+const RAILWAY_CROSSINGS = new Set(["crossing", "level_crossing", "tram_crossing", "tram_level_crossing"]);
+const RAILWAY_NON_TRACK = new Set([
+  "platform", "platform_edge", "station", "halt", "stop", "buffer_stop", "signal_box",
+  "turntable", "traverser", "subway_entrance", "train_station_entrance", "funicular_entrance",
+  "tram_stop",
+]);
+const LINEAR_BARRIERS = new Set(["wall", "fence", "hedge", "retaining_wall", "city_wall", "guard_rail", "ditch"]);
+const BARRIER_OPENINGS = new Set([
+  "gate", "entrance", "opening", "lift_gate", "swing_gate", "kissing_gate", "stile", "turnstile",
+  "bollard", "cycle_barrier", "full-height_turnstile", "hampshire_gate", "sliding_gate",
+  "wicket_gate",
+]);
+const CROSSING_HIGHWAY_NODES = new Set(["crossing", "traffic_signals"]);
+
+const has = (set: Set<string>, v: string | undefined): boolean => v !== undefined && set.has(v);
+
+export function hasMappedSidewalk(tags: Tags): boolean {
+  if (has(SIDEWALK_PRESENT, tags["sidewalk"])) return true;
+  return ["left", "right", "both"].some((side) => tags[`sidewalk:${side}`] === "yes");
+}
+
+/** Why a way must never be walked, or null if it's walkable. */
+export function wayExclusion(tags: Tags): string | null {
+  const hw = tags["highway"];
+  if (hw === undefined) return "not_highway";
+  if ("railway" in tags) return "railway";
+  if (hw === "construction" || hw === "proposed" || "construction" in tags) return "construction";
+  if (has(FORBIDDEN_ACCESS, tags["access"])) return "access";
+  if (has(FORBIDDEN_FOOT, tags["foot"])) return "foot";
+
+  if (FAST_ROADS.has(hw)) {
+    if (!(tags["foot"] === "yes" || hasMappedSidewalk(tags))) return "fast_road";
+  } else if (NEEDS_FOOT_PERMISSION.has(hw)) {
+    if (!has(FOOT_PERMITTED, tags["foot"])) return "no_foot_permission";
+  } else if (!WALKABLE_HIGHWAYS.has(hw)) {
+    return "highway_kind";
+  }
+
+  const indoor = tags["indoor"];
+  if (hw !== "corridor" && indoor !== undefined && indoor !== "no" && indoor !== "corridor") {
+    return "indoor_not_corridor";
+  }
+  const conveying = tags["conveying"];
+  if (conveying !== undefined && conveying !== "forward" && conveying !== "backward" && conveying !== "no") {
+    return "escalator_direction_unknown";
+  }
+  const sac = tags["sac_scale"];
+  if (sac !== undefined && !OK_SAC_SCALES.has(sac)) return "sac_scale";
+  if (has(BAD_TRAIL_VISIBILITY, tags["trail_visibility"])) return "trail_visibility";
+  return null;
+}
+
+export const isBuildingPassage = (tags: Tags): boolean => tags["tunnel"] === "building_passage";
+export const isCovered = (tags: Tags): boolean => tags["covered"] === "yes";
+export const isIndoorCorridor = (tags: Tags): boolean =>
+  tags["highway"] === "corridor" || tags["indoor"] === "corridor";
+
+export function mayPassThroughBuilding(tags: Tags): boolean {
+  if (isBuildingPassage(tags) || isCovered(tags) || isIndoorCorridor(tags)) return true;
+  const bridge = tags["bridge"];
+  return tags["tunnel"] === "yes" || (bridge !== undefined && bridge !== "no");
+}
+
+export function mayPassUnderBuildingUnmapped(tags: Tags): boolean {
+  const indoor = tags["indoor"];
+  return has(UNDER_BUILDING_ROADS, tags["highway"]) && !("level" in tags) && (indoor === undefined || indoor === "no");
+}
+
+/** Which directions (forward, backward along the way) a pedestrian may walk. */
+export function footDirections(tags: Tags): [boolean, boolean] {
+  const conveying = tags["conveying"];
+  if (conveying === "forward") return [true, false];
+  if (conveying === "backward") return [false, true];
+
+  let oneway = tags["oneway:foot"];
+  if (oneway === undefined && has(PEDESTRIAN_ONEWAY_KINDS, tags["highway"])) oneway = tags["oneway"];
+  let fwd = true;
+  let bwd = true;
+  if (oneway === "yes") bwd = false;
+  else if (oneway === "-1") fwd = false;
+  if (has(FORBIDDEN_FOOT, tags["foot:forward"])) fwd = false;
+  if (has(FORBIDDEN_FOOT, tags["foot:backward"])) bwd = false;
+  return [fwd, bwd];
+}
+const PEDESTRIAN_ONEWAY_KINDS = new Set(["footway", "path", "steps", "corridor", "pedestrian", "platform"]);
+
+export function isTrackRailwayWay(tags: Tags): boolean {
+  const rw = tags["railway"];
+  return rw !== undefined && !RAILWAY_NON_TRACK.has(rw);
+}
+
+export interface NodeContext {
+  on_railway?: boolean;
+  on_fast_road?: boolean;
+  on_linear_barrier?: boolean;
+}
+
+/** Why a route must never pass through this node, or null. */
+export function nodeExclusion(tags: Tags, ctx: NodeContext = {}): string | null {
+  const foot = tags["foot"];
+  if (has(FORBIDDEN_FOOT, foot)) return "node_foot";
+  if (has(FORBIDDEN_ACCESS, tags["access"]) && !has(FOOT_PERMITTED, foot)) return "node_access";
+  if (tags["locked"] === "yes") return "node_locked";
+  if (tags["crossing"] === "no") return "node_crossing_no";
+  if (ctx.on_railway && !has(RAILWAY_CROSSINGS, tags["railway"])) return "railway_unmapped_crossing";
+  if (ctx.on_fast_road && !(has(CROSSING_HIGHWAY_NODES, tags["highway"]) || "crossing" in tags)) {
+    return "fast_road_unmarked_crossing";
+  }
+  if (ctx.on_linear_barrier && !(has(BARRIER_OPENINGS, tags["barrier"]) || "entrance" in tags)) {
+    return "barrier_no_opening";
+  }
+  return null;
+}
+
+export const isLinearBarrierWay = (tags: Tags): boolean => has(LINEAR_BARRIERS, tags["barrier"]);
