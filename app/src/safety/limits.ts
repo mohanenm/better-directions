@@ -16,3 +16,6 @@ export function detourCapSeconds(normalSeconds: number): number {
 
 export const NOVELTY_NOTICE =
   "For fun. Use common sense, follow signs and local rules, and don't follow it anywhere that looks unsafe or closed.";
+
+/** GPS art walks are loops with no "normal route" to compare with, so they get the absolute cap. */
+export const GPS_ART_MAX_SECONDS = DETOUR.maxSeconds;

@@ -11,6 +11,8 @@
 import { readFileSync } from "node:fs";
 import fc from "fast-check";
 import { describe, expect, it } from "vitest";
+import { drawShape } from "../src/art/fit";
+import { SHAPE_IDS } from "../src/art/shapes";
 import { decodeGraph } from "../src/graph/format";
 import { FeatureIndex } from "../src/modes/features";
 import { MODE_IDS } from "../src/modes/modes";
@@ -20,7 +22,8 @@ import { NORMAL, Router, type CostModel } from "../src/router/astar";
 import { haversineM, turnAngleDeg } from "../src/router/geometry";
 import { plan } from "../src/router/planner";
 import { hashUnit } from "../src/router/rng";
-import { detourCapSeconds } from "../src/safety/limits";
+import { NodeIndex } from "../src/router/snap";
+import { detourCapSeconds, GPS_ART_MAX_SECONDS } from "../src/safety/limits";
 import { footDirections, nodeExclusion, wayExclusion } from "../src/safety/rules";
 
 const RUNS = Number(process.env["PROPERTY_RUNS"] ?? 300);
@@ -133,6 +136,24 @@ describe("safety property: random routes on the real Lyon graph", () => {
       );
     });
   }
+
+  it("GPS art: every drawing is safe, connected and at most an hour, for any start, shape and length", () => {
+    const index = new NodeIndex(lyon);
+    fc.assert(
+      fc.property(
+        fc.nat({ max: lyon.nodeCount - 1 }),
+        fc.constantFrom(...SHAPE_IDS),
+        fc.constantFrom(25, 40, 55),
+        (node, shape, minutes) => {
+          const r = drawShape(router, features, index, { shape, start: lyon.nodeLonLat(node), minutes });
+          if (!r) return; // some places can't fit a shape; that's allowed
+          checkRoute(lyon, r.route.dirEdges, r.route.nodes);
+          expect(r.route.timeS).toBeLessThanOrEqual(GPS_ART_MAX_SECONDS);
+        },
+      ),
+      { numRuns: Math.ceil(RUNS / 5), seed: 20261127 },
+    );
+  });
 
   it("a tampered graph: routes never use edges or nodes the audit disabled", () => {
     // Mark ~1 in 15 way tagsets private and ~1 in 50 nodes locked, then route at random.
