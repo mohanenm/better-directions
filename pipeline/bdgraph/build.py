@@ -71,6 +71,7 @@ class AreaFeature:
     kind: str  # park | building | mall | station
     polygons: list[Polygon]
     layer: int = 0
+    opening_hours: str | None = None
 
     @property
     def key(self) -> tuple[str, int]:
@@ -150,6 +151,7 @@ def read_osm(path: Path, proj: LocalProjection) -> OsmData:
                     kind,
                     polys,
                     safety.layer_of(tags),
+                    tags.get("opening_hours"),
                 )
             )
     data.areas.sort(key=lambda a: (a.osm_type, a.osm_id))
@@ -531,13 +533,20 @@ def edge_steps(edge: Edge, way: WayData) -> tuple[int, bool]:
     return max(1, round(edge.length / STEP_RUN_M)), True
 
 
-def edge_may_close(edge: Edge, way: WayData) -> bool:
-    """Indoor and covered passages that may close: corridors, anything through a building,
-    covered ways inside malls or stations, and anything with opening_hours."""
+def _has_closing_hours(opening_hours: str | None) -> bool:
+    return opening_hours is not None and opening_hours.strip() != "24/7"
+
+
+def edge_may_close(edge: Edge, way: WayData, areas: list[AreaFeature]) -> bool:
+    """Passages that may close: corridors, anything through a building, covered ways inside
+    malls or stations, anything with opening_hours, and paths in parks with opening hours
+    (Lyon's big parks lock their gates at night)."""
     tags = way.tags
-    if "opening_hours" in tags or safety.is_indoor_corridor(tags):
+    if _has_closing_hours(tags.get("opening_hours")) or safety.is_indoor_corridor(tags):
         return True
     if edge.attrs.building != -1:
+        return True
+    if edge.attrs.park != -1 and _has_closing_hours(areas[edge.attrs.park].opening_hours):
         return True
     return edge.attrs.venue != -1 and safety.is_covered(tags)
 

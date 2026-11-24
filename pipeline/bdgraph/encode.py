@@ -82,7 +82,10 @@ def encode_graph(graph: Graph) -> bytes:
         if ai == -1:
             return 0
         a = data.areas[ai]
-        return areas.add({"kind": a.kind, "name": a.name, "osm": f"{a.osm_type}{a.osm_id}"})
+        entry = {"kind": a.kind, "name": a.name, "osm": f"{a.osm_type}{a.osm_id}"}
+        if a.opening_hours:
+            entry["opening_hours"] = a.opening_hours
+        return areas.add(entry)
 
     # Nodes
     node_lat, node_lon = array("i"), array("i")
@@ -125,7 +128,7 @@ def encode_graph(graph: Graph) -> bytes:
             (FLAG_FORWARD if fwd else 0)
             | (FLAG_BACKWARD if bwd else 0)
             | (FLAG_STEPS_ESTIMATED if estimated else 0)
-            | (FLAG_MAY_CLOSE if edge_may_close(e, w) else 0)
+            | (FLAG_MAY_CLOSE if edge_may_close(e, w, data.areas) else 0)
             | (FLAG_THROUGH_BUILDING if e.attrs.building != -1 else 0)
         )
         e_from.append(node_index[e.nodes[0]])

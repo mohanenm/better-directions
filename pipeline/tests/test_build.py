@@ -277,3 +277,17 @@ def test_build_is_deterministic(tmp_path):
     first = encode_graph(build_graph(town_city(), path))
     second = encode_graph(build_graph(town_city(), path))
     assert first == second
+
+
+def test_paths_in_parks_with_opening_hours_may_close(tmp_path):
+    b = base_town()
+    b.ring([(105, 5), (195, 5), (195, 95), (105, 95)], leisure="park", opening_hours="06:30-22:30")
+    gated = b.way(["C1", "C2"], highway="path")
+    b.ring([(5, 5), (95, 5), (95, 95), (5, 95)], leisure="park", opening_hours="24/7")
+    open_park = b.way(["C0", "C1"], highway="path")
+    _, g = build(b, tmp_path)
+    (e,) = edges_of_way(g, gated)
+    assert g["edge_flags"][e] & FLAG_MAY_CLOSE
+    assert g.meta["areas"][g["edge_park"][e]]["opening_hours"] == "06:30-22:30"
+    (e,) = edges_of_way(g, open_park)
+    assert not g["edge_flags"][e] & FLAG_MAY_CLOSE

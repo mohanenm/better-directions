@@ -29,7 +29,7 @@ Each section is a typed array: `{ "name", "type", "count" }`, where type is one 
 | `strings` | Names and opening hours; index 0 is `""` |
 | `tagsets` | Deduplicated way tag subsets (safety and mode keys); index 0 is `{}` |
 | `node_tagsets` | Deduplicated node tag subsets (barrier, access, foot, railway, highway, crossing, locked, entrance); index 0 is `{}` |
-| `areas` | Parks, venues and buildings that edges reference: `{kind, name, osm}`, where `kind` is `park`, `mall`, `station` or `building` and `osm` is like `w123` or `r456`. Index 0 is `null` (none). |
+| `areas` | Parks, venues and buildings that edges reference: `{kind, name, osm, opening_hours?}`, where `kind` is `park`, `mall`, `station` or `building` and `osm` is like `w123` or `r456`. Index 0 is `null` (none). |
 
 ## Sections
 
@@ -41,7 +41,7 @@ Each section is a typed array: `{ "name", "type", "count" }`, where type is one 
 | `edge_from`, `edge_to` | u32 | edge | Node indices. Geometry runs from → to, in the OSM way's direction. |
 | `edge_way` | u32 | edge | Way index |
 | `edge_length_m` | f32 | edge | Metres along the geometry |
-| `edge_flags` | u8 | edge | Bit 0: walkable forward. Bit 1: walkable backward. Bit 2: step count estimated. Bit 3: may be closed (corridors, passages through buildings, covered ways in malls or stations, anything with `opening_hours`). Bit 4: passes through a building via a mapped passage. |
+| `edge_flags` | u8 | edge | Bit 0: walkable forward. Bit 1: walkable backward. Bit 2: step count estimated. Bit 3: may be closed (corridors, passages through buildings, covered ways in malls or stations, anything with `opening_hours`, paths in parks with `opening_hours`). Bit 4: passes through a building via a mapped passage. |
 | `edge_steps` | u16 | edge | Steps on this edge (staircases only). From `step_count`, split across edges by length, or estimated at 0.3 m per step. |
 | `edge_park`, `edge_venue`, `edge_building` | u16 | edge | Index into `areas` (0 = none). `edge_building` is set only for passages through a building. |
 | `edge_geom_offset` | u32 | edge + 1 | Byte offsets into `geom` |
