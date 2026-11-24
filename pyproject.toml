@@ -1,0 +1,20 @@
+[project]
+name = "better-directions-pipeline"
+version = "0.1.0"
+description = "Offline graph build tooling for Better Directions (not a published package)"
+requires-python = ">=3.12"
+
+[tool.pytest.ini_options]
+testpaths = ["pipeline/tests"]
+pythonpath = ["pipeline"]
+markers = [
+  "real_data: needs the downloaded city extract (skipped when it is missing)",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+src = ["pipeline"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP", "SIM", "RUF"]

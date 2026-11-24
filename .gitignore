@@ -1,0 +1,17 @@
+# Python
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.ruff_cache/
+
+# Raw OSM downloads and intermediate files (large, re-downloadable)
+data/raw/
+data/work/
+
+# Node (later phases)
+node_modules/
+dist/
+
+# OS / editor
+.DS_Store

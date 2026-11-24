@@ -1,0 +1,13 @@
+{
+  "id": "lyon",
+  "name": "Lyon",
+  "extract": {
+    "provider": "Geofabrik",
+    "url": "https://download.geofabrik.de/europe/france/rhone-alpes-latest.osm.pbf",
+    "licence": "ODbL 1.0",
+    "attribution": "© OpenStreetMap contributors"
+  },
+  "bbox": { "west": 4.77, "south": 45.70, "east": 4.93, "north": 45.81 },
+  "center": { "lon": 4.835, "lat": 45.762 },
+  "default_zoom": 14
+}
