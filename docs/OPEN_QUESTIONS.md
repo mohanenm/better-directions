@@ -97,16 +97,30 @@ Each question has a recommended answer and the assumption I'm working on until y
 
 </details>
 
-## Q-009 Opening hours at route time
+## Q-009 Opening hours at route time: answered 2026-11-24, warn for launch
+
+- **Answer:** as recommended. The page shows closures prominently with their hours, plus a "walking late?" hint after 21:00 or before 07:00 when a route has any. A small built-in parser for simple opening hours stays a later improvement.
+
+<details><summary>Original question</summary>
+
 
 - **Question:** should routes avoid passages and parks that are closed *right now*, rather than only warning?
 - **Background:** Park hopper and Through buildings love places with gates and doors: Tête d'Or closes at 22:30 in summer, and traboules lock at night. Every such edge is flagged "may close" and listed with its hours, but the router doesn't check the clock. OSM's `opening_hours` syntax is rich. Doing it properly means a parser (a new dependency, such as the `opening_hours` npm package) or writing a subset ourselves.
 - **Recommendation:** for launch, show the closures prominently with their hours, plus a "walking at night?" hint when it's late. Later, a small built-in parser for the common simple forms (`06:30-22:30`, `Mo-Sa 07:00-21:00`, seasonal ranges) could treat closed places as excluded for that query. A failed parse would mean "assume it may be closed".
 - **Assumption:** warn only.
 
-## Q-010 An effort limit besides the detour cap?
+</details>
+
+## Q-010 An effort limit besides the detour cap?: answered 2026-11-24, no extra cap
+
+- **Answer:** as recommended, time cap only. The stats card shows metres and steps up before anyone starts.
+
+<details><summary>Original question</summary>
+
 
 - **Question:** should there be a cap on climbing, as well as on time?
 - **Background:** the detour cap is in walking *time*, and the time model already slows walkers on hills (Tobler) and stairs (0.6 s per step up), so climbing eats the budget. Still, sample routes include up to 255 m of climbing, e.g. Saint-Jean to Fourvière in Trail runner, a trip that ends at the top of a hill anyway. Stairmaster climbs up to ~600 steps.
 - **Recommendation:** no extra cap for now. The time cap already prices effort, and the stats card shows metres up and steps up before anyone starts. Revisit if it reads as exhausting in Phase 4.
 - **Assumption:** time cap only.
+
+</details>

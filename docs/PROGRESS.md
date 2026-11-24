@@ -6,10 +6,75 @@
 - [x] **Phase 1: Data pipeline.** Done 2026-11-24, including the approved rule changes Q-004 to Q-006.
 - [x] **Phase 2: Router core.** Done 2026-11-24.
 - [x] **Phase 3: The modes.** Done 2026-11-24.
-- [ ] Phase 4: The web page
+- [x] **Phase 4: The web page.** Done 2026-11-24.
 - [ ] Phase 5: Delight
 - [ ] Phase 6: GPS art (stretch)
 - [ ] Phase 7: Hardening and launch prep (no deploy)
+
+## Phase 4: The web page (2026-11-24)
+
+### Built
+
+- **Basemap:** self-hosted Protomaps tiles for Lyon (340 static tiles, built 2026-11-23, the same day as the OSM extract), plus fonts and sprites (D-022). Setup: `python -m bdgraph.tiles cities/lyon.json --build 20261123`.
+- **Places list:** 1,202 public places (D-023). Setup: `python -m bdgraph.places cities/lyon.json`.
+- **Page** (`app/index.html`, `app/src/main.ts`, `app/src/ui/`):
+  - **Map:** both routes drawn, the normal route dashed grey and the better route bold magenta, with A/B markers.
+  - **Start and end:** search over the local places list with an accessible combobox, a tap on the map, "Use map centre" (the keyboard alternative to tapping), "Use my location" (only on tap, kept on the device), and swap.
+  - **Mode picker:** six radio cards with taglines, plus the chaos seed with "Roll a new adventure".
+  - **Results:** the stats card with the one-line summary, closure notes with hours, the late-night hint (after 21:00 or before 07:00, Q-009), the roads-under-buildings disclosure, and step-by-step directions with personality. Tapping a step shows it on the map.
+  - **Sharing:** links with snapped points (D-025), via the system share sheet or the clipboard.
+  - **Always visible:** the novelty notice, the OSM/Protomaps/IGN attribution with the data date, and "Nothing leaves your phone".
+- **Planning worker** (`app/src/worker.ts`, D-024).
+- **Static and private:** Vite build under `/better-directions/`, with the strict meta CSP added at build time ([SECURITY.md](SECURITY.md)). No cookies, storage, analytics or third-party requests.
+
+### Tests
+
+- **TypeScript:** 187 tests in total.
+  - Directions on the mini-town: bookends, distances adding up, the traboule step with its closure note, stairs counts, park entry, determinism.
+  - Link round-trip and sanitising; accent-insensitive search.
+  - **Built-site checks:** CSP meta exact, no inline scripts, handlers or style attributes, everything under the base path, external links to attribution sites only, all assets present, 45 MB against a 100 MB budget.
+- **Browser smoke test** (`npm run smoke`, local Brave):
+  - phone Stairmaster route, desktop Through-buildings route, empty state, and a keyboard-only flow
+  - all pass with no CSP violations, errors, third-party requests, cookies or storage
+- **Sub-path:** the page, graph, places, a tile, a font, a sprite and the favicon all return 200 under `/better-directions/` in `vite preview`.
+
+### Performance and size
+
+| | |
+|---|---|
+| JS | 1.13 MB main (310 kB gzipped, mostly MapLibre and the style), 551 kB MapLibre worker, 33 kB planning worker |
+| Graph | 9.6 MB (3.1 MB gzipped), downloaded once per visit |
+| Total site | 45 MB, mostly tiles; a visit loads only the tiles it views |
+
+### Self-review
+
+- **Safety:**
+  - The novelty notice is always on screen.
+  - Closure notes show with their hours, and the late-night hint fires when it applies.
+  - Roads under buildings are disclosed in the stats card and in the step itself.
+  - Points too far from a path get a clear error, not a guess.
+  - Link names are sanitised and only ever rendered as text (no `innerHTML` anywhere).
+- **Privacy:**
+  - Geolocation only on tap, and snapped before it reaches the URL.
+  - The smoke test checks there are no cookies, storage or third-party requests.
+- **Accessibility:**
+  - Native controls with labels, and the combobox follows the ARIA pattern.
+  - Keyboard-only use works end to end (tested).
+  - Visible focus outlines, AA contrast, respect for reduced motion.
+  - Routes are fully described in text, and results are announced through a live region.
+  - Not yet done: an automated axe or Lighthouse audit. That needs a tool we haven't approved; it's planned for Phase 7.
+- **Found and fixed by looking at screenshots:** the seed row showed in every mode, the marker letters were hard to read, the status line duplicated the summary, the step numbers were misaligned, and "Onward and upward" appeared on a 3-step staircase.
+- **Found by the keyboard smoke test:** famous squares were missing from search.
+- **Fun:** routes read well on the map. One visible weakness: the desktop Through-buildings sample goes down a quay to one far passage and back. That's the 19% doubling-back case, to tune in Phase 5.
+
+### Decisions
+
+D-022 to D-026.
+
+### Skipped, and why
+
+- Route names, the share image, snack tour and famous routes: Phase 5.
+- Deploy: a big item. The workflow comes in Phase 7.
 
 ## Phase 3: The modes (2026-11-24)
 

@@ -4,7 +4,7 @@ A deliberately silly walking-directions app. Pick a start and an end, choose a m
 
 > **For fun.** Use common sense, follow signs and local rules, and don't follow it anywhere that looks unsafe or closed.
 
-Status: work in progress. The data pipeline, router and modes are done; the web page is next. See [docs/PROGRESS.md](docs/PROGRESS.md).
+Status: work in progress. The data pipeline, router, modes and web page are done; delight features are next. See [docs/PROGRESS.md](docs/PROGRESS.md).
 
 ## The modes
 
@@ -24,17 +24,26 @@ python3.12 -m venv .venv
 .venv/bin/pip install -r requirements-dev.txt
 PYTHONPATH=pipeline .venv/bin/python -m bdgraph.fetch cities/lyon.json     # downloads ~534 MB once
 PYTHONPATH=pipeline .venv/bin/python -m bdgraph.terrain cities/lyon.json   # elevations from IGN, cached
+PYTHONPATH=pipeline .venv/bin/python -m bdgraph.tiles cities/lyon.json --build 20261123   # basemap tiles
+PYTHONPATH=pipeline .venv/bin/python -m bdgraph.places cities/lyon.json    # places for search
 PYTHONPATH=pipeline .venv/bin/python -m bdgraph.build cities/lyon.json
 .venv/bin/python -m pytest
 ```
 
-## Router (TypeScript)
+## Privacy
+
+Nothing leaves your phone. The page makes no requests to anyone but its own site. It has no cookies, storage or analytics. Your location is used only if you tap "Use my location", and it stays on your device. See [docs/SECURITY.md](docs/SECURITY.md).
+
+## The app (TypeScript)
 
 ```sh
 npm ci
 npm run check   # typecheck, lint, tests (including the safety property test)
 npm run bench   # routing benchmark on the Lyon graph
 npm run samples # sample routes per mode -> docs/SAMPLE_ROUTES.md
+npm run dev     # local dev server
+npm run build && npm run preview   # the real build at http://localhost:4173/better-directions/
+npm run smoke   # browser smoke test against the preview (needs a local Chromium-based browser)
 ```
 
 ## Licences
@@ -42,3 +51,4 @@ npm run samples # sample routes per mode -> docs/SAMPLE_ROUTES.md
 - Code: [MIT](LICENSE).
 - Map data: © OpenStreetMap contributors, available under the [ODbL](https://opendatacommons.org/licenses/odbl/1-0/).
 - Elevation (Lyon): IGN RGE ALTI®, [Licence Ouverte 2.0](https://www.etalab.gouv.fr/licence-ouverte-open-licence/).
+- Basemap: [Protomaps](https://protomaps.com). Fonts: Noto Sans (SIL OFL), in `app/public/basemap/fonts/OFL.txt`. Sprites are derived from MIT-licensed tangrams/icons.

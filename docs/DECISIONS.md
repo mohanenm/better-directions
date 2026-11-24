@@ -200,3 +200,44 @@ These don't loosen any rule, so they didn't need approval. Each is in `safety/ca
   - *Doubling back* is metres on edges walked more than once.
 - **Why:** these read well in one line ("Normal: 16 min. Better: 29 min, 9 staircases, 555 steps up").
 - **Reversible:** `modes/stats.ts`.
+
+## D-022 Basemap: Protomaps build 2026-11-23 as static z/x/y tiles
+
+- **Choice:** cut Lyon's bbox at zoom 0–15 from the Protomaps daily build of the same date as the OSM extract, and unpack it to 340 plain `.mvt` files (26.9 MB uncompressed). The style comes from `@protomaps/basemaps` ("light" flavour, French labels). Only three glyph ranges are kept for the three Noto Sans fonts: Latin-1, Latin Extended-A and punctuation. The setup step is `python -m bdgraph.tiles`.
+- **Alternatives:** one `.pmtiles` file (broken on Pages, D-003); zoom 0–14 only (smaller, but loses street-level detail); a hosted tile provider (third-party requests).
+- **Why:** it works on a static host and keeps map and graph data from the same day. Pages gzips tiles in transit (about 16 MB in total, and a session only loads the tiles it views).
+- **Reversible:** re-run with another build date or zoom.
+- **Note:** finding build names took one read-only request to `build-metadata.protomaps.dev`. The setup step doesn't use that host; it takes the date as an argument.
+
+## D-023 Places list for search
+
+- **Choice:** search covers 1,202 places extracted from OSM:
+  - Squares: `place=square`, named pedestrian areas, and streets whose names start with a city-configured prefix ("Place", "Square", "Esplanade", "Parvis" in Lyon). Many of Lyon's famous squares, Terreaux and Jacobins included, aren't tagged `place=square`. The keyboard smoke test caught that.
+  - Stations, parks, sights, campuses and malls.
+  - Landmarks only if they have a Wikidata link, excluding memorial plaques.
+  - Search is accent- and case-insensitive, ranked prefix, then word, then contains.
+- **Alternatives:** a geocoding service (a third-party request on every keystroke); all named POIs (noisy, and 10× bigger).
+- **Reversible:** `pipeline/bdgraph/places.py` and the city config.
+
+## D-024 Planning in a Web Worker
+
+- **Choice:** the worker fetches `graph.bin` and builds the router and feature index. It answers plan requests with geometry, stats, directions and disclosures, and stale replies are ignored.
+- **Why:** plans take 50–150 ms on a laptop and more on phones. The worker keeps scrolling and the map smooth.
+- **Reversible:** yes.
+
+## D-025 What goes in a shared link
+
+- **Choice:** `?from=lon,lat&to=lon,lat&fromName=…&toName=…&mode=…&seed=…`. The seed is included only for chaos. Coordinates are the points *snapped to the walking graph*, at 5 decimals. Parsing ignores anything outside the city, unknown modes, bad seeds and control characters, and names are rendered as text only.
+- **Why:** links work on a static host with no routing. Snapping means a shared "My location" link shows a path near you, not your exact GPS fix. The page warns that links include start and end.
+- **Reversible:** yes.
+
+## D-026 Browser smoke test over the DevTools protocol, locally
+
+- **Choice:** `scripts/smoke.mjs` drives a local Chromium-based browser (Brave on this machine) through the DevTools protocol, using Node's built-in WebSocket. It covers:
+  - a phone and a desktop route
+  - the empty state
+  - a keyboard-only flow
+  It fails on CSP violations, script errors, third-party requests, cookies, storage, or a missing novelty notice or attribution, and saves screenshots.
+- **Alternatives:** Playwright (a new dependency, not approved); plain headless screenshots (they hang on a continuously rendering map).
+- **Why:** real-browser coverage with no new dependency. It's local only; CI runs the static built-site checks.
+- **Reversible:** yes. Playwright could replace it if you approve it later.
