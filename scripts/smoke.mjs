@@ -142,6 +142,14 @@ async function runCase(c) {
     checks.summary = /Normal: \d+ min\. Better: \d+ min/.test(summary) || /likeness/.test(summary);
     checks.seedRowHiddenUnlessChaos = await evaluate("(getComputedStyle(document.getElementById('seed-row')).display === 'none') === !location.search.includes('mode=chaos')");
   }
+  // Accessibility tree: every interactive control and image needs a name; landmarks must exist.
+  await send("Accessibility.enable");
+  const ax = (await send("Accessibility.getFullAXTree")).result?.nodes ?? [];
+  const NAMED = new Set(["button", "textbox", "combobox", "radio", "link", "checkbox", "listbox", "img", "image", "slider"]);
+  const unnamed = ax.filter((n) => !n.ignored && NAMED.has(n.role?.value) && !(n.name?.value ?? "").trim());
+  for (const n of unnamed.slice(0, 5)) problems.push(`a11y: unnamed ${n.role.value}`);
+  const roles = new Set(ax.filter((n) => !n.ignored).map((n) => n.role?.value));
+  for (const landmark of ["banner", "main", "contentinfo"]) if (!roles.has(landmark)) problems.push(`a11y: no ${landmark} landmark`);
   for (const [k, ok] of Object.entries(checks)) if (!ok) problems.push(`check failed: ${k}`);
   console.log(`${c.name}: ${problems.length ? "PROBLEMS" : "ok"} | ${status.slice(0, 140)}`);
   for (const p of problems) console.log(`  - ${p}`);

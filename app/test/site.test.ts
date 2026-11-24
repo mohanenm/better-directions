@@ -41,7 +41,8 @@ describe.skipIf(!built)("built site", () => {
     for (const [, url] of html.matchAll(/(?:src|href)="([^"]+)"/g)) {
       if (url!.startsWith("#")) continue;
       if (url!.startsWith("http")) expect(LINK_HOSTS.has(new URL(url!).host), url).toBe(true);
-      else expect(url!.startsWith(BASE), url).toBe(true);
+      else if (url!.startsWith("/")) expect(url!.startsWith(BASE), url).toBe(true); // root-absolute must include the base
+      else expect(existsSync(join(DIST, url!)), `relative link to a missing file: ${url}`).toBe(true);
     }
   });
 
