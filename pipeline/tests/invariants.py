@@ -30,3 +30,6 @@ def assert_output_is_safe(g: DecodedGraph) -> None:
         assert flags & (edge_bits["forward"] | edge_bits["backward"]), "edge usable in no direction"
         if flags & edge_bits["through_building"]:
             assert safety.may_pass_through_building(tags), tags
+        if flags & edge_bits["under_building"]:
+            assert safety.may_pass_under_building_unmapped(tags), tags
+            assert not safety.may_pass_through_building(tags), tags

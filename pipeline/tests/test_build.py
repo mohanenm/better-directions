@@ -14,6 +14,7 @@ from bdgraph.encode import (
     FLAG_MAY_CLOSE,
     FLAG_STEPS_ESTIMATED,
     FLAG_THROUGH_BUILDING,
+    FLAG_UNDER_BUILDING,
     encode_graph,
 )
 
@@ -319,3 +320,27 @@ def test_mapped_tram_crossing_connects_but_unmapped_one_cuts(tmp_path):
     assert graph.dropped["node:railway_unmapped_crossing"] == 2  # both segments touching TB
     assert graph.component["node_share"] == 1.0
     assert_output_is_safe(g)
+
+
+def test_street_under_a_building_is_kept_and_flagged(tmp_path):
+    b = base_town()
+    # A building straddling Cross Street 1, with no tunnel tag on the street.
+    b.ring([(80, 30), (120, 30), (120, 70), (80, 70)], building="yes", name="Pont-Immeuble")
+    graph, g = build(b, tmp_path)
+    assert graph.dropped["through_building_unmapped"] == 0
+    flagged = [
+        e for e in range(g.meta["counts"]["edges"]) if g["edge_flags"][e] & FLAG_UNDER_BUILDING
+    ]
+    assert flagged
+    for e in flagged:
+        assert not g["edge_flags"][e] & FLAG_THROUGH_BUILDING
+        assert g.meta["areas"][g["edge_building"][e]]["name"] == "Pont-Immeuble"
+    assert_output_is_safe(g)
+
+
+def test_footway_under_a_building_is_still_dropped(tmp_path):
+    b = base_town()
+    b.ring([(120, 20), (180, 20), (180, 80), (120, 80)], building="yes")
+    b.way(["C1", "C2"], highway="footway")
+    graph, _ = build(b, tmp_path)
+    assert graph.dropped["through_building_unmapped"] == 1

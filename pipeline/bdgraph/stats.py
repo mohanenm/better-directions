@@ -12,7 +12,12 @@ from pathlib import Path
 
 from bdgraph.build import Graph
 from bdgraph.decode import decode_graph
-from bdgraph.encode import FLAG_MAY_CLOSE, FLAG_STEPS_ESTIMATED, FLAG_THROUGH_BUILDING
+from bdgraph.encode import (
+    FLAG_MAY_CLOSE,
+    FLAG_STEPS_ESTIMATED,
+    FLAG_THROUGH_BUILDING,
+    FLAG_UNDER_BUILDING,
+)
 
 UNPAVED = frozenset({
     "unpaved", "dirt", "earth", "ground", "gravel", "fine_gravel", "compacted", "grass", "mud",
@@ -54,6 +59,8 @@ def compute_stats(graph: Graph, blob: bytes) -> dict:
         if flags & FLAG_THROUGH_BUILDING:
             count("through_building")
             passage_buildings.add(g["edge_building"][e])
+        if flags & FLAG_UNDER_BUILDING:
+            count("under_building")
         if flags & FLAG_MAY_CLOSE:
             count("may_close")
         if hw == "steps":
@@ -96,6 +103,7 @@ def compute_stats(graph: Graph, blob: bytes) -> dict:
                 "corridor",
                 "covered",
                 "through_building",
+                "under_building",
                 "may_close",
                 "steps",
                 "park_path",

@@ -93,3 +93,10 @@ These don't loosen any rule, so they didn't need approval. Each is in `safety/ca
 - **Alternatives:** rebuild in CI (a 534 MB download on every run); Git LFS (Pages doesn't serve LFS files).
 - **Why:** CI and Pages use the committed graph, and the real-data test checks it matches a fresh build. Rebuild only when the data or rules change, to keep history small.
 - **Reversible:** yes.
+
+## D-012 Which "unmapped tunnels" are kept (Q-007 follow-through)
+
+- **Choice:** kept and flagged: walkable roads (residential, service, unclassified, living street, tertiary up to primary and their links, walkable trunks) whose path lies inside a building footprint without a passage tag, and that have no `level` or `indoor` tag. Pedestrian streets, footways, paths and steps stay dropped.
+- **Alternatives:** keep every walkable way type. That would let indoor footways and stairs back in, which the brief forbids.
+- **Why:** a road inside a footprint is almost always a street running under the building. A footway inside one is usually an indoor route. The flag (`edge_flags` bit 5) lets the app disclose it, and modes decide whether it counts as fun.
+- **Reversible:** one set in `safety.py` plus cases.

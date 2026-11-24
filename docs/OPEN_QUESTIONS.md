@@ -70,12 +70,19 @@ Each question has a recommended answer and the assumption I'm working on until y
 
 </details>
 
-## Q-007 Public roads passing under buildings
+## Q-007 Public roads passing under buildings: answered 2026-11-24, keep with a flag
+
+- **Answer:** keep them, with a special flag and a disclosure. Roads only (residential up to primary, service, living street, and walkable trunks), with no `level` or `indoor` tag. They carry `edge_flags` bit 5, and the app will say something like "passes under a building (no tunnel mapped)". Footways and stairs inside footprints are still dropped. Lyon: 162 edges, 5.3 km kept.
+
+<details><summary>Original question</summary>
+
 
 - **Question:** what should happen to street segments whose path lies inside a building footprint with no `tunnel` or `covered` tag? Examples: primary Avenue du Châter (way 4424264), tertiary Avenue de Taffignon (way 4424268), and some service roads.
 - **Background:** the build drops them, because the brief says never through a building except via mapped passages. They're usually streets running under a building, or sloppy outlines.
 - **Recommendation:** keep dropping them. It's the safe direction, and the stats list examples with OSM links for anyone who wants to fix the map.
 - **Assumption:** keep dropping them.
+
+</details>
 
 ## Q-008 Elevation data (new data source, Big item 3)
 

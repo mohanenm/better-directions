@@ -214,6 +214,7 @@ class SegAttrs:
     park: int  # index into areas, -1 if none
     venue: int
     building: int  # building passed *through* via a mapped passage, -1 if none
+    under_building: int = -1  # building a road runs under without a tunnel tag (Q-007)
 
 
 @dataclass
@@ -371,15 +372,20 @@ def build_graph(city: City, osm_path: Path) -> Graph:
                     segs.append(None)
                     continue
             building = spatial.building_on_segment(pa, pb, layer)
+            under = -1
             if building != -1 and not passage_ok:
-                drop("through_building_unmapped", way.osm_id)
-                segs.append(None)
-                continue
+                if safety.may_pass_under_building_unmapped(tags):
+                    under = building  # kept, flagged and disclosed (Q-007)
+                else:
+                    drop("through_building_unmapped", way.osm_id)
+                    segs.append(None)
+                    continue
             mid = ((pa[0] + pb[0]) / 2, (pa[1] + pb[1]) / 2)
             attrs = SegAttrs(
                 park=spatial.area_at(spatial.parks, mid),
                 venue=spatial.area_at(spatial.venues, mid),
                 building=building if (building != -1 and counts_as_through) else -1,
+                under_building=under,
             )
             node_coords[a] = (lon_a, lat_a)
             node_coords[b] = (lon_b, lat_b)

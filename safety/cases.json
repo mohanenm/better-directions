@@ -929,5 +929,67 @@
       },
       "track": false
     }
+  ],
+  "under_building_unmapped": [
+    {
+      "name": "residential street",
+      "tags": {
+        "highway": "residential"
+      },
+      "allowed": true
+    },
+    {
+      "name": "primary road",
+      "tags": {
+        "highway": "primary",
+        "name": "Avenue"
+      },
+      "allowed": true
+    },
+    {
+      "name": "service road",
+      "tags": {
+        "highway": "service"
+      },
+      "allowed": true
+    },
+    {
+      "name": "footway is likely indoors",
+      "tags": {
+        "highway": "footway"
+      },
+      "allowed": false
+    },
+    {
+      "name": "steps are likely indoors",
+      "tags": {
+        "highway": "steps",
+        "level": "0;1"
+      },
+      "allowed": false
+    },
+    {
+      "name": "pedestrian street not included",
+      "tags": {
+        "highway": "pedestrian"
+      },
+      "allowed": false
+    },
+    {
+      "name": "road with a level tag looks indoor",
+      "tags": {
+        "highway": "service",
+        "level": "-1"
+      },
+      "allowed": false
+    },
+    {
+      "name": "road with indoor=yes",
+      "tags": {
+        "highway": "service",
+        "indoor": "yes"
+      },
+      "allowed": false
+    }
   ]
 }

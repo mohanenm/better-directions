@@ -53,3 +53,8 @@ def test_every_way_reason_is_covered():
 @pytest.mark.parametrize("case", CASES["track_ways"], ids=lambda c: c["name"])
 def test_track_way_cases(case):
     assert safety.is_track_railway_way(case["tags"]) is case["track"]
+
+
+@pytest.mark.parametrize("case", CASES["under_building_unmapped"], ids=lambda c: c["name"])
+def test_under_building_cases(case):
+    assert safety.may_pass_under_building_unmapped(case["tags"]) is case["allowed"]

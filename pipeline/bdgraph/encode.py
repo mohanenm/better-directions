@@ -25,6 +25,7 @@ FLAG_BACKWARD = 1 << 1
 FLAG_STEPS_ESTIMATED = 1 << 2
 FLAG_MAY_CLOSE = 1 << 3
 FLAG_THROUGH_BUILDING = 1 << 4
+FLAG_UNDER_BUILDING = 1 << 5  # road under a building, no tunnel tag: disclose it (Q-007)
 
 # Node context bits (for the router's node safety re-check)
 CTX_ON_RAILWAY = 1 << 0
@@ -130,6 +131,7 @@ def encode_graph(graph: Graph) -> bytes:
             | (FLAG_STEPS_ESTIMATED if estimated else 0)
             | (FLAG_MAY_CLOSE if edge_may_close(e, w, data.areas) else 0)
             | (FLAG_THROUGH_BUILDING if e.attrs.building != -1 else 0)
+            | (FLAG_UNDER_BUILDING if e.attrs.under_building != -1 else 0)
         )
         e_from.append(node_index[e.nodes[0]])
         e_to.append(node_index[e.nodes[-1]])
@@ -139,7 +141,9 @@ def encode_graph(graph: Graph) -> bytes:
         e_steps.append(min(steps, U16_MAX))
         e_park.append(area_ref(e.attrs.park))
         e_venue.append(area_ref(e.attrs.venue))
-        e_building.append(area_ref(e.attrs.building))
+        e_building.append(
+            area_ref(e.attrs.building if e.attrs.building != -1 else e.attrs.under_building)
+        )
         # Intermediate points as zigzag varint deltas from the start node.
         px, py = graph.node_coords[e.nodes[0]]
         prev = (_scaled(px), _scaled(py))
@@ -197,6 +201,7 @@ def encode_graph(graph: Graph) -> bytes:
                 "steps_estimated": FLAG_STEPS_ESTIMATED,
                 "may_close": FLAG_MAY_CLOSE,
                 "through_building": FLAG_THROUGH_BUILDING,
+                "under_building": FLAG_UNDER_BUILDING,
             },
             "node_ctx": {
                 "on_railway": CTX_ON_RAILWAY,

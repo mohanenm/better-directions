@@ -134,6 +134,42 @@ def may_pass_through_building(tags: Tags) -> bool:
     return tags.get("tunnel") == "yes" or tags.get("bridge") not in (None, "no")
 
 
+# Roads that may run under a building without a tunnel tag (approved 2026-11-24, Q-007).
+# Pedestrian ways inside a footprint are usually indoor routes, so they're not included.
+UNDER_BUILDING_ROADS = frozenset(
+    {
+        "residential",
+        "service",
+        "unclassified",
+        "living_street",
+        "tertiary",
+        "tertiary_link",
+        "secondary",
+        "secondary_link",
+        "primary",
+        "primary_link",
+        "trunk",
+        "trunk_link",
+        "motorway",
+        "motorway_link",
+    }
+)
+
+
+def may_pass_under_building_unmapped(tags: Tags) -> bool:
+    """True for a walkable road that lies inside a building footprint without a passage tag.
+
+    These are almost always streets running under a building (an unmapped tunnel), so they're
+    kept, flagged and disclosed to the walker rather than dropped. Anything that looks indoor
+    (a level or indoor tag) is still dropped.
+    """
+    return (
+        tags.get("highway") in UNDER_BUILDING_ROADS
+        and "level" not in tags
+        and tags.get("indoor") in (None, "no")
+    )
+
+
 def foot_directions(tags: Tags) -> tuple[bool, bool]:
     """Which directions (forward, backward along the way) a pedestrian may walk."""
     conveying = tags.get("conveying")
