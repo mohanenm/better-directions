@@ -35,6 +35,7 @@ export interface PlanResult {
   betterStats: CostOfFun;
   capMinutes: number;
   summary: string;
+  name: string;
   steps: Step[];
   strategy: string;
   ms: number;

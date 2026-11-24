@@ -66,7 +66,7 @@
         <div id="announcer" class="visually-hidden" aria-live="polite"></div>
 
         <section id="result" class="result" aria-labelledby="result-title" hidden tabindex="-1">
-          <h2 id="result-title">The cost of fun</h2>
+          <h2 id="result-title" class="route-name"><span class="visually-hidden">Your route: </span><span id="route-name"></span></h2>
           <p class="summary" id="summary"></p>
           <div class="legend" aria-hidden="true">
             <span class="swatch normal"></span> Normal route
@@ -76,11 +76,23 @@
           <p class="late-hint" id="late-hint" hidden>It's late. Some parks and passages on this route may already be locked: check the notes below.</p>
           <ul class="notes" id="notes" aria-label="Things to know"></ul>
           <div class="share-row">
-            <button type="button" id="share" class="secondary">Share this route</button>
-            <span class="share-note">The link includes your start and end points.</span>
+            <button type="button" id="share" class="secondary">Share link</button>
+            <button type="button" id="make-image" class="secondary">Make a share image</button>
+            <span class="share-note">Links and images show your start and end points.</span>
           </div>
+          <figure class="share-image" id="share-image" hidden>
+            <img id="share-preview" alt="Share image: the route on a map with its name and cost of fun." width="1080" height="1350">
+            <figcaption>
+              <button type="button" id="share-image-share" class="secondary">Share image</button>
+              <a id="share-image-download" class="button-link" download="better-directions.png" href="#">Download</a>
+            </figcaption>
+          </figure>
           <h3>Step by step</h3>
           <ol class="steps" id="steps"></ol>
+        </section>
+        <section class="famous" aria-labelledby="famous-title">
+          <h2 id="famous-title">Famous better routes</h2>
+          <ul id="famous-list"></ul>
         </section>
       </section>
     </main>

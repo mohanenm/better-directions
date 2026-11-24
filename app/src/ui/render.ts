@@ -9,7 +9,7 @@ const el = <K extends keyof HTMLElementTagNameMap>(tag: K, text?: string, classN
   return node;
 };
 
-function statItems(r: PlanResult): [string, string][] {
+export function statItems(r: PlanResult): [string, string][] {
   const b: CostOfFun = r.betterStats;
   const n: CostOfFun = r.normalStats;
   const min = (s: number) => `${Math.max(1, Math.round(s / 60))} min`;
@@ -35,6 +35,7 @@ export function isLate(now = new Date()): boolean {
 
 export function renderResult(r: PlanResult, onStep: (at: [number, number]) => void): void {
   const get = (id: string) => document.getElementById(id)!;
+  get("route-name").textContent = r.name;
   get("summary").textContent = r.summary;
 
   get("stats").replaceChildren(

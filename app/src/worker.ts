@@ -68,6 +68,7 @@ function plan(req: PlanRequest): void {
       betterStats: p.betterStats,
       capMinutes: Math.round(p.capSeconds / 60),
       summary: p.summary,
+      name: p.name,
       steps: directions(fi, p, req.fromName, req.toName),
       strategy: p.strategy,
       ms: Math.round(performance.now() - t0),

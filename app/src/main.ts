@@ -5,9 +5,11 @@
 import "./style.css";
 import { MODE_IDS, MODES, type ModeId } from "./modes/modes";
 import { attachCombo } from "./ui/combo";
+import { FAMOUS_ROUTES } from "./ui/famous";
 import { createMap, type RouteMap } from "./ui/map";
 import type { FromWorker, PlanResult, ReadyInfo } from "./ui/protocol";
 import { renderResult } from "./ui/render";
+import { renderShareImage } from "./ui/share-image";
 import type { Place } from "./ui/search";
 import { parseLink, serializeLink, type LinkState } from "./ui/url";
 
@@ -222,6 +224,7 @@ function onPlan(result: PlanResult): void {
   writeLink();
   routeMap?.setRoutes(result.normal, result.better);
   renderResult(result, (at) => routeMap?.flyTo(at));
+  clearShareImage();
   resultEl.hidden = false;
   setStatus("");
   // Screen readers hear the result; sighted users see it in the card.
@@ -247,6 +250,76 @@ $("#share").addEventListener("click", async () => {
     // The user closed the share sheet, or the clipboard isn't available: nothing to do.
   }
 });
+
+// --- Share image ---------------------------------------------------------------------------------
+
+let shareBlob: Blob | null = null;
+let shareUrl: string | null = null;
+
+function clearShareImage(): void {
+  if (shareUrl) URL.revokeObjectURL(shareUrl);
+  shareBlob = null;
+  shareUrl = null;
+  $("#share-image").hidden = true;
+}
+
+$("#make-image").addEventListener("click", async () => {
+  if (!lastResult || !routeMap) return;
+  clearShareImage();
+  setStatus("Drawing your share image…");
+  try {
+    shareBlob = await renderShareImage(routeMap.map, lastResult);
+    shareUrl = URL.createObjectURL(shareBlob);
+    $<HTMLImageElement>("#share-preview").src = shareUrl;
+    $<HTMLAnchorElement>("#share-image-download").href = shareUrl;
+    $("#share-image").hidden = false;
+    setStatus("Share image ready. It was drawn on your device.");
+  } catch {
+    setStatus("Couldn't draw the share image on this device.", true);
+  }
+});
+
+$("#share-image-share").addEventListener("click", async () => {
+  if (!shareBlob || !lastResult) return;
+  const file = new File([shareBlob], "better-directions.png", { type: "image/png" });
+  try {
+    if (navigator.canShare?.({ files: [file] })) {
+      await navigator.share({ files: [file], title: lastResult.name, text: lastResult.summary });
+    } else {
+      $<HTMLAnchorElement>("#share-image-download").click();
+    }
+  } catch {
+    // Share sheet closed: nothing to do.
+  }
+});
+
+// --- Famous better routes --------------------------------------------------------------------------
+
+$("#famous-list").replaceChildren(
+  ...FAMOUS_ROUTES.map((f) => {
+    const li = document.createElement("li");
+    const button = document.createElement("button");
+    button.type = "button";
+    const title = document.createElement("strong");
+    title.textContent = f.title;
+    const pitch = document.createElement("span");
+    pitch.textContent = f.pitch;
+    const meta = document.createElement("small");
+    meta.textContent = `${MODES[f.mode].name} · ${f.fromName} to ${f.toName}`;
+    button.append(title, pitch, meta);
+    button.addEventListener("click", () => {
+      state.mode = f.mode;
+      state.seed = f.seed;
+      setEnd("from", f.from, f.fromName);
+      setEnd("to", f.to, f.toName);
+      syncInputs();
+      requestPlan();
+      $("#planner").scrollIntoView({ block: "start", behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
+    });
+    li.append(button);
+    return li;
+  }),
+);
 
 // --- Places --------------------------------------------------------------------------------------
 

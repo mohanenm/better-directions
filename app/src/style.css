@@ -108,7 +108,7 @@ button.secondary { background: var(--paper); color: var(--accent); border: 1px s
 /* --- Result --- */
 .result { border-top: 1px solid var(--line); padding-top: 0.75rem; }
 .result:focus { outline: none; }
-.result h2 { margin: 0 0 0.25rem; font-size: 1.05rem; }
+.result h2.route-name { margin: 0 0 0.15rem; font-size: 1.35rem; color: var(--accent); letter-spacing: -0.01em; }
 .summary { font-size: 1.1rem; font-weight: 600; margin: 0.25rem 0 0.5rem; }
 .legend { display: flex; align-items: center; gap: 0.4rem; font-size: 0.85rem; color: var(--ink-soft); margin-bottom: 0.5rem; }
 .swatch { display: inline-block; width: 1.6rem; height: 0.35rem; border-radius: 3px; }
@@ -127,6 +127,22 @@ button.secondary { background: var(--paper); color: var(--accent); border: 1px s
 .steps li::marker { color: var(--accent); font-weight: 700; }
 .steps .step-note { display: block; font-size: 0.85rem; color: var(--warn-ink); margin-top: 0.15rem; }
 .steps button { border: 0; background: none; padding: 0; font: inherit; color: inherit; text-align: left; cursor: pointer; vertical-align: top; }
+
+.share-image { margin: 0.5rem 0 1rem; }
+.share-image img { width: 100%; height: auto; border-radius: 10px; border: 1px solid var(--line); }
+.share-image figcaption { display: flex; gap: 0.75rem; align-items: center; margin-top: 0.5rem; }
+.button-link { color: var(--accent); font-weight: 650; }
+
+.famous { border-top: 1px solid var(--line); margin-top: 1.25rem; padding-top: 0.75rem; }
+.famous h2 { font-size: 1.05rem; margin: 0 0 0.5rem; }
+.famous ul { list-style: none; padding: 0; margin: 0; display: grid; gap: 0.5rem; }
+.famous button {
+  width: 100%; text-align: left; font: inherit; color: var(--ink); background: var(--wash);
+  border: 1px solid var(--line); border-radius: 10px; padding: 0.6rem 0.75rem; cursor: pointer;
+}
+.famous button strong { display: block; color: var(--accent); }
+.famous button span { display: block; font-size: 0.85rem; color: var(--ink-soft); }
+.famous button small { display: block; font-size: 0.75rem; color: var(--ink-soft); margin-top: 0.2rem; }
 
 /* --- Map markers --- */
 .marker {
