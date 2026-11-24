@@ -1,0 +1,125 @@
+#!/usr/bin/env node
+/**
+ * Browser smoke test (local only; needs a Chromium-based browser, no npm dependencies).
+ * Drives the browser over the DevTools protocol: loads the preview build under the sub-path,
+ * waits for a route, saves screenshots, and fails on any CSP violation, script error or
+ * request to another host.
+ *
+ *   npm run build && npm run preview &   # serves http://localhost:4173/better-directions/
+ *   BROWSER="/Applications/Brave Browser.app/Contents/MacOS/Brave Browser" node scripts/smoke.mjs [outdir]
+ */
+import { spawn } from "node:child_process";
+import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+
+const BROWSER = process.env.BROWSER ?? "/Applications/Brave Browser.app/Contents/MacOS/Brave Browser";
+const ORIGIN = process.env.ORIGIN ?? "http://localhost:4173";
+const BASE = "/better-directions/";
+const OUT = process.argv[2] ?? mkdtempSync(join(tmpdir(), "bd-smoke-"));
+const PORT = 9333;
+mkdirSync(OUT, { recursive: true });
+
+const CASES = [
+  { name: "phone-stairs", width: 420, height: 2800, mobile: true,
+    query: "?from=4.83200,45.75780&to=4.83360,45.76750&fromName=Place%20Bellecour&toName=Place%20des%20Terreaux&mode=stairs" },
+  { name: "desktop-buildings", width: 1280, height: 860, mobile: false,
+    query: "?from=4.82740,45.76060&to=4.82250,45.76230&fromName=Cath%C3%A9drale%20Saint-Jean&toName=Basilique%20de%20Fourvi%C3%A8re&mode=buildings" },
+  { name: "phone-empty", width: 420, height: 900, mobile: true, query: "", expectRoute: false },
+  { name: "keyboard-only", width: 420, height: 2000, mobile: true, query: "", keyboard: true },
+];
+
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+const profile = mkdtempSync(join(tmpdir(), "bd-profile-"));
+const browser = spawn(BROWSER, [
+  "--headless=new", "--no-first-run", `--user-data-dir=${profile}`, `--remote-debugging-port=${PORT}`,
+  "--use-angle=swiftshader", "--enable-unsafe-swiftshader", "--hide-scrollbars", "about:blank",
+], { stdio: "ignore" });
+
+let failures = 0;
+try {
+  let version;
+  for (let i = 0; i < 50 && !version; i++) {
+    try { version = await (await fetch(`http://127.0.0.1:${PORT}/json/version`)).json(); } catch { await sleep(200); }
+  }
+  if (!version) throw new Error("browser didn't start");
+  for (const c of CASES) failures += await runCase(c);
+} finally {
+  browser.kill();
+}
+console.log(failures ? `FAILED (${failures} problems)` : `OK. Screenshots in ${OUT}`);
+process.exit(failures ? 1 : 0);
+
+async function runCase(c) {
+  const target = await (await fetch(`http://127.0.0.1:${PORT}/json/new?about:blank`, { method: "PUT" })).json();
+  const ws = new WebSocket(target.webSocketDebuggerUrl);
+  await new Promise((r) => ws.addEventListener("open", r, { once: true }));
+  let id = 0;
+  const pending = new Map();
+  const problems = [];
+  ws.addEventListener("message", (ev) => {
+    const msg = JSON.parse(ev.data);
+    if (msg.id && pending.has(msg.id)) { pending.get(msg.id)(msg); pending.delete(msg.id); return; }
+    if (msg.method === "Runtime.exceptionThrown") problems.push(`exception: ${msg.params.exceptionDetails.exception?.description ?? msg.params.exceptionDetails.text}`);
+    if (msg.method === "Log.entryAdded" && ["error"].includes(msg.params.entry.level)) problems.push(`log: ${msg.params.entry.text} ${msg.params.entry.url ?? ""}`);
+    if (msg.method === "Runtime.consoleAPICalled" && msg.params.type === "error") problems.push(`console: ${msg.params.args.map((a) => a.value ?? a.description).join(" ")}`);
+    if (msg.method === "Network.requestWillBeSent") {
+      const url = new URL(msg.params.request.url);
+      if (!["data:", "blob:"].includes(url.protocol) && url.origin !== ORIGIN) problems.push(`third-party request: ${url.href}`);
+    }
+  });
+  const send = (method, params = {}) => new Promise((resolve) => { const i = ++id; pending.set(i, resolve); ws.send(JSON.stringify({ id: i, method, params })); });
+  const evaluate = async (expr) => (await send("Runtime.evaluate", { expression: expr, returnByValue: true })).result?.result?.value;
+
+  await send("Runtime.enable"); await send("Log.enable"); await send("Network.enable");
+  await send("Emulation.setDeviceMetricsOverride", { width: c.width, height: c.height, deviceScaleFactor: 1, mobile: c.mobile });
+  await send("Page.navigate", { url: `${ORIGIN}${BASE}${c.query}` });
+
+  const key = async (k, code) => {
+    for (const type of ["keyDown", "keyUp"]) await send("Input.dispatchKeyEvent", { type, key: k, code: k, windowsVirtualKeyCode: code });
+  };
+  if (c.keyboard) {
+    // Choose both places and plan using only the keyboard.
+    for (let i = 0; i < 60; i++) { await sleep(250); if ((await evaluate("document.getElementById('status').textContent")).startsWith("Pick a start")) break; }
+    for (const [field, text] of [["from-input", "bellecour"], ["to-input", "terreaux"]]) {
+      await evaluate(`document.getElementById('${field}').focus()`);
+      await send("Input.insertText", { text });
+      await sleep(300);
+      await key("ArrowDown", 40);
+      await key("Enter", 13);
+      await sleep(200);
+    }
+    if (!(await evaluate("document.getElementById('from-input').value")).includes("Bellecour")) problems.push("keyboard: start not chosen");
+    if (!(await evaluate("document.getElementById('to-input').value")).includes("Terreaux")) problems.push("keyboard: end not chosen");
+  }
+  const wantRoute = c.expectRoute !== false;
+  let status = "";
+  for (let i = 0; i < 120; i++) {
+    await sleep(250);
+    status = (await evaluate("(document.getElementById('announcer')?.textContent || document.getElementById('status')?.textContent) ?? ''")) ?? "";
+    if (wantRoute ? status.startsWith("Route ready") : status.startsWith("Pick a start")) break;
+  }
+  await sleep(1500); // let the map draw the route
+  const shot = await send("Page.captureScreenshot", { format: "png" });
+  writeFileSync(join(OUT, `${c.name}.png`), Buffer.from(shot.result.data, "base64"));
+
+  const checks = {
+    novelty: await evaluate("getComputedStyle(document.getElementById('novelty')).display !== 'none' && document.getElementById('novelty').textContent.includes('For fun')"),
+    attribution: await evaluate("document.querySelector('.attribution').textContent.includes('OpenStreetMap')"),
+    cspMeta: await evaluate("!!document.querySelector('meta[http-equiv=\"Content-Security-Policy\"]')"),
+    noCookies: await evaluate("document.cookie === ''"),
+    noStorage: await evaluate("localStorage.length === 0 && sessionStorage.length === 0"),
+  };
+  if (wantRoute) {
+    checks.route = status.startsWith("Route ready");
+    checks.steps = (await evaluate("document.querySelectorAll('#steps li').length")) > 2;
+    checks.summary = /Normal: \d+ min\. Better: \d+ min/.test((await evaluate("document.getElementById('summary').textContent")) ?? "");
+    checks.seedRowHiddenUnlessChaos = await evaluate("(getComputedStyle(document.getElementById('seed-row')).display === 'none') === !location.search.includes('mode=chaos')");
+  }
+  for (const [k, ok] of Object.entries(checks)) if (!ok) problems.push(`check failed: ${k}`);
+  console.log(`${c.name}: ${problems.length ? "PROBLEMS" : "ok"} | ${status.slice(0, 140)}`);
+  for (const p of problems) console.log(`  - ${p}`);
+  ws.close();
+  await fetch(`http://127.0.0.1:${PORT}/json/close/${target.id}`);
+  return problems.length;
+}

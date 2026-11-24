@@ -43,5 +43,7 @@ jobs:
       - run: npm ci
       - run: npm run typecheck
       - run: npm run lint
+      # Build first so the built-site checks (CSP, base path, size budget) run too.
+      - run: npm run build
       # Includes the safety property test on the committed Lyon graph.
       - run: npm test

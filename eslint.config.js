@@ -14,4 +14,13 @@ export default tseslint.config(
       "@typescript-eslint/no-non-null-assertion": "off",
     },
   },
+  {
+    // Node scripts (listed by hand rather than adding the `globals` package).
+    files: ["scripts/**/*.mjs"],
+    languageOptions: {
+      globals: Object.fromEntries(
+        ["process", "console", "fetch", "setTimeout", "URL", "WebSocket", "Buffer"].map((g) => [g, "readonly"]),
+      ),
+    },
+  },
 );
