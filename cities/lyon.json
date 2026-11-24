@@ -23,5 +23,13 @@
     "resource": "ign_rge_alti_wld",
     "licence": "Licence Ouverte 2.0 (Etalab): https://www.etalab.gouv.fr/licence-ouverte-open-licence/",
     "attribution": "Elevation: IGN RGE ALTI®"
+  },
+  "places": {
+    "square_name_prefixes": [
+      "Place ",
+      "Square ",
+      "Esplanade ",
+      "Parvis "
+    ]
   }
 }
