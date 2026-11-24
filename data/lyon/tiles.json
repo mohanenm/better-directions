@@ -1,0 +1,17 @@
+{
+  "source": "https://build.protomaps.com/20261123.pmtiles",
+  "build": "20261123",
+  "bbox": {
+    "west": 4.77,
+    "south": 45.7,
+    "east": 4.93,
+    "north": 45.81
+  },
+  "max_zoom": 15,
+  "tiles": 340,
+  "tile_bytes": 26865384,
+  "assets_commit": "028c18f713baecad011301ff7a69acc39bcc2ae7",
+  "asset_bytes": 857719,
+  "pmtiles_cli": "1.31.2",
+  "licence": "Map data \u00a9 OpenStreetMap contributors (ODbL); basemap by Protomaps"
+}
