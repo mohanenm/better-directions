@@ -4,7 +4,7 @@
  * cold cache, phone viewport. Measures time to interactive, worker load phases, time to plan
  * a route, bytes transferred and JS heap in the page and the planning worker.
  *
- *   npm run build && npm run preview &
+ *   npm run pages:gz &                 # gzip, like Pages; Vite's preview server doesn't compress
  *   AREA=dc node scripts/perf.mjs      # default: lyon
  */
 import { spawn } from "node:child_process";
@@ -13,7 +13,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 
 const BROWSER = process.env.BROWSER ?? "/Applications/Brave Browser.app/Contents/MacOS/Brave Browser";
-const URL_BASE = process.env.ORIGIN ?? "http://localhost:4173";
+const URL_BASE = process.env.ORIGIN ?? "http://localhost:4174";
 const PORT = 9335;
 const CPU_SLOWDOWN = Number(process.env.CPU ?? 6);
 const NET = { latency: 150, downloadThroughput: (4 * 1024 * 1024) / 8, uploadThroughput: (1 * 1024 * 1024) / 8 }; // ~slow 4G
@@ -27,6 +27,7 @@ const ROUTES = {
   "silver-spring": "from=-77.03110,38.99390&to=-77.09460,38.98470&mode=stairs",
   richmond: "from=-77.43250,37.53230&to=-77.45020,37.54680&mode=stairs",
   baltimore: "from=-76.61050,39.28560&to=-76.59330,39.28230&mode=stairs",
+  chicago: "from=-87.64030,41.87890&to=-87.62330,41.88270&mode=stairs",
 };
 
 const browser = spawn(BROWSER, ["--headless=new", "--no-first-run", `--user-data-dir=${mkdtempSync(join(tmpdir(), "bd-perf-"))}`, `--remote-debugging-port=${PORT}`, "--use-angle=swiftshader", "--enable-unsafe-swiftshader", "about:blank"], { stdio: "ignore" });

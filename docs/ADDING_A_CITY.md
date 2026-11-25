@@ -1,6 +1,6 @@
 # Adding a city
 
-The site serves several areas, each with its own graph, places list and tiles, loaded only when someone picks it. Adding one takes an afternoon, mostly downloads, plus time to pick good famous routes. The US areas (Washington DC, Arlington and Alexandria, Silver Spring and Bethesda, Richmond, Baltimore) were added this way; the notes below include what they taught.
+The site serves several areas, each with its own graph, places list and tiles, loaded only when someone picks it. Adding one takes an afternoon, mostly downloads, plus time to pick good famous routes. The US areas (Washington DC, Arlington and Alexandria, Silver Spring and Bethesda, Richmond, Baltimore, Chicago) were added this way; the notes below include what they taught.
 
 ## 1. Check the data
 
@@ -67,11 +67,12 @@ npm run check                       # typecheck, lint and all tests, including t
 npm run samples                     # read docs/SAMPLE_ROUTES.md: is every mode recognisable?
 npm run pages:local &               # the real build at http://localhost:4173/better-directions/
 npm run smoke                       # browser checks
-npm run perf                        # low-end phone emulation
+npm run pages:gz &                  # the same build served with gzip, like Pages
+npm run perf                        # low-end phone emulation against it
 ```
 
 The pipeline's real-data tests (`pipeline/tests/test_real_data.py`) and the property test read Lyon's paths; switch them to the new city.
 
 ## Size
 
-With six areas the built site is about 185 MB. DC is the largest: a 9.8 MB graph (2.8 MB gzipped) and 61 MB of tiles at zoom 0 to 15 for its 18 × 23 km. Tiles grow with the area's size, roughly 4 MB per 10 km² at zoom 15; dropping zoom 15 cuts them by about 60% at the cost of street-level detail. GitHub Pages allows 1 GB per site and about 100 GB of traffic a month, and no file may exceed 100 MB (the site test keeps every file under 25 MB and the whole site under 300 MB).
+With seven areas the built site is about 220 MB. DC has the most tiles, 50 MB at zoom 0 to 15 for its 18 × 23 km; Chicago has the largest graph, 12.8 MB (3.4 MB gzipped) for 11 × 20 km of dense grid, alleys and mapped sidewalks, and its first route takes about 10 seconds on the emulated phone. Tiles grow with the area's size, roughly 1.2 to 1.7 MB per 10 km²; dropping zoom 15 cuts them by about 60% at the cost of street-level detail. The graph grows with how much is mapped: about 0.6 MB per 10 km² in Chicago, against 0.25 in DC with its parkland and river. GitHub Pages allows 1 GB per site and about 100 GB of traffic a month, and no file may exceed 100 MB (the site test keeps every file under 25 MB and the whole site under 300 MB).

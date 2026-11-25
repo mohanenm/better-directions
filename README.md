@@ -1,6 +1,6 @@
 # Better Directions
 
-A walking router that takes the long way round on purpose, for Lyon, Washington DC, Arlington and Alexandria, Silver Spring and Bethesda, Richmond and Baltimore. Pick a start, an end and a mode, and it finds the *better* route: up every staircase, through the traboules, along the dirt paths, past the bakeries. The normal route is drawn next to it, with the cost:
+A walking router that takes the long way round on purpose, for Lyon, Washington DC, Arlington and Alexandria, Silver Spring and Bethesda, Richmond, Baltimore and Chicago. Pick a start, an end and a mode, and it finds the *better* route: up every staircase, through the traboules, along the dirt paths, past the bakeries. The normal route is drawn next to it, with the cost:
 
 > Normal: 23 min. Better: 33 min, 10 staircases, 591 steps up.
 > *(Cathédrale Saint-Jean to the Basilique de Fourvière, Stairs mode)*
@@ -60,10 +60,11 @@ A word you spell stays on your device unless you choose to put it in a link. You
 
 ## Performance
 
-Measured on an emulated low-end phone (6× slower CPU, slow 4G, empty cache), the first route on a first visit is ready in 3 to 9 seconds depending on the area, mostly downloading its walking graph once:
+Measured on an emulated low-end phone (6× slower CPU, slow 4G, empty cache), the first route on a first visit is ready in 3 to 10 seconds depending on the area, mostly downloading its walking graph once:
 
 | Area | Download | First route |
 |---|---:|---:|
+| Chicago | 4.2 MB | 10.3 s |
 | Lyon | 3.3 MB | 8.7 s |
 | Washington, DC | 3.4 MB | 8.6 s |
 | Arlington and Alexandria | 2.5 MB | 7.0 s |
@@ -93,7 +94,8 @@ npm ci
 npm run check          # typecheck, lint and all tests, including the safety property test
 npm run pages:local    # build and serve at http://localhost:4173/better-directions/
 npm run smoke          # browser checks against that preview (needs a local Chromium-based browser)
-npm run perf           # low-end phone emulation
+npm run pages:gz &     # the same build served with gzip, like Pages, at port 4174
+npm run perf           # low-end phone emulation against it
 npm run samples        # sample routes per mode, written to docs/SAMPLE_ROUTES.md
 ```
 

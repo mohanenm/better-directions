@@ -186,6 +186,7 @@ def main(argv: list[str] | None = None) -> None:
         "licence": "Map data © OpenStreetMap contributors (ODbL); basemap by Protomaps",
     }
     out = args.data_dir / city.id / "tiles.json"
+    out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(json.dumps(record, indent=2) + "\n", encoding="utf-8")
     print(
         f"Done: {count:,} tiles, {tile_bytes / 1e6:.1f} MB; assets {asset_bytes / 1e6:.1f} MB",
