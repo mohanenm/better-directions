@@ -11,7 +11,7 @@ const router = new Router(town);
 const at = (x: number, y: number) => nodeAt(town, x, y);
 
 describe("directions", () => {
-  it("start and arrive bookend the steps, and distances add up to the route", () => {
+  it("starts and ends the steps, and distances add up", () => {
     const p = planMode(router, fi, at(0, 0), at(300, 100), "stairs", 1)!;
     const steps = directions(fi, p, "Main Street corner", "the far corner");
     expect(steps[0]!.kind).toBe("start");

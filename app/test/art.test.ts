@@ -48,7 +48,7 @@ describe("GPS art on Lyon", () => {
   const fi = new FeatureIndex(lyon);
   const index = new NodeIndex(lyon);
 
-  it("draws a recognisable square near Guillotière within the hour, deterministically", () => {
+  it("draws a recognisable square near Guillotière within the hour", () => {
     const req = { shape: "square" as const, start: [4.845, 45.751] as [number, number], minutes: 40 };
     const a = drawShape(router, fi, index, req)!;
     expect(a.likeness).toBeGreaterThanOrEqual(70);

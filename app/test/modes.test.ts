@@ -108,7 +108,7 @@ describe("each mode is recognisably itself on Lyon sample trips", () => {
     }
   });
 
-  it("Snack tour: at least 3 snack stops, more than the normal route, at least one bakery-type stop", () => {
+  it("Snack tour: 3+ stops, more than normal, at least one bakery-type", () => {
     const count = (s: { snacks: Record<string, number> }) => Object.values(s.snacks).reduce((a, b) => a + b, 0);
     for (const p of plans("snacks")) {
       expect(count(p.betterStats)).toBeGreaterThanOrEqual(3);
@@ -125,7 +125,7 @@ describe("each mode is recognisably itself on Lyon sample trips", () => {
     }
   });
 
-  it("Scenic chaos: a real detour, a different route per seed, the same route per seed", () => {
+  it("Scenic chaos: a real detour that changes with the seed and only with the seed", () => {
     const [s, t] = trips[1]!;
     const routes = [1, 2, 3, 4, 5].map((seed) => planMode(router, fi, s, t, "chaos", seed)!);
     expect(new Set(routes.map((p) => p.better.dirEdges.join(","))).size).toBeGreaterThanOrEqual(4);
@@ -134,7 +134,7 @@ describe("each mode is recognisably itself on Lyon sample trips", () => {
     expect(again.better.dirEdges).toEqual(routes[2]!.better.dirEdges);
   });
 
-  it("every mode respects the detour cap, is deterministic, and rarely doubles back", () => {
+  it("every mode keeps to the cap, is deterministic and rarely doubles back", () => {
     for (const id of MODE_IDS) {
       const first = plans(id);
       const second = plans(id);
