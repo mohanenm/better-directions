@@ -2,18 +2,20 @@
  * Page controller. Everything runs on the device: the planner in a Web Worker, place search over
  * a local list, and location only when the user taps "Use my location".
  */
-import { CITY, cityData } from "./city";
+import { AREAS, CITY, cityData, DEFAULT_AREA, nearestArea } from "./city";
 import "./style.css";
 import { SHAPE_IDS, SHAPES, type ShapeId } from "./art/shapes";
 import { MODE_IDS, MODES, type ModeId } from "./modes/modes";
+import { CRAWL_MINUTES, MAX_STOPS, MIN_STOPS, type CrawlTheme, type WorkoutFocus } from "./modes/options";
 import { attachCombo } from "./ui/combo";
-import { FAMOUS_ROUTES } from "./ui/famous";
+import { FAMOUS } from "./ui/famous";
 import { createMap, type RouteMap } from "./ui/map";
-import type { ArtResultMsg, FromWorker, PlanResult, ReadyInfo } from "./ui/protocol";
-import { artCard, planCard, renderArt, renderResult } from "./ui/render";
+import type { PinAction } from "./ui/map";
+import type { ArtResultMsg, FromWorker, Pin, PlanResult, ReadyInfo, SpellResultMsg, ToWorker, TourResult } from "./ui/protocol";
+import { artCard, planCard, renderArt, renderResult, renderSpell, renderTour, spellCard, tourCard } from "./ui/render";
 import { renderShareImage, type ShareCard } from "./ui/share-image";
 import type { Place } from "./ui/search";
-import { parseLink, serializeLink, type LinkState } from "./ui/url";
+import { DEFAULT_OPEN, MAX_LINK_STOPS, parseLink, SECTION_IDS, serializeLink, type LinkState, type SectionId } from "./ui/url";
 
 type End = "from" | "to";
 
@@ -22,7 +24,14 @@ const statusEl = $("#status");
 const resultEl = $("#result");
 const goButton = $<HTMLButtonElement>("#go");
 
-const state: LinkState = { from: null, to: null, fromName: null, toName: null, mode: "stairs", seed: 1, art: null, artMinutes: 40 };
+const state: LinkState = {
+  from: null, to: null, fromName: null, toName: null, mode: "stairs", seed: 1, art: null, artMinutes: 40,
+  open: [...DEFAULT_OPEN], stops: [], workout: null, crawl: null, spell: null, spellInLink: false,
+};
+/** Names for the stops the user picked (links carry only the points). */
+const stopNames: string[] = [];
+/** Crawl stops the user swapped or skipped this session. */
+let crawlSkip: number[] = [];
 let places: Place[] = [];
 let routeMap: RouteMap | null = null;
 let info: ReadyInfo | null = null;
@@ -36,8 +45,8 @@ function setStatus(text: string, error = false): void {
 
 // --- Worker ------------------------------------------------------------------------------------
 
-const worker = new Worker(new URL("./worker.ts", import.meta.url), { type: "module" });
-setStatus(`Loading the map of ${CITY.name} (about 3 MB the first time)…`);
+const worker = new Worker(new URL("./worker.ts", import.meta.url), { type: "module", name: CITY.id });
+setStatus(`Loading the map of ${CITY.name} (a few MB the first time)…`);
 
 worker.addEventListener("message", (event: MessageEvent<FromWorker>) => {
   const msg = event.data;
@@ -47,7 +56,10 @@ worker.addEventListener("message", (event: MessageEvent<FromWorker>) => {
   else if (msg.type === "error") {
     goButton.disabled = false;
     setStatus(msg.message, true);
+    showSuggestion(msg.suggestion);
   } else if (msg.type === "art") onArt(msg.result);
+  else if (msg.type === "tour") onTour(msg.result);
+  else if (msg.type === "spell") onSpell(msg.result);
   else onPlan(msg.result);
 });
 
@@ -55,15 +67,98 @@ function onReady(ready: ReadyInfo): void {
   info = ready;
   document.documentElement.dataset["loadTimings"] = JSON.stringify(ready.timings);
   if (ready.dataAsOf) $("#data-date").textContent = `, data as of ${ready.dataAsOf.slice(0, 10)}`;
-  if (ready.terrainAttribution) $("#terrain-credit").textContent = ready.terrainAttribution;
+  $("#terrain-credit").textContent = ready.terrainAttribution;
+  $("#terrain-wrap").hidden = !ready.terrainAttribution;
   Object.assign(state, parseLink(window.location.search, ready.bbox));
+  applyOpen();
   routeMap = createMap($("#map"), ready.bbox);
   routeMap.onTap(onMapTap);
   syncInputs();
-  setStatus(state.from && (state.to || state.art) ? "" : "Pick a start and an end: search above, or tap the map.");
-  if (state.art && state.from) requestArt();
+  syncToolForms();
+  renderStops();
+  const canPlan = state.from && (state.to || state.art || state.crawl || state.workout);
+  setStatus(canPlan ? "" : "Pick a start and an end: search, or tap the map.");
+  if (state.spell) {
+    $<HTMLInputElement>("#spell-word").value = state.spell;
+    $<HTMLInputElement>("#spell-in-link").checked = state.spellInLink;
+  }
+  if (state.spell && state.from) requestSpell();
+  else if (state.art && state.from) requestArt();
+  else if (state.crawl && state.from) requestCrawl();
+  else if (state.workout && state.from) requestWorkout();
   else if (state.from && state.to) requestPlan();
 }
+
+// --- Area ----------------------------------------------------------------------------------------
+
+const areaSelect = $<HTMLSelectElement>("#area");
+areaSelect.replaceChildren(
+  ...AREAS.map((a) => {
+    const o = document.createElement("option");
+    o.value = a.id;
+    o.textContent = a.name;
+    return o;
+  }),
+);
+areaSelect.value = CITY.id;
+document.title = `Better Directions: ${CITY.name}, the long way round`;
+$("#map").setAttribute("aria-label", `Map of ${CITY.name}. Choose places with the search fields, or tap the map. Arrow keys pan, plus and minus zoom.`);
+
+/** Areas are separate downloads, so switching loads the page afresh for the new one. */
+function switchArea(id: string): void {
+  if (id === CITY.id) return;
+  window.location.search = id === DEFAULT_AREA ? "" : `?area=${id}`;
+}
+
+areaSelect.addEventListener("change", () => switchArea(areaSelect.value));
+
+$("#nearest-area").addEventListener("click", () => {
+  if (!("geolocation" in navigator)) {
+    setStatus("Your browser can't share your location.", true);
+    return;
+  }
+  setStatus("Finding the nearest area… (your location stays on this device)");
+  navigator.geolocation.getCurrentPosition(
+    (pos) => {
+      const near = nearestArea(pos.coords.longitude, pos.coords.latitude);
+      if (near.id === CITY.id) setStatus(`${CITY.name} is already the nearest area.`);
+      else switchArea(near.id);
+    },
+    () => setStatus("Couldn't get your location. Pick an area from the list instead.", true),
+    { enableHighAccuracy: false, timeout: 15000, maximumAge: 300000 },
+  );
+});
+
+// --- Panel sections ------------------------------------------------------------------------------
+
+const sectionHead = (id: SectionId) => $<HTMLButtonElement>(`#${id}-head`);
+const sectionBody = (id: SectionId) => $(`#${id}-body`);
+
+function applyOpen(): void {
+  for (const id of SECTION_IDS) {
+    const open = state.open.includes(id);
+    sectionHead(id).setAttribute("aria-expanded", String(open));
+    sectionBody(id).hidden = !open;
+  }
+}
+
+function setOpen(id: SectionId, open: boolean): void {
+  state.open = SECTION_IDS.filter((s) => (s === id ? open : state.open.includes(s)));
+  applyOpen();
+  writeLink();
+}
+
+for (const id of SECTION_IDS) {
+  sectionHead(id).addEventListener("click", () => setOpen(id, !state.open.includes(id)));
+}
+
+// Links can open sections before the map has loaded.
+state.open = parseLink(window.location.search, { west: -180, south: -90, east: 180, north: 90 }).open;
+applyOpen();
+
+$(".skip-link").addEventListener("click", () => {
+  if (!state.open.includes("plan")) setOpen("plan", true);
+});
 
 // --- Choosing start and end ----------------------------------------------------------------------
 
@@ -133,7 +228,8 @@ function locate(end: End): void {
       const point: [number, number] = [pos.coords.longitude, pos.coords.latitude];
       const b = info?.bbox;
       if (b && (point[0] < b.west || point[0] > b.east || point[1] < b.south || point[1] > b.north)) {
-        setStatus(`You seem to be outside ${CITY.name}. Better Directions only knows ${CITY.name} for now.`, true);
+        const near = nearestArea(point[0], point[1]);
+        setStatus(near.id === CITY.id ? `You seem to be outside ${CITY.name}.` : `You seem to be outside ${CITY.name}. ${near.name} is the nearest area; pick it above.`, true);
         return;
       }
       setEnd(end, point, "My location");
@@ -148,7 +244,7 @@ function locate(end: End): void {
 
 // --- Modes ---------------------------------------------------------------------------------------
 
-const grid = $("#mode-grid");
+const modeList = $("#mode-list");
 for (const id of MODE_IDS) {
   const m = MODES[id];
   const wrap = document.createElement("div");
@@ -167,7 +263,7 @@ for (const id of MODE_IDS) {
   span.textContent = m.tagline;
   label.append(strong, span);
   wrap.append(radio, label);
-  grid.append(wrap);
+  modeList.append(wrap);
   radio.addEventListener("change", () => {
     state.mode = id as ModeId;
     state.art = null;
@@ -198,17 +294,34 @@ $<HTMLFormElement>("#planner").addEventListener("submit", (e) => {
   requestPlan();
 });
 
+function send(msg: ToWorker): void {
+  if (msg.type !== "spell") state.spell = null;
+  showSuggestion(undefined);
+  setShareable(true);
+  worker.postMessage(msg);
+}
+
+/** Links for a spelled word that's kept off the link would be useless, so sharing is off. */
+function setShareable(on: boolean): void {
+  $<HTMLButtonElement>("#share").disabled = !on;
+  $(".share-note").textContent = on
+    ? "Links and images show your start and end points."
+    : "Tick \"Include the word in shared links\" to share a link. The image doesn't show the word.";
+}
+
 function requestPlan(): void {
   if (!info) return;
   state.art = null;
+  state.crawl = null;
+  state.workout = null;
   if (!state.from || !state.to) {
     setStatus("Pick both a start and an end first.", true);
     return;
   }
   requestId++;
   goButton.disabled = true;
-  setStatus(`Finding the ${MODES[state.mode].name.toLowerCase()} route…`);
-  worker.postMessage({
+  setStatus(`Planning a ${MODES[state.mode].name.toLowerCase()} route…`);
+  send({
     type: "plan",
     id: requestId,
     from: state.from,
@@ -217,6 +330,7 @@ function requestPlan(): void {
     toName: state.toName ?? "your destination",
     mode: state.mode,
     seed: state.seed,
+    stops: state.stops,
   });
 }
 
@@ -230,18 +344,32 @@ function onPlan(result: PlanResult): void {
   routeMap?.setMarker("to", result.to);
   writeLink();
   routeMap?.setRoutes(result.normal, result.better);
+  routeMap?.setPins(result.pins, parkActions);
   renderResult(result, (at) => routeMap?.flyTo(at));
   clearShareImage();
-  resultEl.hidden = false;
-  setStatus("");
+  showResult();
   // Screen readers hear the result; sighted users see it in the card.
   $("#announcer").textContent = `Route ready. ${result.summary} Step-by-step directions follow the stats.`;
+}
+
+/** Shows the result card, scrolling the panel to it if it's out of sight. */
+function showResult(): void {
+  resultEl.hidden = false;
+  setStatus("");
+  const panel = $("#panel").getBoundingClientRect();
+  const card = resultEl.getBoundingClientRect();
+  if (card.top > panel.bottom - 80 || card.bottom < panel.top) {
+    const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    resultEl.scrollIntoView({ block: "start", behavior: reduced ? "auto" : "smooth" });
+  }
 }
 
 // --- Sharing -------------------------------------------------------------------------------------
 
 function writeLink(): void {
-  history.replaceState(null, "", `${window.location.pathname}${serializeLink(state)}`);
+  const q = serializeLink(state);
+  const withArea = CITY.id === DEFAULT_AREA ? q : `?area=${CITY.id}${q.length > 1 ? `&${q.slice(1)}` : ""}`;
+  history.replaceState(null, "", `${window.location.pathname}${withArea}`);
 }
 
 $("#share").addEventListener("click", async () => {
@@ -315,11 +443,14 @@ artShape.replaceChildren(
 $<HTMLFormElement>("#art-form").addEventListener("submit", (e) => {
   e.preventDefault();
   if (!state.from) {
-    setStatus("Pick a From point first: the drawing starts there.", true);
+    setStatus("Pick a From point first; the drawing starts there.", true);
+    if (!state.open.includes("plan")) setOpen("plan", true);
     input("from").focus();
     return;
   }
   state.art = artShape.value as ShapeId;
+  state.crawl = null;
+  state.workout = null;
   state.artMinutes = Number(document.querySelector<HTMLInputElement>('input[name="art-len"]:checked')?.value ?? 40);
   requestArt();
 });
@@ -330,9 +461,9 @@ function requestArt(): void {
   artShape.value = state.art;
   const len = document.querySelector<HTMLInputElement>(`input[name="art-len"][value="${state.artMinutes}"]`);
   if (len) len.checked = true;
-  $<HTMLDetailsElement>("#art").open = true;
+  if (!state.open.includes("art")) setOpen("art", true);
   setStatus(`Drawing a ${SHAPES[state.art].label.toLowerCase()} with ${CITY.name}'s streets…`);
-  worker.postMessage({ type: "art", id: requestId, start: state.from, fromName: state.fromName ?? "your start", shape: state.art, minutes: state.artMinutes });
+  send({ type: "art", id: requestId, start: state.from, fromName: state.fromName ?? "your start", shape: state.art, minutes: state.artMinutes });
 }
 
 function onArt(result: ArtResultMsg): void {
@@ -344,17 +475,268 @@ function onArt(result: ArtResultMsg): void {
   routeMap?.setMarker("to", SHAPES[result.shape].closed ? null : end);
   writeLink();
   routeMap?.setRoutes(result.template, result.line);
+  routeMap?.setPins([], () => []);
   renderArt(result, (at) => routeMap?.flyTo(at));
   clearShareImage();
-  resultEl.hidden = false;
-  setStatus("");
+  showResult();
   $("#announcer").textContent = `Drawing ready. ${lastCard.summary} Step-by-step directions follow the stats.`;
 }
 
-// --- Famous better routes --------------------------------------------------------------------------
+// --- Spell a word --------------------------------------------------------------------------------
+
+const spellInput = $<HTMLInputElement>("#spell-word");
+const suggestionButton = $<HTMLButtonElement>("#spell-suggestion");
+
+function showSuggestion(word: string | undefined): void {
+  suggestionButton.hidden = !word;
+  if (word) {
+    suggestionButton.textContent = `Spell ${word} instead`;
+    suggestionButton.dataset["word"] = word;
+  }
+}
+
+suggestionButton.addEventListener("click", () => {
+  spellInput.value = suggestionButton.dataset["word"] ?? "";
+  $<HTMLFormElement>("#spell-form").requestSubmit();
+});
+
+$<HTMLFormElement>("#spell-form").addEventListener("submit", (e) => {
+  e.preventDefault();
+  if (!needFrom("word")) return;
+  state.spell = spellInput.value;
+  state.spellInLink = $<HTMLInputElement>("#spell-in-link").checked;
+  requestSpell();
+});
+
+$<HTMLInputElement>("#spell-in-link").addEventListener("change", (e) => {
+  if (!state.spell) return;
+  state.spellInLink = (e.target as HTMLInputElement).checked;
+  writeLink();
+  setShareable(state.spellInLink);
+  if (lastSpell) lastCard = spellCard(lastSpell, state.spellInLink);
+});
+
+let lastSpell: SpellResultMsg | null = null;
+
+function requestSpell(): void {
+  if (!info || !state.from || !state.spell) return;
+  state.art = null;
+  state.crawl = null;
+  state.workout = null;
+  requestId++;
+  if (!state.open.includes("spell")) setOpen("spell", true);
+  setStatus("Laying out the letters…");
+  send({ type: "spell", id: requestId, start: state.from, fromName: state.fromName ?? "your start", word: state.spell });
+}
+
+function onSpell(result: SpellResultMsg): void {
+  goButton.disabled = false;
+  lastSpell = result;
+  state.spell = result.word;
+  spellInput.value = result.word;
+  lastCard = spellCard(result, state.spellInLink);
+  state.from = result.start;
+  routeMap?.setMarker("from", result.start);
+  routeMap?.setMarker("to", result.end);
+  writeLink();
+  setShareable(state.spellInLink);
+  routeMap?.setRoutes(result.template, result.strokeLines, result.penUpLines);
+  routeMap?.setPins([], () => []);
+  renderSpell(result, (at) => routeMap?.flyTo(at));
+  clearShareImage();
+  showResult();
+  $("#announcer").textContent = `Word ready. ${result.likeness}% readable, ${Math.max(1, Math.round(result.stats.timeS / 60))} minutes. Step-by-step directions follow the stats.`;
+}
+
+// --- Stops from park pins ------------------------------------------------------------------------
+
+function parkActions(pin: Pin): PinAction[] {
+  if (pin.kind !== "park") return [];
+  const already = state.stops.some((p) => p[0] === pin.at[0] && p[1] === pin.at[1]);
+  if (already || state.stops.length >= MAX_LINK_STOPS || !state.to) return [];
+  return [{
+    label: "Add as a stop",
+    run: () => {
+      state.stops.push(pin.at);
+      stopNames[state.stops.length - 1] = pin.name;
+      renderStops();
+      requestPlan();
+    },
+  }];
+}
+
+function renderStops(): void {
+  $("#stops").hidden = state.stops.length === 0;
+  $("#stop-list").replaceChildren(
+    ...state.stops.map((_, i) => {
+      const li = document.createElement("li");
+      const name = document.createElement("span");
+      name.textContent = stopNames[i] ?? `Stop ${i + 1}`;
+      const remove = document.createElement("button");
+      remove.type = "button";
+      remove.className = "link-button";
+      remove.textContent = "Remove";
+      remove.setAttribute("aria-label", `Remove ${name.textContent}`);
+      remove.addEventListener("click", () => {
+        state.stops.splice(i, 1);
+        stopNames.splice(i, 1);
+        renderStops();
+        if (state.from && state.to) requestPlan();
+        else writeLink();
+      });
+      li.append(name, remove);
+      return li;
+    }),
+  );
+}
+
+// --- Crawls and workouts -------------------------------------------------------------------------
+
+const radioValue = (name: string) => document.querySelector<HTMLInputElement>(`input[name="${name}"]:checked`)?.value ?? "";
+const setRadio = (name: string, value: string | number) => {
+  const r = document.querySelector<HTMLInputElement>(`input[name="${name}"][value="${value}"]`);
+  if (r) r.checked = true;
+};
+const crawlCount = $<HTMLSelectElement>("#crawl-count");
+
+function fillCrawlCounts(theme: CrawlTheme, selected: number): void {
+  crawlCount.replaceChildren(
+    ...Array.from({ length: MAX_STOPS[theme] - MIN_STOPS + 1 }, (_, i) => {
+      const o = document.createElement("option");
+      o.value = String(MIN_STOPS + i);
+      o.textContent = String(MIN_STOPS + i);
+      return o;
+    }),
+  );
+  crawlCount.value = String(Math.min(selected, MAX_STOPS[theme]));
+}
+fillCrawlCounts("art", 5);
+document.querySelectorAll<HTMLInputElement>('input[name="crawl-theme"]').forEach((r) =>
+  r.addEventListener("change", () => fillCrawlCounts(r.value as CrawlTheme, Number(crawlCount.value))),
+);
+
+function syncToolForms(): void {
+  if (state.crawl) {
+    setRadio("crawl-theme", state.crawl.theme);
+    fillCrawlCounts(state.crawl.theme, state.crawl.count);
+    setRadio("crawl-len", state.crawl.minutes);
+    $<HTMLInputElement>("#crawl-end").checked = state.crawl.toEnd;
+  }
+  if (state.workout) {
+    setRadio("workout-focus", state.workout.focus);
+    setRadio("workout-len", state.workout.minutes);
+  }
+}
+
+function needFrom(what: string): boolean {
+  if (state.from) return true;
+  setStatus(`Pick a From point first; the ${what} starts there.`, true);
+  if (!state.open.includes("plan")) setOpen("plan", true);
+  input("from").focus();
+  return false;
+}
+
+$<HTMLFormElement>("#crawl-form").addEventListener("submit", (e) => {
+  e.preventDefault();
+  if (!needFrom("crawl")) return;
+  const toEnd = $<HTMLInputElement>("#crawl-end").checked;
+  if (toEnd && !state.to) {
+    setStatus("Pick a To point to finish there, or untick the box to loop back.", true);
+    return;
+  }
+  const minutes = Number(radioValue("crawl-len"));
+  state.crawl = {
+    theme: radioValue("crawl-theme") as CrawlTheme,
+    count: Number(crawlCount.value),
+    minutes: (CRAWL_MINUTES as readonly number[]).includes(minutes) ? minutes : 45,
+    toEnd,
+  };
+  crawlSkip = [];
+  requestCrawl();
+});
+
+function requestCrawl(): void {
+  if (!info || !state.from || !state.crawl) return;
+  state.art = null;
+  state.workout = null;
+  requestId++;
+  if (!state.open.includes("crawl")) setOpen("crawl", true);
+  setStatus("Planning the crawl…");
+  send({
+    type: "crawl",
+    id: requestId,
+    start: state.from,
+    end: state.crawl.toEnd ? state.to : null,
+    fromName: state.fromName ?? "your start",
+    toName: state.toName ?? "your end",
+    theme: state.crawl.theme,
+    stops: state.crawl.count,
+    minutes: state.crawl.minutes,
+    skip: crawlSkip,
+  });
+}
+
+$<HTMLFormElement>("#workout-form").addEventListener("submit", (e) => {
+  e.preventDefault();
+  if (!needFrom("loop")) return;
+  state.workout = { focus: radioValue("workout-focus") as WorkoutFocus, minutes: Number(radioValue("workout-len")) };
+  requestWorkout();
+});
+
+function requestWorkout(): void {
+  if (!info || !state.from || !state.workout) return;
+  state.art = null;
+  state.crawl = null;
+  requestId++;
+  if (!state.open.includes("workout")) setOpen("workout", true);
+  setStatus("Planning the loop…");
+  send({ type: "workout", id: requestId, start: state.from, fromName: state.fromName ?? "your start", minutes: state.workout.minutes, focus: state.workout.focus });
+}
+
+function stopActions(pin: Pin): PinAction[] {
+  if (pin.kind !== "stop" || pin.stopIndex === undefined || !state.crawl) return [];
+  const index = pin.stopIndex;
+  const actions: PinAction[] = [{
+    label: "Swap for another",
+    run: () => {
+      crawlSkip.push(index);
+      requestCrawl();
+    },
+  }];
+  if (state.crawl.count > MIN_STOPS) {
+    actions.push({
+      label: "Skip this stop",
+      run: () => {
+        crawlSkip.push(index);
+        state.crawl!.count--;
+        syncToolForms();
+        requestCrawl();
+      },
+    });
+  }
+  return actions;
+}
+
+function onTour(result: TourResult): void {
+  goButton.disabled = false;
+  lastCard = tourCard(result);
+  state.from = result.start;
+  routeMap?.setMarker("from", result.start);
+  const loops = result.end[0] === result.start[0] && result.end[1] === result.start[1];
+  routeMap?.setMarker("to", loops ? null : result.end);
+  writeLink();
+  routeMap?.setRoutes([], result.line);
+  routeMap?.setPins(result.pins, stopActions);
+  renderTour(result, (at) => routeMap?.flyTo(at));
+  clearShareImage();
+  showResult();
+  $("#announcer").textContent = `${result.kind === "crawl" ? "Crawl" : "Loop"} ready. ${result.summary} Step-by-step directions follow the stats.`;
+}
+
+// --- Famous routes -------------------------------------------------------------------------------
 
 $("#famous-list").replaceChildren(
-  ...FAMOUS_ROUTES.map((f) => {
+  ...(FAMOUS[CITY.id] ?? []).map((f) => {
     const li = document.createElement("li");
     const button = document.createElement("button");
     button.type = "button";
@@ -363,16 +745,27 @@ $("#famous-list").replaceChildren(
     const pitch = document.createElement("span");
     pitch.textContent = f.pitch;
     const meta = document.createElement("small");
-    meta.textContent = `${MODES[f.mode].name} · ${f.fromName} to ${f.toName}`;
+    meta.textContent =
+      f.kind === "plan" ? `${MODES[f.mode].name} · ${f.fromName} to ${f.toName}` : `${f.kind === "crawl" ? "Crawl" : "Workout"} · from ${f.fromName}`;
     button.append(title, pitch, meta);
     button.addEventListener("click", () => {
-      state.mode = f.mode;
-      state.seed = f.seed;
       setEnd("from", f.from, f.fromName);
-      setEnd("to", f.to, f.toName);
-      syncInputs();
-      requestPlan();
-      $("#planner").scrollIntoView({ block: "start", behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
+      if (f.kind === "plan") {
+        state.mode = f.mode;
+        state.seed = f.seed;
+        setEnd("to", f.to, f.toName);
+        syncInputs();
+        requestPlan();
+      } else if (f.kind === "crawl") {
+        state.crawl = { theme: f.theme, count: f.count, minutes: f.minutes, toEnd: false };
+        crawlSkip = [];
+        syncToolForms();
+        requestCrawl();
+      } else {
+        state.workout = { focus: f.focus, minutes: f.minutes };
+        syncToolForms();
+        requestWorkout();
+      }
     });
     li.append(button);
     return li;

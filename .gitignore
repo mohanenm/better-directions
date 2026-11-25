@@ -9,9 +9,12 @@ __pycache__/
 data/raw/
 data/work/
 
-# Node (later phases)
+# Node
 node_modules/
 dist/
 
 # OS / editor
 .DS_Store
+
+# Local working notes (not published)
+notes/

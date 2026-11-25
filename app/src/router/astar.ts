@@ -85,7 +85,11 @@ export class Router {
 
   route(start: number, goal: number, model: CostModel, opts: RouteOptions = {}): Route | null {
     const g = this.g;
-    if (start === goal) return { dirEdges: [], nodes: [start], timeS: 0, lengthM: 0, cost: 0 };
+    if (start === goal) {
+      // Only a usable node: one the audit left at least one walkable edge out of.
+      if (g.outStart[start + 1]! === g.outStart[start]!) return null;
+      return { dirEdges: [], nodes: [start], timeS: 0, lengthM: 0, cost: 0 };
+    }
     if (!(model.minCostPerSecond > 0)) throw new CostModelError(`${model.id}: minCostPerSecond must be > 0`);
 
     this.gen++;

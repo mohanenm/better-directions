@@ -25,6 +25,7 @@ const parts = [
   "Fonts: Noto Sans, SIL Open Font License 1.1 (basemap/fonts/OFL.txt).",
   "Map sprites: protomaps/basemaps-assets, derived from MIT-licensed tangrams/icons.",
   "Elevation (Lyon): IGN RGE ALTI®, Licence Ouverte 2.0 (Etalab).",
+  "Elevation (US areas): USGS 3D Elevation Program (3DEP), public domain.",
   "",
   "Third-party software shipped in this page:",
   "",

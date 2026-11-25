@@ -6,14 +6,20 @@
 export type Tags = Readonly<Record<string, string>>;
 
 export interface AreaRef {
-  kind: "park" | "mall" | "station" | "building";
+  /** grounds: cemeteries, gardens and zoos that close; only their hours matter. */
+  kind: "park" | "grounds" | "mall" | "station" | "building";
   name: string | null;
   osm: string;
   opening_hours?: string;
+  /** The building tag, for building areas. */
+  building?: string;
 }
 
+export type SnackKind = "bakery" | "pastry" | "chocolate" | "ice_cream" | "cafe";
+export type CrawlKind = "artwork" | "gallery" | "museum" | "pub" | "bar" | "brewery" | "wine_bar" | "winery" | "wine_shop";
+
 export interface Poi {
-  kind: "bakery" | "pastry" | "chocolate" | "ice_cream" | "cafe";
+  kind: SnackKind | CrawlKind;
   name: string;
   /** The edge (street) the shop is on. */
   edge: number;
@@ -46,6 +52,8 @@ export interface GraphMeta {
   tagsets: Tags[];
   node_tagsets: Tags[];
   areas: (AreaRef | null)[];
+  /** OSM way ids of passages confirmed open to the public. */
+  confirmed_passages?: number[];
   /** Snack stops for the snack tour (absent in older graphs). */
   pois?: Poi[];
   sections: { name: string; type: SectionType; count: number }[];

@@ -25,7 +25,7 @@ const EARTH = 6_371_008.8;
 const CLOUD_STEP_M = 20;
 const CLOUD_CELL_M = 40;
 const QUICK_STEP_M = 40;
-const MISS_M = 150; // a template point this far from any path counts as a miss
+export const MISS_M = 150; // a template point this far from any path counts as a miss
 const CORRIDOR_SIGMA_M = 30;
 const CORRIDOR_MAX_FACTOR = 60;
 const LIKENESS_SCALE = 0.08; // chamfer error of 8% of the shape size = 0% likeness
@@ -103,7 +103,7 @@ export function densify(line: XY[], step: number): XY[] {
 }
 
 /** Distance from p to the nearest point of a polyline. */
-function polylineDist(p: XY, line: XY[]): number {
+export function polylineDist(p: XY, line: XY[]): number {
   let best = Infinity;
   for (let i = 0; i < line.length - 1; i++) best = Math.min(best, segDist(p, line[i]!, line[i + 1]!));
   return best;
@@ -147,7 +147,7 @@ class NetworkCloud {
 }
 
 const clouds = new WeakMap<Graph, NetworkCloud>();
-function cloudFor(g: Graph): NetworkCloud {
+export function cloudFor(g: Graph): NetworkCloud {
   let c = clouds.get(g);
   if (!c) {
     const b = g.meta.city.bbox;
@@ -198,7 +198,7 @@ export function trimSpurs(dirEdges: number[]): number[] {
   return out;
 }
 
-function trace(router: Router, fi: FeatureIndex, index: NodeIndex, m: LocalMetres, pts: XY[], start: number): Route | null {
+export function trace(router: Router, fi: FeatureIndex, index: NodeIndex, m: LocalMetres, pts: XY[], start: number): Route | null {
   const g = router.g;
   const nodes = pts.map((p, i) => (i === 0 ? start : index.nearest(m.lonLat(p), MISS_M)));
   if (nodes.some((n) => n === null)) return null;

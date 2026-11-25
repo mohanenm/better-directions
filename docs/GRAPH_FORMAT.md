@@ -31,7 +31,8 @@ Each section is a typed array: `{ "name", "type", "count" }`, where type is one 
 | `tagsets` | Deduplicated way tag subsets (safety and mode keys); index 0 is `{}` |
 | `node_tagsets` | Deduplicated node tag subsets (barrier, access, foot, railway, highway, crossing, locked, entrance); index 0 is `{}` |
 | `pois` | Snack stops for the snack tour: `{kind, name, edge, opening_hours?}`, where `kind` is `bakery`, `pastry`, `chocolate`, `ice_cream` or `cafe` and `edge` is the street the shop is on (the nearest edge within 40 m). Sorted by edge, then kind, then name. |
-| `areas` | Parks, venues and buildings that edges reference: `{kind, name, osm, opening_hours?}`, where `kind` is `park`, `mall`, `station` or `building` and `osm` is like `w123` or `r456`. Index 0 is `null` (none). |
+| `areas` | Parks, venues and buildings that edges reference: `{kind, name, osm, opening_hours?, building?}`, where `kind` is `park`, `mall`, `station` or `building`, `osm` is like `w123` or `r456`, and `building` is the building tag. Index 0 is `null` (none). |
+| `confirmed_passages` | OSM way ids of passages confirmed open to the public in the city config. The load-time audit accepts these through any building. |
 
 ## Sections
 
@@ -55,6 +56,6 @@ Each section is a typed array: `{ "name", "type", "count" }`, where type is one 
 
 ## Guarantees
 
-- **Only walkable things are in the file.** Every way's tagset passes `way_exclusion`, and every node passes `node_exclusion` with its context bits. Tests check this on the built file, and the router re-checks it at query time.
-- **Every node can reach every other node** (the graph is one strongly connected component, respecting one-way flags).
-- **Same extract and same code give the same bytes.**
+- Only walkable things are in the file. Every way's tagset passes `way_exclusion`, every node passes `node_exclusion` with its context bits, and every edge through a building passes `passage_exclusion` with its building and venue. Tests check this on the built file, and the browser re-checks it when the file loads.
+- Every node can reach every other node: the graph is one strongly connected component, respecting one-way flags.
+- The same extract and the same code give the same bytes.

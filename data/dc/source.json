@@ -1,0 +1,8 @@
+{
+  "provider": "Geofabrik",
+  "dated_url": "https://download.geofabrik.de/north-america/us/district-of-columbia/district-of-columbia-261124.osm.pbf",
+  "data_as_of": "2026-11-24T21:21:23Z",
+  "licence": "ODbL 1.0",
+  "attribution": "\u00a9 OpenStreetMap contributors",
+  "cropped_sha256": "3c6e9f90fb8cb11ddff2fb903c5a579eedf8d936b22a20de81bcba60e232a182"
+}

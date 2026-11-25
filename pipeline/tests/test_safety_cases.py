@@ -46,6 +46,8 @@ def test_every_way_reason_is_covered():
         "escalator_direction_unknown",
         "sac_scale",
         "trail_visibility",
+        "sidewalk_separate",
+        "no_sidewalk",
     }
     assert reasons == expected
 
@@ -58,3 +60,20 @@ def test_track_way_cases(case):
 @pytest.mark.parametrize("case", CASES["under_building_unmapped"], ids=lambda c: c["name"])
 def test_under_building_cases(case):
     assert safety.may_pass_under_building_unmapped(case["tags"]) is case["allowed"]
+
+
+@pytest.mark.parametrize("case", CASES["passages"], ids=lambda c: c["name"])
+def test_passage_cases(case):
+    reason = safety.passage_exclusion(
+        case["tags"],
+        case["way_name"],
+        case["building"],
+        in_public_venue=case.get("in_public_venue", False),
+        confirmed=case.get("confirmed", False),
+    )
+    assert reason == case["excluded"]
+
+
+@pytest.mark.parametrize("case", CASES["restricted_areas"], ids=lambda c: c["name"])
+def test_restricted_area_cases(case):
+    assert safety.restricted_area_exclusion(case["way"], case["area"]) == case["excluded"]

@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import dataclasses
+
 import pytest
 from invariants import assert_output_is_safe
 from osmfixture import base_town, town_city
@@ -19,9 +21,9 @@ from bdgraph.encode import (
 )
 
 
-def build(builder, tmp_path):
+def build(builder, tmp_path, city=None):
     path = builder.write(tmp_path / "town.osm")
-    graph = build_graph(town_city(), path)
+    graph = build_graph(city or town_city(), path)
     return graph, decode_graph(encode_graph(graph))
 
 
@@ -147,12 +149,40 @@ def test_untagged_footway_through_a_building_is_dropped(tmp_path):
 def test_building_passage_is_kept_and_flagged(tmp_path):
     b = base_town()
     b.ring([(120, 20), (180, 20), (180, 80), (120, 80)], building="yes", name="Maison")
-    passage = b.way(["C1", "C2"], highway="footway", tunnel="building_passage")
+    passage = b.way(["C1", "C2"], highway="footway", tunnel="building_passage", foot="permissive")
     _, g = build(b, tmp_path)
     (e,) = edges_of_way(g, passage)
     assert g["edge_flags"][e] & FLAG_THROUGH_BUILDING
     assert g["edge_flags"][e] & FLAG_MAY_CLOSE
     assert g.meta["areas"][g["edge_building"][e]]["name"] == "Maison"
+
+
+def test_unmarked_passage_through_flats_is_dropped(tmp_path):
+    b = base_town()
+    b.ring([(120, 20), (180, 20), (180, 80), (120, 80)], building="apartments")
+    passage = b.way(["C1", "C2"], highway="footway", tunnel="building_passage")
+    graph, g = build(b, tmp_path)
+    assert graph.dropped["passage_not_public"] == 1
+    assert passage not in way_ids(g)
+
+
+def test_confirmed_passage_through_flats_is_kept(tmp_path):
+    b = base_town()
+    b.ring([(120, 20), (180, 20), (180, 80), (120, 80)], building="apartments")
+    passage = b.way(["C1", "C2"], highway="footway", tunnel="building_passage")
+    city = dataclasses.replace(town_city(), confirmed_passages=frozenset({passage}))
+    _, g = build(b, tmp_path, city)
+    assert passage in way_ids(g)
+    assert g.meta["confirmed_passages"] == [passage]
+
+
+def test_university_corridor_is_dropped(tmp_path):
+    b = base_town()
+    b.ring([(120, 20), (180, 20), (180, 80), (120, 80)], building="university")
+    corridor = b.way(["C1", "C2"], highway="corridor", indoor="corridor")
+    graph, g = build(b, tmp_path)
+    assert graph.dropped["passage_not_public"] == 1
+    assert corridor not in way_ids(g)
 
 
 def test_footway_through_a_courtyard_is_not_inside_the_building(tmp_path):
@@ -163,9 +193,9 @@ def test_footway_through_a_courtyard_is_not_inside_the_building(tmp_path):
     # The footway enters and leaves through passages, but its middle runs through the courtyard.
     b.node(115, 50, "P1")
     b.node(185, 50, "P2")
-    b.way(["C1", "P1"], highway="footway", tunnel="building_passage")
+    b.way(["C1", "P1"], highway="footway", tunnel="building_passage", foot="permissive")
     court = b.way(["P1", "P2"], highway="footway")
-    b.way(["P2", "C2"], highway="footway", tunnel="building_passage")
+    b.way(["P2", "C2"], highway="footway", tunnel="building_passage", foot="permissive")
     graph, g = build(b, tmp_path)
     assert graph.dropped["through_building_unmapped"] == 0
     assert court in way_ids(g)
@@ -367,3 +397,51 @@ def test_snack_stops_are_snapped_to_the_street_they_are_on(tmp_path):
     # The bakery at (305, 55) is on Cross Street 3 (x = 300), not at a junction.
     wi = g["edge_way"][poi["edge"]]
     assert g.meta["strings"][g["way_name"][wi]] == "Cross Street 3"
+
+
+def test_crawl_stop_kinds():
+    from bdgraph.build import poi_kind
+
+    assert poi_kind({"tourism": "artwork", "artwork_type": "mural"}) == ("artwork", "Mural")
+    assert poi_kind({"tourism": "artwork", "name": "Mur des Canuts"}) == (
+        "artwork",
+        "Mur des Canuts",
+    )
+    assert poi_kind({"tourism": "artwork", "indoor": "yes", "name": "X"}) is None
+    assert poi_kind({"tourism": "museum", "name": "Musée des Beaux-Arts"}) == (
+        "museum",
+        "Musée des Beaux-Arts",
+    )
+    assert poi_kind({"tourism": "museum", "name": "Musée de l'Imprimerie"}) is None
+    assert poi_kind({"amenity": "pub", "name": "The Shamrock"}) == ("pub", "The Shamrock")
+    assert poi_kind({"amenity": "bar", "name": "Le Zinc", "microbrewery": "yes"}) == (
+        "brewery",
+        "Le Zinc",
+    )
+    assert poi_kind({"amenity": "bar", "name": "La Cave à Vins"}) == ("wine_bar", "La Cave à Vins")
+    assert poi_kind({"amenity": "bar", "name": "Chez Jo", "drink:wine": "served"})[0] == "wine_bar"
+    assert poi_kind({"shop": "wine", "name": "Caviste"}) == ("wine_shop", "Caviste")
+    assert poi_kind({"amenity": "bar"}) is None  # unnamed bars are skipped
+
+
+def test_paths_on_a_military_base_are_dropped(tmp_path):
+    b = base_town()
+    b.ring([(110, 10), (190, 10), (190, 90), (110, 90)], landuse="military")
+    inside = b.way(["C1", "C2"], highway="footway", foot="yes")
+    graph, g = build(b, tmp_path)
+    assert graph.dropped["military_area"] >= 1
+    assert inside not in way_ids(g)
+
+
+def test_private_grounds_keep_only_public_paths(tmp_path):
+    b = base_town()
+    b.ring([(110, 10), (190, 10), (190, 90), (110, 90)], leisure="garden", access="private")
+    private = b.way(["C1", "C2"], highway="footway")
+    graph, g = build(b, tmp_path)
+    assert graph.dropped["restricted_area"] >= 1
+    assert private not in way_ids(g)
+    b2 = base_town()
+    b2.ring([(110, 10), (190, 10), (190, 90), (110, 90)], leisure="garden", access="private")
+    public = b2.way(["C1", "C2"], highway="footway", foot="designated")
+    _, g2 = build(b2, tmp_path)
+    assert public in way_ids(g2)

@@ -1,6 +1,6 @@
 /**
- * Sample routes per mode between well-known public places in Lyon, for tuning and for the
- * progress notes. Run: npm run samples   (writes docs/SAMPLE_ROUTES.md)
+ * Sample routes per mode between well-known public places in Lyon, for tuning.
+ * Run: npm run samples   (writes docs/SAMPLE_ROUTES.md)
  */
 import { readFileSync, writeFileSync } from "node:fs";
 import { it } from "vitest";

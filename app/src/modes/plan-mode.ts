@@ -3,17 +3,18 @@
  * For collecting modes, both the cost-profile route and the collected route are tried, and the
  * more fun one (by the mode's score) wins. Whatever wins is safety-checked against the cap.
  */
-import type { Route, Router } from "../router/astar";
+import { NORMAL, type Route, type Router } from "../router/astar";
 import { blended, plan } from "../router/planner";
 import { assertRouteSafe } from "../router/verify";
 import { haversineM } from "../router/geometry";
 import { hashUnit, mulberry32 } from "../router/rng";
 import { FLAT_SPEED_MS } from "../router/time";
+import { detourCapSeconds } from "../safety/limits";
 import { collectRoute, DETOUR_FACTOR, viaRoute } from "./collect";
 import type { FeatureIndex } from "./features";
-import { MODES, type ModeId } from "./modes";
+import { CROSSING_PENALTIES_S, inconvenientModel, MODES, type ModeId } from "./modes";
 import { routeName } from "./names";
-import { costOfFun, snackSummary, summarise, type CostOfFun } from "./stats";
+import { costOfFun, inconvenienceSummary, snackSummary, summarise, type CostOfFun } from "./stats";
 
 export interface ModePlan {
   mode: ModeId;
@@ -23,7 +24,7 @@ export interface ModePlan {
   normalStats: CostOfFun;
   betterStats: CostOfFun;
   capSeconds: number;
-  strategy: "cost-profile" | "collect" | "chaos-waypoints" | "normal";
+  strategy: "cost-profile" | "collect" | "chaos-waypoints" | "via-stops" | "normal";
   summary: string;
   name: string;
 }
@@ -35,10 +36,11 @@ export function planMode(
   goal: number,
   modeId: ModeId,
   seed = 1,
+  capSeconds?: number,
 ): ModePlan | null {
   const mode = MODES[modeId];
   const model = mode.cost(fi, seed);
-  const base = plan(router, start, goal, model);
+  const base = plan(router, start, goal, model, capSeconds);
   if (!base) return null;
 
   let better = base.better;
@@ -67,14 +69,55 @@ export function planMode(
     }
   }
 
-  assertRouteSafe(router.g, better, base.capSeconds);
   const normalStats = costOfFun(fi, base.normal);
+
+  if (modeId === "inconvenient") {
+    // Wander via a few off-route waypoints too; keep the most annoying route that crosses no
+    // more busy roads than the normal one.
+    let bestScore = betterStats.busyCrossings <= normalStats.busyCrossings ? mode.score(betterStats) : -Infinity;
+    for (let k = 1; k <= 3; k++) {
+      const wild = chaosWaypointRoute(router, fi, start, goal, model, base.capSeconds, seed * 31 + k);
+      if (!wild) continue;
+      const stats = costOfFun(fi, wild);
+      if (stats.busyCrossings > normalStats.busyCrossings || mode.score(stats) <= bestScore) continue;
+      bestScore = mode.score(stats);
+      better = wild;
+      betterStats = stats;
+      strategy = "chaos-waypoints";
+    }
+  }
+
+  if (modeId === "inconvenient" && betterStats.busyCrossings > normalStats.busyCrossings) {
+    // Inconvenient, not riskier: raise the crossing penalty until it crosses no more than normal.
+    let fixed = false;
+    for (const penalty of CROSSING_PENALTIES_S.slice(1)) {
+      const strict = plan(router, start, goal, inconvenientModel(fi, penalty), base.capSeconds);
+      if (!strict) break;
+      const stats = costOfFun(fi, strict.better);
+      if (stats.busyCrossings <= normalStats.busyCrossings) {
+        better = strict.better;
+        betterStats = stats;
+        strategy = strict.fellBackToNormal ? "normal" : "cost-profile";
+        fixed = true;
+        break;
+      }
+    }
+    if (!fixed) {
+      better = base.normal;
+      betterStats = normalStats;
+      strategy = "normal";
+    }
+  }
+
+  assertRouteSafe(router.g, better, base.capSeconds);
   const extras =
     modeId === "no-right"
       ? [`${betterStats.leftTurns} left turns, ${betterStats.rightTurns} right`]
       : modeId === "snacks"
         ? snackSummary(betterStats)
-        : [];
+        : modeId === "inconvenient"
+          ? inconvenienceSummary(betterStats)
+          : [];
   return {
     mode: modeId,
     seed,
@@ -89,8 +132,69 @@ export function planMode(
   };
 }
 
+/** Joins consecutive routes end to end. */
+export function joinRoutes(routes: Route[]): Route {
+  const dirEdges: number[] = [];
+  const nodes: number[] = [];
+  let timeS = 0;
+  let lengthM = 0;
+  for (const r of routes) {
+    dirEdges.push(...r.dirEdges);
+    nodes.push(...(nodes.length ? r.nodes.slice(1) : r.nodes));
+    timeS += r.timeS;
+    lengthM += r.lengthM;
+  }
+  return { dirEdges, nodes, timeS, lengthM, cost: NaN };
+}
+
 /**
- * Scenic chaos: one or two seeded random waypoints inside the detour budget, joined by legs
+ * A mode's route through stops the user picked, in order. The normal route goes through the same
+ * stops, so the detour cap is measured against it; each leg gets its share of that cap.
+ */
+export function planModeVia(
+  router: Router,
+  fi: FeatureIndex,
+  points: number[],
+  modeId: ModeId,
+  seed = 1,
+): ModePlan | null {
+  if (points.length === 2) return planMode(router, fi, points[0]!, points[1]!, modeId, seed);
+  const normals: Route[] = [];
+  for (let i = 0; i < points.length - 1; i++) {
+    const leg = router.route(points[i]!, points[i + 1]!, NORMAL);
+    if (!leg) return null;
+    normals.push(leg);
+  }
+  const normal = joinRoutes(normals);
+  const capSeconds = detourCapSeconds(normal.timeS);
+  const legs: ModePlan[] = [];
+  for (let i = 0; i < normals.length; i++) {
+    const share = normal.timeS > 0 ? normals[i]!.timeS / normal.timeS : 1 / normals.length;
+    const leg = planMode(router, fi, points[i]!, points[i + 1]!, modeId, seed + i, capSeconds * share);
+    if (!leg) return null;
+    legs.push(leg);
+  }
+  const better = joinRoutes(legs.map((l) => l.better));
+  assertRouteSafe(router.g, better, capSeconds);
+  const normalStats = costOfFun(fi, normal);
+  const betterStats = costOfFun(fi, better);
+  const extras = modeId === "no-right" ? [`${betterStats.leftTurns} left turns, ${betterStats.rightTurns} right`] : modeId === "snacks" ? snackSummary(betterStats) : modeId === "inconvenient" ? inconvenienceSummary(betterStats) : [];
+  return {
+    mode: modeId,
+    seed,
+    normal,
+    better,
+    normalStats,
+    betterStats,
+    capSeconds,
+    strategy: legs.every((l) => l.strategy === "normal") ? "normal" : "via-stops",
+    summary: summarise(normalStats, betterStats, extras),
+    name: routeName(fi, modeId, betterStats, better, seed),
+  };
+}
+
+/**
+ * Random: one or two seeded random waypoints inside the detour budget, joined by legs
  * under the seed's random weights. Same seed + same trip = same route; a new seed is a new
  * adventure. Falls back (fewer waypoints, then none) if a route won't fit the cap.
  */

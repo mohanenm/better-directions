@@ -44,7 +44,9 @@ def minitown() -> OsmBuilder:
     b.way(["A1", "B3"], highway="footway", access="private", name="Private")
     b.way(["C1", "C2"], highway="footway", oneway="yes", name="One Way")
     b.way(["C2", "S", "C3"], highway="steps", step_count="30", name="Stairs")
-    b.way(["W", "E"], highway="footway", tunnel="building_passage", name="Traboule")
+    b.way(
+        ["W", "E"], highway="footway", tunnel="building_passage", foot="permissive", name="Traboule"
+    )
     b.ring([(210, 40), (290, 40), (290, 60), (210, 60)], leisure="park", name="Little Park")
     b.ring([(20, 70), (45, 70), (45, 95), (20, 95)], building="yes", name="Traboule House")
     for x, y, tags in (

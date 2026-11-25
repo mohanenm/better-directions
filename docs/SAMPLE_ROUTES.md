@@ -8,72 +8,72 @@ Each row is one mode between two public places: the cost of fun, which strategy 
 
 | Mode | Cost of fun | Strategy | Plan |
 |---|---|---|---:|
-| Through buildings | **The Window Shopper's Shortcut**. Normal: 14 min. Better: 35 min, 1 staircase, 9 buildings walked through, 1 mall. <br><sub>2.9 km · +21 min · 16 m up · trail 5% · turns 37L/29R · 12% doubled back · 8 may close</sub> | collect | 88 ms |
-| Trail runner | **Trail Mix**. Normal: 14 min. Better: 55 min, 3 trails. <br><sub>4.5 km · +41 min · 30 m up · trail 47% · turns 19L/21R · 10% doubled back</sub> | collect | 17 ms |
-| Stairmaster | **The Montée des Chazeaux Calf Crusher**. Normal: 14 min. Better: 35 min, 10 staircases, 289 steps up. <br><sub>2.6 km · +21 min · 79 m up · trail 3% · turns 28L/21R · 4% doubled back</sub> | collect | 31 ms |
-| Park hopper | **The Green Grand Tour**. Normal: 14 min. Better: 56 min, 11 staircases, 174 steps up, 1 trail, 5 parks. <br><sub>4.0 km · +42 min · 169 m up · trail 12% · turns 34L/26R · 4% doubled back · 2 may close</sub> | collect | 33 ms |
-| Snack tour | **The Croissant Crawl**. Normal: 14 min. Better: 18 min, 4 bakeries, 2 pâtisseries, 1 chocolatier, 2 ice-cream shops, 5 cafés. <br><sub>1.5 km · +4 min · 7 m up · trail 6% · turns 14L/11R</sub> | collect | 9 ms |
-| Never turn right | **The Sinister Circuit**. Normal: 14 min. Better: 26 min, 2 trails, 25 left turns, 0 right. <br><sub>2.2 km · +12 min · 10 m up · trail 25% · turns 25L/0R</sub> | cost-profile | 3 ms |
-| Scenic chaos | **The Scenic Tangent**. Normal: 14 min. Better: 37 min, 5 staircases, 65 steps up, 1 park. <br><sub>2.9 km · +23 min · 65 m up · trail 3% · turns 22L/26R</sub> | chaos-waypoints | 43 ms |
+| Through buildings | **Mall Rat Express**. Normal: 14 min. Better: 43 min, 1 staircase, 43 steps up, 9 buildings walked through, 1 mall. <br><sub>3.5 km · +29 min · 28 m up · trail 4% · turns 34L/29R · 15% doubled back · 7 may close</sub> | collect | 128 ms |
+| Trail runner | **Trail Mix**. Normal: 14 min. Better: 55 min, 3 trails. <br><sub>4.5 km · +41 min · 30 m up · trail 47% · turns 19L/21R · 10% doubled back</sub> | collect | 40 ms |
+| Stairmaster | **Montée des Chazeaux or Bust**. Normal: 14 min. Better: 35 min, 10 staircases, 289 steps up. <br><sub>2.6 km · +21 min · 79 m up · trail 3% · turns 28L/21R · 4% doubled back</sub> | collect | 64 ms |
+| Park hopper | **The 5-Park Picnic Parade**. Normal: 14 min. Better: 56 min, 11 staircases, 174 steps up, 1 trail, 5 parks. <br><sub>4.0 km · +42 min · 169 m up · trail 12% · turns 34L/26R · 4% doubled back · 2 may close</sub> | collect | 49 ms |
+| Snack tour | **Carb Loading Loop**. Normal: 14 min. Better: 18 min, 4 bakeries, 2 pâtisseries, 1 chocolatier, 2 ice-cream shops, 5 cafés. <br><sub>1.5 km · +4 min · 7 m up · trail 6% · turns 14L/11R</sub> | collect | 15 ms |
+| Never turn right | **Port Side Promenade**. Normal: 14 min. Better: 26 min, 2 trails, 25 left turns, 0 right. <br><sub>2.2 km · +12 min · 10 m up · trail 25% · turns 25L/0R</sub> | cost-profile | 5 ms |
+| Scenic chaos | **Chaos Route #7**. Normal: 14 min. Better: 54 min, 1 trail. <br><sub>4.5 km · +40 min · 27 m up · trail 5% · turns 24L/27R</sub> | chaos-waypoints | 67 ms |
 
 ## Gare Part-Dieu → Cathédrale Saint-Jean
 
 | Mode | Cost of fun | Strategy | Plan |
 |---|---|---|---:|
-| Through buildings | **The Secret Passage Shuffle**. Normal: 35 min. Better: 53 min, 1 staircase, 37 steps up, 8 buildings walked through. <br><sub>4.3 km · +18 min · 30 m up · trail 3% · turns 33L/24R · 9% doubled back · 7 may close</sub> | collect | 75 ms |
-| Trail runner | **Trail Mix**. Normal: 35 min. Better: 58 min, 1 building walked through, 1 mall, 4 trails. <br><sub>4.7 km · +23 min · 25 m up · trail 34% · turns 33L/35R · 3% doubled back · 1 may close</sub> | collect | 64 ms |
-| Stairmaster | **Up, Up and Away**. Normal: 35 min. Better: 57 min, 16 staircases, 299 steps up, 1 mall. <br><sub>4.1 km · +22 min · 57 m up · trail 1% · turns 36L/37R · 4% doubled back</sub> | collect | 99 ms |
-| Park hopper | **The 6-Park Picnic Parade**. Normal: 35 min. Better: 57 min, 1 staircase, 6 parks. <br><sub>4.7 km · +22 min · 32 m up · trail 6% · turns 30L/44R · 3% doubled back</sub> | collect | 69 ms |
-| Snack tour | **Carb Loading Loop**. Normal: 35 min. Better: 40 min, 2 staircases, 4 bakeries, 2 pâtisseries, 1 chocolatier, 7 cafés. <br><sub>3.2 km · +5 min · 23 m up · trail 1% · turns 18L/19R</sub> | collect | 49 ms |
-| Never turn right | **The Nearly Sinister Circuit**. Normal: 35 min. Better: 59 min, 1 station, 50 left turns, 1 right. <br><sub>4.9 km · +24 min · 28 m up · trail 1% · turns 50L/1R · 1% doubled back</sub> | cost-profile | 27 ms |
-| Scenic chaos | **Chaos Route #7**. Normal: 35 min. Better: 51 min, 2 staircases. <br><sub>4.2 km · +16 min · 34 m up · trail 1% · turns 27L/25R</sub> | chaos-waypoints | 67 ms |
+| Through buildings | **The Traboule Tango**. Normal: 35 min. Better: 58 min, 1 staircase, 37 steps up, 8 buildings walked through, 1 trail. <br><sub>4.7 km · +23 min · 29 m up · trail 4% · turns 32L/29R · 11% doubled back · 7 may close</sub> | collect | 157 ms |
+| Trail runner | **Paths Less Paved**. Normal: 35 min. Better: 58 min, 1 building walked through, 1 mall, 4 trails. <br><sub>4.7 km · +23 min · 25 m up · trail 34% · turns 33L/35R · 3% doubled back · 1 may close</sub> | collect | 94 ms |
+| Stairmaster | **Up, Up and Away**. Normal: 35 min. Better: 57 min, 16 staircases, 299 steps up, 1 mall. <br><sub>4.1 km · +22 min · 57 m up · trail 1% · turns 36L/37R · 4% doubled back</sub> | collect | 150 ms |
+| Park hopper | **The Green Grand Tour**. Normal: 35 min. Better: 57 min, 1 staircase, 6 parks. <br><sub>4.7 km · +22 min · 32 m up · trail 6% · turns 30L/44R · 3% doubled back</sub> | collect | 134 ms |
+| Snack tour | **Carb Loading Loop**. Normal: 35 min. Better: 40 min, 2 staircases, 4 bakeries, 2 pâtisseries, 1 chocolatier, 7 cafés. <br><sub>3.2 km · +5 min · 23 m up · trail 1% · turns 18L/19R</sub> | collect | 86 ms |
+| Never turn right | **The Nearly Sinister Circuit**. Normal: 35 min. Better: 59 min, 1 station, 50 left turns, 1 right. <br><sub>4.9 km · +24 min · 28 m up · trail 1% · turns 50L/1R · 1% doubled back</sub> | cost-profile | 49 ms |
+| Scenic chaos | **Chaos Route #7**. Normal: 35 min. Better: 52 min, 2 staircases. <br><sub>4.3 km · +17 min · 33 m up · trail 1% · turns 31L/27R</sub> | chaos-waypoints | 63 ms |
 
 ## Place des Terreaux → Place de la Croix-Rousse
 
 | Mode | Cost of fun | Strategy | Plan |
 |---|---|---|---:|
-| Through buildings | **Through the Walls Tour**. Normal: 16 min. Better: 25 min, 8 staircases, 310 steps up, 10 buildings walked through. <br><sub>1.8 km · +9 min · 96 m up · trail 1% · turns 25L/22R · 12% doubled back · 4 may close</sub> | collect | 20 ms |
-| Trail runner | **Paths Less Paved**. Normal: 16 min. Better: 58 min, 3 staircases, 307 steps up, 4 trails, 1 park. <br><sub>4.5 km · +42 min · 154 m up · trail 28% · turns 48L/30R · 5% doubled back</sub> | collect | 68 ms |
-| Stairmaster | **Stairway to Somewhere**. Normal: 16 min. Better: 29 min, 9 staircases, 555 steps up, 2 buildings walked through, 1 park. <br><sub>2.0 km · +13 min · 129 m up · trail 1% · turns 22L/24R · 10% doubled back · 1 may close</sub> | collect | 22 ms |
-| Park hopper | **The 8-Park Picnic Parade**. Normal: 16 min. Better: 52 min, 9 staircases, 201 steps up, 8 parks. <br><sub>3.6 km · +36 min · 190 m up · trail 3% · turns 44L/52R · 14% doubled back · 1 may close</sub> | collect | 59 ms |
-| Snack tour | **The Pastry Pilgrimage**. Normal: 16 min. Better: 20 min, 2 staircases, 150 steps up, 1 building walked through, 1 park, 2 bakeries, 1 pâtisserie, 5 cafés. <br><sub>1.4 km · +4 min · 91 m up · trail 1% · turns 20L/17R · 1 may close</sub> | collect | 13 ms |
-| Never turn right | **Left Lane Legend**. Normal: 16 min. Better: 20 min, 1 staircase, 107 steps up, 1 park, 26 left turns, 0 right. <br><sub>1.4 km · +4 min · 84 m up · trail 6% · turns 26L/0R</sub> | cost-profile | 5 ms |
-| Scenic chaos | **The Butterfly Effect**. Normal: 16 min. Better: 56 min, 1 staircase, 443 steps up, 1 park. <br><sub>4.2 km · +40 min · 118 m up · trail 3% · turns 29L/21R · 1% doubled back · 1 may close</sub> | chaos-waypoints | 19 ms |
+| Through buildings | **Through the Walls Tour**. Normal: 16 min. Better: 29 min, 5 staircases, 193 steps up, 10 buildings walked through. <br><sub>1.9 km · +13 min · 110 m up · trail 2% · turns 20L/19R · 13% doubled back · 3 may close</sub> | collect | 33 ms |
+| Trail runner | **The Off-Pavement Express**. Normal: 16 min. Better: 58 min, 3 staircases, 307 steps up, 4 trails, 1 park. <br><sub>4.5 km · +42 min · 154 m up · trail 28% · turns 48L/30R · 5% doubled back</sub> | collect | 95 ms |
+| Stairmaster | **The Calf Destroyer Deluxe**. Normal: 16 min. Better: 29 min, 9 staircases, 555 steps up, 2 buildings walked through, 1 park. <br><sub>2.0 km · +13 min · 129 m up · trail 1% · turns 22L/24R · 10% doubled back · 1 may close</sub> | collect | 32 ms |
+| Park hopper | **The Green Grand Tour**. Normal: 16 min. Better: 52 min, 9 staircases, 201 steps up, 8 parks. <br><sub>3.6 km · +36 min · 190 m up · trail 3% · turns 44L/52R · 14% doubled back · 1 may close</sub> | collect | 89 ms |
+| Snack tour | **The Pastry Pilgrimage**. Normal: 16 min. Better: 20 min, 2 staircases, 150 steps up, 1 building walked through, 1 park, 2 bakeries, 1 pâtisserie, 5 cafés. <br><sub>1.4 km · +4 min · 91 m up · trail 1% · turns 20L/17R · 1 may close</sub> | collect | 51 ms |
+| Never turn right | **The Sinister Circuit**. Normal: 16 min. Better: 20 min, 1 staircase, 107 steps up, 1 park, 26 left turns, 0 right. <br><sub>1.4 km · +4 min · 84 m up · trail 6% · turns 26L/0R</sub> | cost-profile | 16 ms |
+| Scenic chaos | **Adventure #7**. Normal: 16 min. Better: 59 min, 3 staircases, 230 steps up. <br><sub>4.7 km · +43 min · 112 m up · trail 1% · turns 35L/37R · 1% doubled back</sub> | chaos-waypoints | 133 ms |
 
 ## Cathédrale Saint-Jean → Basilique de Fourvière
 
 | Mode | Cost of fun | Strategy | Plan |
 |---|---|---|---:|
-| Through buildings | **Through the Walls Tour**. Normal: 23 min. Better: 56 min, 10 staircases, 366 steps up, 8 buildings walked through, 1 station. <br><sub>4.0 km · +33 min · 171 m up · trail 1% · turns 36L/35R · 6% doubled back · 7 may close</sub> | collect | 45 ms |
-| Trail runner | **Trail Mix**. Normal: 23 min. Better: 60 min, 14 staircases, 249 steps up, 4 trails, 2 parks. <br><sub>4.2 km · +37 min · 255 m up · trail 32% · turns 32L/44R · 12% doubled back · 2 may close</sub> | collect | 28 ms |
-| Stairmaster | **The Calf Destroyer Deluxe**. Normal: 23 min. Better: 33 min, 10 staircases, 591 steps up, 1 park. <br><sub>2.2 km · +10 min · 185 m up · trail 11% · turns 18L/16R · 9% doubled back · 2 may close</sub> | collect | 22 ms |
-| Park hopper | **The Completionist's Park Tour**. Normal: 23 min. Better: 59 min, 11 staircases, 223 steps up, 7 parks. <br><sub>4.2 km · +36 min · 203 m up · trail 10% · turns 33L/30R · 5% doubled back · 3 may close</sub> | collect | 37 ms |
-| Snack tour | **The Pastry Pilgrimage**. Normal: 23 min. Better: 32 min, 6 staircases, 50 steps up, 1 pâtisserie, 1 chocolatier, 2 ice-cream shops, 1 café. <br><sub>2.2 km · +9 min · 136 m up · trail 9% · turns 24L/20R · 2% doubled back · 2 may close</sub> | collect | 27 ms |
-| Never turn right | **The Sinister Circuit**. Normal: 23 min. Better: 30 min, 9 staircases, 302 steps up, 33 left turns, 0 right. <br><sub>2.0 km · +7 min · 141 m up · trail 4% · turns 33L/0R · 1 may close</sub> | cost-profile | 5 ms |
-| Scenic chaos | **Chaos Route #7**. Normal: 23 min. Better: 42 min, 5 staircases, 808 steps up. <br><sub>3.1 km · +19 min · 147 m up · trail 2% · turns 23L/21R · 2 may close</sub> | chaos-waypoints | 21 ms |
+| Through buildings | **The Window Shopper's Shortcut**. Normal: 23 min. Better: 59 min, 9 staircases, 360 steps up, 6 buildings walked through, 1 mall, 1 trail. <br><sub>4.3 km · +36 min · 163 m up · trail 6% · turns 33L/39R · 1% doubled back · 7 may close</sub> | collect | 229 ms |
+| Trail runner | **Paths Less Paved**. Normal: 23 min. Better: 60 min, 14 staircases, 249 steps up, 4 trails, 2 parks. <br><sub>4.2 km · +37 min · 255 m up · trail 32% · turns 32L/44R · 12% doubled back · 2 may close</sub> | collect | 47 ms |
+| Stairmaster | **Stairway to Somewhere**. Normal: 23 min. Better: 33 min, 10 staircases, 591 steps up, 1 park. <br><sub>2.2 km · +10 min · 185 m up · trail 11% · turns 18L/16R · 9% doubled back · 2 may close</sub> | collect | 50 ms |
+| Park hopper | **The Completionist's Park Tour**. Normal: 23 min. Better: 59 min, 11 staircases, 223 steps up, 7 parks. <br><sub>4.2 km · +36 min · 203 m up · trail 10% · turns 33L/30R · 5% doubled back · 3 may close</sub> | collect | 93 ms |
+| Snack tour | **Sugar Rush Route**. Normal: 23 min. Better: 32 min, 6 staircases, 50 steps up, 1 pâtisserie, 1 chocolatier, 2 ice-cream shops, 1 café. <br><sub>2.2 km · +9 min · 136 m up · trail 9% · turns 24L/20R · 2% doubled back · 2 may close</sub> | collect | 67 ms |
+| Never turn right | **Left Lane Legend**. Normal: 23 min. Better: 30 min, 9 staircases, 302 steps up, 33 left turns, 0 right. <br><sub>2.0 km · +7 min · 141 m up · trail 4% · turns 33L/0R · 1 may close</sub> | cost-profile | 9 ms |
+| Scenic chaos | **The Scenic Tangent**. Normal: 23 min. Better: 52 min, 6 staircases, 800 steps up. <br><sub>3.8 km · +29 min · 150 m up · trail 1% · turns 29L/30R · 2 may close</sub> | chaos-waypoints | 60 ms |
 
 ## Parc de la Tête d'Or (Porte des Enfants du Rhône) → Place Bellecour
 
 | Mode | Cost of fun | Strategy | Plan |
 |---|---|---|---:|
-| Through buildings | **The Secret Passage Shuffle**. Normal: 32 min. Better: 47 min, 1 staircase, 10 buildings walked through, 1 park. <br><sub>3.9 km · +15 min · 19 m up · trail 5% · turns 27L/32R · 2% doubled back · 6 may close</sub> | collect | 79 ms |
-| Trail runner | **The Mud Lover's Mile**. Normal: 32 min. Better: 56 min, 1 mall, 5 trails, 1 park. <br><sub>4.7 km · +24 min · 18 m up · trail 53% · turns 26L/35R · 8% doubled back</sub> | collect | 50 ms |
-| Stairmaster | **The Step Collector**. Normal: 32 min. Better: 41 min, 8 staircases, 147 steps up, 1 building walked through, 1 park. <br><sub>3.0 km · +9 min · 25 m up · trail 8% · turns 23L/27R · 2% doubled back · 1 may close</sub> | collect | 81 ms |
-| Park hopper | **The Green Grand Tour**. Normal: 32 min. Better: 58 min, 2 staircases, 44 steps up, 3 trails, 5 parks. <br><sub>4.7 km · +26 min · 28 m up · trail 33% · turns 30L/29R · 9% doubled back</sub> | collect | 48 ms |
-| Snack tour | **The Croissant Crawl**. Normal: 32 min. Better: 34 min, 1 building walked through, 4 bakeries, 5 pâtisseries, 2 chocolatiers, 2 ice-cream shops, 7 cafés. <br><sub>2.8 km · +2 min · 14 m up · trail 3% · turns 25L/22R · 1 may close</sub> | cost-profile | 36 ms |
-| Never turn right | **Left Lane Legend**. Normal: 32 min. Better: 53 min, 3 staircases, 46 steps up, 1 trail, 1 park, 44 left turns, 0 right. <br><sub>4.2 km · +21 min · 33 m up · trail 14% · turns 44L/0R · 1% doubled back</sub> | cost-profile | 20 ms |
-| Scenic chaos | **The Scenic Tangent**. Normal: 32 min. Better: 48 min. <br><sub>3.8 km · +16 min · 27 m up · trail 2% · turns 22L/23R</sub> | chaos-waypoints | 27 ms |
+| Through buildings | **The Secret Passage Shuffle**. Normal: 32 min. Better: 52 min, 10 buildings walked through. <br><sub>4.3 km · +20 min · 19 m up · trail 4% · turns 31L/33R · 4% doubled back · 8 may close</sub> | collect | 174 ms |
+| Trail runner | **The Mud Lover's Mile**. Normal: 32 min. Better: 56 min, 1 mall, 5 trails, 1 park. <br><sub>4.7 km · +24 min · 18 m up · trail 53% · turns 26L/35R · 8% doubled back</sub> | collect | 128 ms |
+| Stairmaster | **Up, Up and Away**. Normal: 32 min. Better: 41 min, 8 staircases, 147 steps up, 1 building walked through, 1 park. <br><sub>3.0 km · +9 min · 25 m up · trail 8% · turns 23L/27R · 2% doubled back · 1 may close</sub> | collect | 197 ms |
+| Park hopper | **The 5-Park Picnic Parade**. Normal: 32 min. Better: 58 min, 2 staircases, 44 steps up, 3 trails, 5 parks. <br><sub>4.7 km · +26 min · 28 m up · trail 33% · turns 30L/29R · 9% doubled back</sub> | collect | 88 ms |
+| Snack tour | **Carb Loading Loop**. Normal: 32 min. Better: 34 min, 1 building walked through, 4 bakeries, 5 pâtisseries, 2 chocolatiers, 2 ice-cream shops, 7 cafés. <br><sub>2.8 km · +2 min · 14 m up · trail 3% · turns 25L/22R · 1 may close</sub> | cost-profile | 111 ms |
+| Never turn right | **Left Lane Legend**. Normal: 32 min. Better: 53 min, 3 staircases, 46 steps up, 1 trail, 1 park, 44 left turns, 0 right. <br><sub>4.2 km · +21 min · 33 m up · trail 14% · turns 44L/0R · 1% doubled back</sub> | cost-profile | 45 ms |
+| Scenic chaos | **The Scenic Tangent**. Normal: 32 min. Better: 56 min, 1 building walked through, 1 trail, 1 park. <br><sub>4.7 km · +24 min · 18 m up · trail 6% · turns 34L/27R · 1 may close</sub> | chaos-waypoints | 77 ms |
 
 ## Place Jean Macé → Place Bellecour
 
 | Mode | Cost of fun | Strategy | Plan |
 |---|---|---|---:|
-| Through buildings | **Mall Rat Express**. Normal: 23 min. Better: 52 min, 8 buildings walked through, 1 mall, 1 station. <br><sub>4.3 km · +29 min · 30 m up · trail 2% · turns 36L/36R · 9% doubled back · 6 may close</sub> | collect | 53 ms |
-| Trail runner | **The Mud Lover's Mile**. Normal: 23 min. Better: 59 min, 2 staircases, 52 steps up, 6 trails, 1 park. <br><sub>5.0 km · +36 min · 29 m up · trail 51% · turns 30L/28R · 7% doubled back</sub> | collect | 31 ms |
-| Stairmaster | **The Step Collector**. Normal: 23 min. Better: 34 min, 9 staircases, 258 steps up. <br><sub>2.6 km · +11 min · 22 m up · trail 10% · turns 19L/20R · 7% doubled back</sub> | collect | 35 ms |
-| Park hopper | **The 5-Park Picnic Parade**. Normal: 23 min. Better: 55 min, 3 staircases, 3 trails, 5 parks. <br><sub>4.5 km · +32 min · 39 m up · trail 25% · turns 29L/28R · 2% doubled back</sub> | collect | 55 ms |
-| Snack tour | **Carb Loading Loop**. Normal: 23 min. Better: 27 min, 1 trail, 4 bakeries, 1 pâtisserie, 4 cafés. <br><sub>2.2 km · +4 min · 14 m up · trail 10% · turns 16L/16R</sub> | collect | 23 ms |
-| Never turn right | **Left Lane Legend**. Normal: 23 min. Better: 33 min, 1 trail, 32 left turns, 0 right. <br><sub>2.8 km · +10 min · 14 m up · trail 17% · turns 32L/0R · 2% doubled back</sub> | cost-profile | 8 ms |
-| Scenic chaos | **Adventure #7**. Normal: 23 min. Better: 42 min. <br><sub>3.5 km · +19 min · 17 m up · trail 3% · turns 25L/20R</sub> | chaos-waypoints | 14 ms |
+| Through buildings | **Mall Rat Express**. Normal: 23 min. Better: 56 min, 2 staircases, 67 steps up, 6 buildings walked through, 1 mall, 1 trail. <br><sub>4.6 km · +33 min · 29 m up · trail 5% · turns 42L/36R · 6% doubled back · 6 may close</sub> | collect | 100 ms |
+| Trail runner | **Dirt Road Diva**. Normal: 23 min. Better: 59 min, 2 staircases, 52 steps up, 6 trails, 1 park. <br><sub>5.0 km · +36 min · 29 m up · trail 51% · turns 30L/28R · 7% doubled back</sub> | collect | 77 ms |
+| Stairmaster | **Up, Up and Away**. Normal: 23 min. Better: 34 min, 9 staircases, 258 steps up. <br><sub>2.6 km · +11 min · 22 m up · trail 10% · turns 19L/20R · 7% doubled back</sub> | collect | 103 ms |
+| Park hopper | **The Green Grand Tour**. Normal: 23 min. Better: 55 min, 3 staircases, 3 trails, 5 parks. <br><sub>4.5 km · +32 min · 39 m up · trail 25% · turns 29L/28R · 2% doubled back</sub> | collect | 103 ms |
+| Snack tour | **The Bakery Blitz**. Normal: 23 min. Better: 27 min, 1 trail, 4 bakeries, 1 pâtisserie, 4 cafés. <br><sub>2.2 km · +4 min · 14 m up · trail 10% · turns 16L/16R</sub> | collect | 28 ms |
+| Never turn right | **Port Side Promenade**. Normal: 23 min. Better: 33 min, 1 trail, 32 left turns, 0 right. <br><sub>2.8 km · +10 min · 14 m up · trail 17% · turns 32L/0R · 2% doubled back</sub> | cost-profile | 25 ms |
+| Scenic chaos | **The Scenic Tangent**. Normal: 23 min. Better: 59 min, 3 staircases. <br><sub>4.9 km · +36 min · 28 m up · trail 2% · turns 25L/24R</sub> | chaos-waypoints | 70 ms |
 
-Planning time over all 42 plans: median 31 ms, p90 69 ms, max 99 ms.
+Planning time over all 42 plans: median 70 ms, p90 134 ms, max 229 ms.

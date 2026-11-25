@@ -145,6 +145,7 @@ def compute_stats(graph: Graph, blob: bytes) -> dict:
             "parks_on_paths": len(parks),
             "buildings_passed_through": len(passage_buildings),
             "venues": dict(sorted(venues.items())),
+            "stops": dict(sorted(Counter(p["kind"] for p in meta.get("pois", [])).items())),
         },
         "exclusions": {
             "ways_by_reason": dict(sorted(graph.data.way_reasons.items())),
@@ -191,6 +192,7 @@ def render_markdown(stats: dict) -> str:
         "no `step_count` and are estimated from length.",
         f"Distinct parks with paths: {d['parks_on_paths']:,}. Buildings passed through via mapped "
         f"passages: {d['buildings_passed_through']:,}. Venues: {d['venues']}.",
+        f"Snack and crawl stops: {d['stops']}.",
         "",
         "## Edges by highway type",
         "",

@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 import sys
 from pathlib import Path
 
@@ -25,7 +26,14 @@ KEYS = (
 )  # fmt: skip
 
 
-def classify(tags: dict[str, str], square_prefixes: tuple[str, ...] = ()) -> str | None:
+QUADRANT = re.compile(r"\s+(NW|NE|SW|SE)$")
+
+
+def classify(
+    tags: dict[str, str],
+    square_prefixes: tuple[str, ...] = (),
+    square_suffixes: tuple[str, ...] = (),
+) -> str | None:
     if "name" not in tags:
         return None
     notable = "wikidata" in tags
@@ -35,6 +43,9 @@ def classify(tags: dict[str, str], square_prefixes: tuple[str, ...] = ()) -> str
         return "square"  # many squares are mapped only as pedestrian areas
     if "highway" in tags and tags["name"].startswith(square_prefixes):
         return "square"  # ...or only as a street called "Place ..." (city-specific prefixes)
+    bare = QUADRANT.sub("", tags["name"])
+    if "highway" in tags and square_suffixes and bare.endswith(square_suffixes):
+        return "square"  # US style: "Dupont Circle NW", "Freedom Plaza"
     if tags.get("railway") == "station" or (
         tags.get("public_transport") == "station" and tags.get("railway") in ("station", "halt")
     ):
@@ -55,7 +66,12 @@ def classify(tags: dict[str, str], square_prefixes: tuple[str, ...] = ()) -> str
     return None
 
 
-def collect(path: Path, bbox: BBox, square_prefixes: tuple[str, ...] = ()) -> list[dict]:
+def collect(
+    path: Path,
+    bbox: BBox,
+    square_prefixes: tuple[str, ...] = (),
+    square_suffixes: tuple[str, ...] = (),
+) -> list[dict]:
     found: dict[tuple[str, str], tuple[float, float]] = {}
 
     def add(kind: str, name: str, lon: float, lat: float) -> None:
@@ -66,7 +82,7 @@ def collect(path: Path, bbox: BBox, square_prefixes: tuple[str, ...] = ()) -> li
         osmium.FileProcessor(str(path)).with_areas().with_filter(osmium.filter.KeyFilter(*KEYS))
     ):
         tags = {t.k: t.v for t in obj.tags}
-        kind = classify(tags, square_prefixes)
+        kind = classify(tags, square_prefixes, square_suffixes)
         if kind is None:
             continue
         if obj.is_node():
@@ -102,7 +118,8 @@ def main(argv: list[str] | None = None) -> None:
     out = args.out or Path("app/public/data") / city.id / "places.json"
     raw = json.loads(Path(args.city_config).read_text(encoding="utf-8"))
     prefixes = tuple(raw.get("places", {}).get("square_name_prefixes", []))
-    places = collect(osm, city.bbox, prefixes)
+    suffixes = tuple(raw.get("places", {}).get("square_name_suffixes", []))
+    places = collect(osm, city.bbox, prefixes, suffixes)
     out.write_text(
         json.dumps(places, ensure_ascii=False, separators=(",", ":")) + "\n", encoding="utf-8"
     )

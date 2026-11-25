@@ -20,6 +20,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 import sys
 from collections import Counter, defaultdict
 from dataclasses import dataclass, field
@@ -56,6 +57,9 @@ WAY_KEYS = (
 NODE_KEYS = ("barrier", "access", "foot", "railway", "highway", "crossing", "locked", "entrance")
 
 BUILDING_SAMPLE_SPACING_M = 4.0
+RESTRICTED_SAMPLE_SPACING_M = 10.0
+# Pavements drawn along a base's or estate's fence line stay walkable.
+RESTRICTED_EDGE_TOLERANCE_M = 2.0
 BUILDING_EDGE_TOLERANCE_M = 0.75  # sidewalks drawn on a facade line aren't "inside"
 STEP_RUN_M = 0.3  # horizontal run per step, for estimating step counts
 EXAMPLES_PER_REASON = 8  # OSM way ids listed per drop reason in the stats, for map review
@@ -73,6 +77,7 @@ class AreaFeature:
     polygons: list[Polygon]
     layer: int = 0
     opening_hours: str | None = None
+    building: str | None = None  # the building tag, for the public-passage rule
 
     @property
     def key(self) -> tuple[str, int]:
@@ -99,7 +104,9 @@ class OsmData:
     fast_segments: list[tuple[Point, Point, int]] = field(default_factory=list)
     way_reasons: Counter[str] = field(default_factory=Counter)
     rail_values_crossed: Counter[str] = field(default_factory=Counter)
-    snacks: list[Snack] = field(default_factory=list)
+    pois: list[Poi] = field(default_factory=list)
+    # Restricted ground (military, or access=private|no areas): polygons and the tags that matter.
+    restricted: list[tuple[list[Polygon], dict[str, str]]] = field(default_factory=list)
 
 
 def _tags(obj) -> dict[str, str]:
@@ -107,10 +114,10 @@ def _tags(obj) -> dict[str, str]:
 
 
 @dataclass(frozen=True)
-class Snack:
-    """A named place to eat something sweet or drink a coffee, for the snack tour."""
+class Poi:
+    """A place the snack tour or a crawl can stop at."""
 
-    kind: str  # bakery | pastry | chocolate | ice_cream | cafe
+    kind: str  # see POI_KINDS
     name: str
     lon: float
     lat: float
@@ -119,24 +126,81 @@ class Snack:
 
 SNACK_SHOPS = {"bakery": "bakery", "pastry": "pastry", "confectionery": "chocolate",
                "chocolate": "chocolate", "ice_cream": "ice_cream"}  # fmt: skip
-SNAP_SNACK_M = 40.0
+SNAP_POI_M = 40.0
+
+# Wine bars are rarely tagged bar=wine; in Lyon most only show it in their name.
+WINE_WORDS = re.compile(
+    r"\b(vins?|wine|caves?|caviste|vinoth[eè]que|winery|bar [àa] vins?)\b", re.I
+)
+ARTWORK_LABELS = {"mural": "Mural", "sculpture": "Sculpture", "statue": "Statue", "bust": "Bust",
+                  "installation": "Installation", "mosaic": "Mosaic", "street_art": "Street art",
+                  "graffiti": "Graffiti", "flacking": "Pavement mosaic", "pixel_art": "Pixel art",
+                  "fountain": "Fountain", "relief": "Relief"}  # fmt: skip
+
+
+def poi_kind(tags: dict[str, str]) -> tuple[str, str] | None:
+    """(kind, display name) for a snack or crawl stop, or None."""
+    name = tags.get("name")
+    if tags.get("tourism") == "artwork" and tags.get("indoor") != "yes":
+        label = ARTWORK_LABELS.get(tags.get("artwork_type", ""), "Artwork")
+        return "artwork", name or label
+    if name is None:
+        return None
+    if tags.get("shop") in SNACK_SHOPS:
+        return SNACK_SHOPS[tags["shop"]], name
+    if tags.get("amenity") == "ice_cream":
+        return "ice_cream", name
+    if tags.get("amenity") == "cafe":
+        return "cafe", name
+    if tags.get("tourism") == "gallery":
+        return "gallery", name
+    if tags.get("tourism") == "museum" and (
+        tags.get("museum") == "art" or re.search(r"\b(art|arts|beaux-arts)\b", name, re.I)
+    ):
+        return "museum", name
+    if tags.get("craft") == "winery":
+        return "winery", name
+    if tags.get("shop") == "wine":
+        return "wine_shop", name
+    if tags.get("amenity") in ("bar", "pub", "biergarten"):
+        if (
+            tags.get("bar") == "wine"
+            or tags.get("drink:wine") in ("yes", "served")
+            or WINE_WORDS.search(name)
+        ):
+            return "wine_bar", name
+        if tags.get("microbrewery") == "yes":
+            return "brewery", name
+        return ("bar" if tags["amenity"] == "bar" else "pub"), name
+    if tags.get("craft") == "brewery":
+        return "brewery", name
+    return None
 
 
 def snack_kind(tags: dict[str, str]) -> str | None:
-    if "name" not in tags:
-        return None
-    if tags.get("shop") in SNACK_SHOPS:
-        return SNACK_SHOPS[tags["shop"]]
-    if tags.get("amenity") == "ice_cream":
-        return "ice_cream"
-    if tags.get("amenity") == "cafe":
-        return "cafe"
-    return None
+    found = poi_kind(tags)
+    return found[0] if found and found[0] in SNACK_KINDS else None
+
+
+SNACK_KINDS = frozenset({"bakery", "pastry", "chocolate", "ice_cream", "cafe"})
+
+
+# Grounds that lock up: walkable inside, but flagged "may close" (with their hours if mapped).
+# Cemeteries close at night whether or not their hours are mapped; gardens and zoos only count
+# when they have hours.
+CEMETERIES = (("landuse", "cemetery"), ("amenity", "grave_yard"))
+HOURS_GROUNDS = (("leisure", "garden"), ("tourism", "zoo"))
 
 
 def _area_kind(tags: dict[str, str]) -> str | None:
     if tags.get("leisure") == "park":
         return "park"
+    if any(tags.get(k) == v for k, v in CEMETERIES):
+        return "grounds"
+    if any(tags.get(k) == v for k, v in HOURS_GROUNDS) and _has_closing_hours(
+        tags.get("opening_hours")
+    ):
+        return "grounds"
     if tags.get("shop") == "mall":
         return "mall"
     if tags.get("building") == "train_station" or (
@@ -157,7 +221,16 @@ def read_osm(path: Path, proj: LocalProjection) -> OsmData:
 
     # Pass 1: areas.
     area_filter = osmium.filter.KeyFilter(
-        "leisure", "building", "shop", "public_transport", "amenity"
+        "leisure",
+        "building",
+        "shop",
+        "public_transport",
+        "amenity",
+        "tourism",
+        "craft",
+        "landuse",
+        "military",
+        "access",
     )
     for obj in (
         osmium.FileProcessor(str(path))
@@ -165,17 +238,25 @@ def read_osm(path: Path, proj: LocalProjection) -> OsmData:
         .with_filter(osmium.filter.EntityFilter(osmium.osm.AREA))
     ):
         tags = _tags(obj)
-        snack = snack_kind(tags)
-        if snack:
+        poi = poi_kind(tags)
+        if poi:
             for outer in obj.outer_rings():
                 pts = [(n.lon, n.lat) for n in outer][:-1]
                 if pts:
                     lon = sum(x for x, _ in pts) / len(pts)
                     lat = sum(y for _, y in pts) / len(pts)
-                    data.snacks.append(
-                        Snack(snack, tags["name"], lon, lat, tags.get("opening_hours"))
-                    )
+                    data.pois.append(Poi(poi[0], poi[1], lon, lat, tags.get("opening_hours")))
                 break
+        if safety.is_restricted_area(tags):
+            rings = []
+            for outer in obj.outer_rings():
+                ring = [proj(n.lon, n.lat) for n in outer]
+                holes = [[proj(n.lon, n.lat) for n in inner] for inner in obj.inner_rings(outer)]
+                if len(ring) >= 4:
+                    rings.append(Polygon.from_rings(ring, holes))
+            keep = {k: tags[k] for k in ("landuse", "military", "access") if k in tags}
+            if rings:
+                data.restricted.append((rings, keep))
         kind = _area_kind(tags)
         if kind is None:
             continue
@@ -195,6 +276,7 @@ def read_osm(path: Path, proj: LocalProjection) -> OsmData:
                     polys,
                     safety.layer_of(tags),
                     tags.get("opening_hours"),
+                    tags.get("building"),
                 )
             )
     data.areas.sort(key=lambda a: (a.osm_type, a.osm_id))
@@ -208,11 +290,11 @@ def read_osm(path: Path, proj: LocalProjection) -> OsmData:
             tags = {k: v for k, v in all_tags.items() if k in NODE_KEYS}
             if tags:
                 data.node_tags[obj.id] = tags
-            snack = snack_kind(all_tags)
-            if snack:
+            poi = poi_kind(all_tags)
+            if poi:
                 loc = obj.location
-                data.snacks.append(
-                    Snack(snack, all_tags["name"], loc.lon, loc.lat, all_tags.get("opening_hours"))
+                data.pois.append(
+                    Poi(poi[0], poi[1], loc.lon, loc.lat, all_tags.get("opening_hours"))
                 )
             continue
         if not obj.is_way():
@@ -264,7 +346,7 @@ class SegAttrs:
     park: int  # index into areas, -1 if none
     venue: int
     building: int  # building passed *through* via a mapped passage, -1 if none
-    under_building: int = -1  # building a road runs under without a tunnel tag (Q-007)
+    under_building: int = -1  # building a road runs under without a tunnel tag
 
 
 @dataclass
@@ -299,8 +381,8 @@ class Graph:
     # Terrain: elevations in decimetres keyed by microdegree (lon, lat); None = no data.
     elevations: dict[tuple[int, int], int | None] = field(default_factory=dict)
     terrain: dict[str, str] = field(default_factory=dict)  # provider, licence, attribution
-    # Snack stops snapped to the street they're on: (edge index, Snack), sorted.
-    snack_stops: list[tuple[int, Snack]] = field(default_factory=list)
+    # Snack and crawl stops snapped to the street they're on: (edge index, Poi), sorted.
+    poi_stops: list[tuple[int, Poi]] = field(default_factory=list)
 
 
 class _Spatial:
@@ -311,7 +393,10 @@ class _Spatial:
         self.venues = GridIndex(100.0)
         self.polys: list[tuple[int, Polygon]] = []
         for ai, area in enumerate(data.areas):
-            index = {"park": self.parks, "building": self.buildings}.get(area.kind, self.venues)
+            # Closing grounds share the park slot so their hours reach the "may close" notes.
+            index = {"park": self.parks, "grounds": self.parks, "building": self.buildings}.get(
+                area.kind, self.venues
+            )
             for poly in area.polygons:
                 pi = len(self.polys)
                 self.polys.append((ai, poly))
@@ -319,6 +404,12 @@ class _Spatial:
                 if area.kind in ("mall", "station"):
                     # Station and mall buildings are also buildings for the passage rule.
                     self.buildings.insert(pi, poly.bbox)
+        self.restricted_polys: list[tuple[int, Polygon]] = []
+        self.restricted = GridIndex(100.0)
+        for ri, (polys, _) in enumerate(data.restricted):
+            for poly in polys:
+                self.restricted.insert(len(self.restricted_polys), poly.bbox)
+                self.restricted_polys.append((ri, poly))
         self.rail = GridIndex(50.0)
         for i, (a, b, _) in enumerate(data.rail_segments):
             self.rail.insert(i, _seg_bbox(a, b))
@@ -347,6 +438,20 @@ class _Spatial:
                 if poly.contains(p) and poly.boundary_distance(p) > BUILDING_EDGE_TOLERANCE_M:
                     return ai
         return -1
+
+    def restricted_on_segment(self, a: Point, b: Point) -> list[int]:
+        """Restricted areas (indices into data.restricted) the segment passes into."""
+        found: set[int] = set()
+        for p in sample_points(a, b, RESTRICTED_SAMPLE_SPACING_M):
+            for pi in self.restricted.query_point(p):
+                ri, poly = self.restricted_polys[pi]
+                if (
+                    ri not in found
+                    and poly.contains(p)
+                    and poly.boundary_distance(p) > RESTRICTED_EDGE_TOLERANCE_M
+                ):
+                    found.add(ri)
+        return sorted(found)
 
     def crosses(self, a: Point, b: Point, layer: int, which: str) -> bool:
         index, segs = (
@@ -402,6 +507,8 @@ def build_graph(city: City, osm_path: Path) -> Graph:
             or safety.is_indoor_corridor(tags)
             or safety.is_covered(tags)
         )
+        name = tags.get("name", "")
+        confirmed = way.osm_id in city.confirmed_passages
         segs: list[Segment | None] = []
         for i in range(len(way.nodes) - 1):
             a, b = way.nodes[i], way.nodes[i + 1]
@@ -426,19 +533,47 @@ def build_graph(city: City, osm_path: Path) -> Graph:
                     drop("fast_road_crossing_geometry", way.osm_id)
                     segs.append(None)
                     continue
+            if not other_level:
+                restricted = next(
+                    (
+                        r
+                        for ri in spatial.restricted_on_segment(pa, pb)
+                        if (r := safety.restricted_area_exclusion(tags, data.restricted[ri][1]))
+                    ),
+                    None,
+                )
+                if restricted:
+                    drop(restricted, way.osm_id)
+                    segs.append(None)
+                    continue
             building = spatial.building_on_segment(pa, pb, layer)
             under = -1
             if building != -1 and not passage_ok:
                 if safety.may_pass_under_building_unmapped(tags):
-                    under = building  # kept, flagged and disclosed (Q-007)
+                    under = building  # kept, flagged and disclosed
                 else:
                     drop("through_building_unmapped", way.osm_id)
                     segs.append(None)
                     continue
             mid = ((pa[0] + pb[0]) / 2, (pa[1] + pb[1]) / 2)
+            venue = spatial.area_at(spatial.venues, mid)
+            if building != -1 and passage_ok:
+                area = data.areas[building]
+                reason = safety.passage_exclusion(
+                    tags,
+                    name,
+                    {"kind": area.kind, "building": area.building},
+                    in_public_venue=venue != -1
+                    and data.areas[venue].kind in safety.PUBLIC_AREA_KINDS,
+                    confirmed=confirmed,
+                )
+                if reason:
+                    drop(reason, way.osm_id)
+                    segs.append(None)
+                    continue
             attrs = SegAttrs(
                 park=spatial.area_at(spatial.parks, mid),
-                venue=spatial.area_at(spatial.venues, mid),
+                venue=venue,
                 building=building if (building != -1 and counts_as_through) else -1,
                 under_building=under,
             )
@@ -454,7 +589,7 @@ def build_graph(city: City, osm_path: Path) -> Graph:
     used = {n for e in edges for n in e.nodes}
     node_coords = {n: node_coords[n] for n in sorted(used)}
     junctions = sorted({e.nodes[0] for e in edges} | {e.nodes[-1] for e in edges})
-    snack_stops = _snap_snacks(data.snacks, edges, node_coords, proj, bbox)
+    poi_stops = _snap_pois(data.pois, edges, node_coords, proj, bbox)
     dropped_examples = {r: sorted(ids)[:EXAMPLES_PER_REASON] for r, ids in sorted(examples.items())}
     return Graph(
         city,
@@ -466,18 +601,18 @@ def build_graph(city: City, osm_path: Path) -> Graph:
         excluded_nodes,
         component,
         dropped_examples,
-        snack_stops=snack_stops,
+        poi_stops=poi_stops,
     )
 
 
-def _snap_snacks(
-    snacks: list[Snack],
+def _snap_pois(
+    pois: list[Poi],
     edges: list[Edge],
     node_coords: dict[int, tuple[float, float]],
     proj: LocalProjection,
     bbox: BBox,
-) -> list[tuple[int, Snack]]:
-    """Snap each snack stop to the nearest edge (the street it's on) within SNAP_SNACK_M."""
+) -> list[tuple[int, Poi]]:
+    """Snap each stop to the nearest edge (the street it's on) within SNAP_POI_M."""
     index = GridIndex(50.0)
     shapes: list[list[Point]] = []
     for ei, e in enumerate(edges):
@@ -486,12 +621,12 @@ def _snap_snacks(
         xs = [x for x, _ in pts]
         ys = [y for _, y in pts]
         index.insert(ei, (min(xs), min(ys), max(xs), max(ys)))
-    out: dict[tuple[int, str, str], Snack] = {}
-    r = SNAP_SNACK_M
-    for snack in snacks:
-        if not bbox.contains(snack.lon, snack.lat):
+    out: dict[tuple[int, str, str], Poi] = {}
+    r = SNAP_POI_M
+    for poi in pois:
+        if not bbox.contains(poi.lon, poi.lat):
             continue
-        p = proj(snack.lon, snack.lat)
+        p = proj(poi.lon, poi.lat)
         best, best_d = -1, r
         for ei in sorted(index.query_bbox((p[0] - r, p[1] - r, p[0] + r, p[1] + r))):
             pts = shapes[ei]
@@ -499,7 +634,7 @@ def _snap_snacks(
             if d < best_d:
                 best, best_d = ei, d
         if best != -1:
-            out.setdefault((best, snack.kind, snack.name), snack)
+            out.setdefault((best, poi.kind, poi.name), poi)
     return [(ei, s) for (ei, _, _), s in sorted(out.items())]
 
 
@@ -678,15 +813,17 @@ def _has_closing_hours(opening_hours: str | None) -> bool:
 
 def edge_may_close(edge: Edge, way: WayData, areas: list[AreaFeature]) -> bool:
     """Passages that may close: corridors, anything through a building, covered ways inside
-    malls or stations, anything with opening_hours, and paths in parks with opening hours
-    (Lyon's big parks lock their gates at night)."""
+    malls or stations, anything with opening_hours, and paths in parks and grounds (cemeteries,
+    gardens, zoos) with opening hours: Lyon's big parks and Arlington Cemetery lock at night."""
     tags = way.tags
     if _has_closing_hours(tags.get("opening_hours")) or safety.is_indoor_corridor(tags):
         return True
     if edge.attrs.building != -1:
         return True
-    if edge.attrs.park != -1 and _has_closing_hours(areas[edge.attrs.park].opening_hours):
-        return True
+    if edge.attrs.park != -1:
+        area = areas[edge.attrs.park]
+        if area.kind == "grounds" or _has_closing_hours(area.opening_hours):
+            return True
     return edge.attrs.venue != -1 and safety.is_covered(tags)
 
 

@@ -12,11 +12,11 @@ import type { FeatureIndex } from "./features";
 import type { ModeId } from "./modes";
 import type { Route } from "../router/astar";
 import type { ModePlan } from "./plan-mode";
-import { minutes } from "./stats";
+import { minutes, TURN_DEG } from "./stats";
 
 export type StepKind =
   | "start" | "walk" | "stairs-up" | "stairs-down" | "stairs" | "passage" | "corridor"
-  | "under-building" | "trail" | "arrive";
+  | "under-building" | "trail" | "stop" | "arrive";
 
 export interface Step {
   kind: StepKind;
@@ -56,38 +56,50 @@ const GENERIC_NAMES: Record<string, string> = {
   platform: "the platform",
 };
 
-const QUIPS: Record<ModeId | "normal" | "art", { start: string[]; arrive: string[] }> = {
+const QUIPS: Record<ModeId | "normal" | "art" | "workout" | "crawl", { start: string[]; arrive: string[] }> = {
+  workout: {
+    start: ["Warm up first. Nobody else will remind you.", "Pace yourself; the stairs aren't going anywhere."],
+    arrive: ["Done. Stretch, if you're the stretching type.", "That's the loop. Same time next week?"],
+  },
+  crawl: {
+    start: ["Stops are in route order, nothing more.", "Take your time at each stop."],
+    arrive: ["That's the lot.", "End of the crawl."],
+  },
   art: {
-    start: ["Somewhere above you, a satellite is about to be impressed.", "You are the pen. The city is the paper."],
-    arrive: ["Masterpiece complete. Check your GPS app.", "Art delivered, one step at a time."],
+    start: ["Record the walk, or nobody will believe you.", "The drawing only exists if your GPS is on."],
+    arrive: ["Done. The shape is in your GPS track, more or less.", "Finished. Squint at the trace."],
   },
   buildings: {
-    start: ["Doors are for amateurs. Let's go through things.", "Today, walls are merely suggestions (mapped ones only)."],
-    arrive: ["You went through it all. Literally.", "Architecture: experienced from the inside."],
+    start: ["Mapped public passages only. If a door is shut, it's shut.", "Through, not round, where the map allows."],
+    arrive: ["You've seen more courtyards than most.", "Arrived, mostly indoors."],
   },
   trail: {
-    start: ["Lace up. Pavement is the enemy.", "Somewhere out there is dirt with your name on it."],
-    arrive: ["Your shoes have stories now.", "Trail conquered. Asphalt weeps."],
+    start: ["Expect mud after rain.", "Pavement avoided where possible."],
+    arrive: ["Your shoes may need attention.", "Arrived, slightly dustier."],
   },
   stairs: {
-    start: ["Your calves called. They want a word.", "Up is the only direction that matters."],
-    arrive: ["Legs: jelly. Spirit: soaring.", "Every step counted. Literally, we counted them."],
+    start: ["Mostly uphill, by design.", "There are stairs ahead. That was the idea."],
+    arrive: ["Sit down if you like.", "Every step was counted, if mapped."],
   },
   parks: {
-    start: ["Gotta visit 'em all.", "Grass ahead. Lots of it."],
-    arrive: ["Park passport: stamped.", "You are now 40% tree."],
+    start: ["The scenic route. Very scenic.", "Greenery ahead, in quantity."],
+    arrive: ["Arrived, eventually, via the trees.", "That was most of the parks."],
   },
   snacks: {
-    start: ["Pace yourself. There are pastries ahead.", "Stretchy trousers recommended."],
-    arrive: ["Fuelled and fulfilled.", "You walked it off. Mostly."],
+    start: ["The shops are on the way. Stopping is up to you.", "Pace yourself."],
+    arrive: ["Probably later than planned.", "Arrived. Crumbs are your own business."],
   },
   "no-right": {
-    start: ["Right turns are cancelled. Lefts only from here.", "We've lost our right-turn privileges. Onward, leftward."],
-    arrive: ["Not a single regret. Or right turn.", "Three lefts make a right, and you made them all."],
+    start: ["Left turns only. This was your idea.", "Right turns are off the table."],
+    arrive: ["Arrived, mostly by turning left.", "Three lefts made several rights."],
+  },
+  inconvenient: {
+    start: ["Straight lines are for other people.", "This will take a while. That's the point."],
+    arrive: ["You made it, eventually.", "Arrived. That was annoying on purpose."],
   },
   chaos: {
-    start: ["The dice have spoken.", "No plan survives this seed. That's the plan."],
-    arrive: ["Chaos delivered you safely. Somehow.", "Same destination, entirely different adventure."],
+    start: ["The seed decided this. Take it up with the seed.", "Not the quickest way. Not even close."],
+    arrive: ["Arrived. Another seed, another way.", "You got here. The seed is satisfied."],
   },
   normal: { start: ["Off you go."], arrive: ["You're there."] },
 };
@@ -125,7 +137,7 @@ function groupRoute(fi: FeatureIndex, dirEdges: number[]): Group[] {
     const name = g.edgeName(e) || genericName(g.edgeTags(e)["highway"]);
     const last = groups[groups.length - 1];
     const climb = g.climb(e, forward);
-    const park = g.s.edge_park[e]!;
+    const park = fi.parkOf[e]!;
     if (last && last.category === category && last.name === name && last.park === park) {
       last.dirEdges.push(d);
       last.lengthM += g.s.edge_length_m[e]!;
@@ -179,10 +191,14 @@ function bestSnack(fi: FeatureIndex, grp: Group, seen: Set<number>) {
   return best;
 }
 
-function turnPhrase(angle: number): string {
+/**
+ * Same rule as the turn counts in stats.ts: only a junction (three or more ways) is a turn, and
+ * under TURN_DEG is carrying on. Bends where a path changes name are just "continue".
+ */
+function turnPhrase(angle: number, atJunction: boolean): string {
   const side = angle > 0 ? "right" : "left";
   const a = Math.abs(angle);
-  if (a < 20) return "Continue";
+  if (!atJunction || a <= TURN_DEG) return "Continue";
   if (a < 60) return `Bear ${side}`;
   if (a < 150) return `Turn ${side}`;
   return "Turn around";
@@ -210,11 +226,13 @@ export function directions(fi: FeatureIndex, plan: ModePlan, fromName: string, t
 }
 
 export interface DescribeOptions {
-  quips: ModeId | "art";
+  quips: ModeId | "art" | "workout" | "crawl";
   seed: number;
   fromName: string;
   /** First sentence of the arrival step (a quip follows). */
   arriveText: string;
+  /** Stops to call out, in route order, when the route reaches their node. */
+  stops?: { node: number; label: string }[];
 }
 
 /** Step-by-step directions for any route. */
@@ -234,13 +252,19 @@ export function describeRoute(fi: FeatureIndex, route: Route, opts: DescribeOpti
   });
 
   const groups = groupRoute(fi, route.dirEdges);
+  const pendingStops = [...(opts.stops ?? [])];
+  // A stop right at the start is reached before the first step.
+  while (pendingStops[0] && pendingStops[0].node === route.nodes[0]) {
+    const first = pendingStops.shift()!;
+    steps.push({ kind: "stop", text: `${first.label}.`, distanceM: 0, at: g.nodeLonLat(first.node), notes: [] });
+  }
   let prevPark = 0;
   const seenSnacks = new Set<number>();
   groups.forEach((grp, i) => {
     const first = grp.dirEdges[0]!;
     const at = g.nodeLonLat(g.tail(first));
     const prevLast = i > 0 ? groups[i - 1]!.dirEdges.at(-1)! : -1;
-    const turn = prevLast >= 0 ? turnPhrase(turnAngleDeg(g, prevLast, first)) : "Head off";
+    const turn = prevLast >= 0 ? turnPhrase(turnAngleDeg(g, prevLast, first), fi.degree[g.tail(first)]! >= 3) : "Head off";
     const onto = turn === "Continue" ? `Continue on ${grp.name}` : `${turn} onto ${grp.name}`;
     const notes: string[] = [];
     let kind: StepKind = "walk";
@@ -252,9 +276,8 @@ export function describeRoute(fi: FeatureIndex, route: Route, opts: DescribeOpti
         const down = grp.descentM > grp.climbM + 0.5;
         kind = up ? "stairs-up" : down ? "stairs-down" : "stairs";
         const where = grp.name === GENERIC_NAMES["steps"] ? "" : ` (${grp.name})`;
-        const flourish = up && plan.mode === "stairs" && grp.steps >= 20 ? ` ${pick(["Glory awaits.", "Feel the burn.", "Onward and upward."], plan.seed, i)}` : "";
         text = up
-          ? `Climb ${grp.steps} steps${where}, ${Math.round(grp.climbM)} m up.${flourish}`
+          ? `Climb ${grp.steps} steps${where}, ${Math.round(grp.climbM)} m up.`
           : down
             ? `Head down ${grp.steps} steps${where}.`
             : `Take the ${grp.steps} steps${where}.`;
@@ -263,13 +286,13 @@ export function describeRoute(fi: FeatureIndex, route: Route, opts: DescribeOpti
       case "passage": {
         kind = "passage";
         const bname = g.area(grp.building)?.name;
-        text = `Slip through the passage${bname ? ` in ${bname}` : " through the building"} (${Math.round(grp.lengthM)} m).`;
+        text = `Go through the passage${bname ? ` in ${bname}` : " under the building"} (${Math.round(grp.lengthM)} m).`;
         break;
       }
       case "corridor": {
         kind = "corridor";
         const venue = g.area(grp.venue)?.name ?? g.area(grp.building)?.name;
-        text = `Wander the corridors${venue ? ` of ${venue}` : ""} for ${Math.round(grp.lengthM)} m.`;
+        text = `Follow the corridors${venue ? ` of ${venue}` : ""} for ${Math.round(grp.lengthM)} m.`;
         break;
       }
       case "under": {
@@ -280,7 +303,7 @@ export function describeRoute(fi: FeatureIndex, route: Route, opts: DescribeOpti
       }
       case "trail":
         kind = "trail";
-        text = `${onto} and hit the dirt for ${Math.round(grp.lengthM)} m.`;
+        text = `${onto}, unpaved, for ${Math.round(grp.lengthM)} m.`;
         break;
       default:
         text = `${onto} for ${Math.round(grp.lengthM)} m.`;
@@ -289,7 +312,7 @@ export function describeRoute(fi: FeatureIndex, route: Route, opts: DescribeOpti
     if (plan.mode === "snacks") {
       const stop = bestSnack(fi, grp, seenSnacks);
       if (stop) {
-        text += ` Treat stop: ${stop.name}${stop.openingHours ? ` (open ${stop.openingHours})` : ""}.`;
+        text += ` You pass ${stop.name}${stop.openingHours ? ` (open ${stop.openingHours})` : ""}.`;
       }
     }
     if (grp.park && grp.park !== prevPark) {
@@ -300,6 +323,13 @@ export function describeRoute(fi: FeatureIndex, route: Route, opts: DescribeOpti
     const closure = closureNote(fi, grp);
     if (closure) notes.push(closure);
     steps.push({ kind, text, distanceM: grp.lengthM, at, notes });
+    for (const d of grp.dirEdges) {
+      const next = pendingStops[0];
+      if (next && g.head(d) === next.node) {
+        steps.push({ kind: "stop", text: `${next.label}.`, distanceM: 0, at: g.nodeLonLat(next.node), notes: [] });
+        pendingStops.shift();
+      }
+    }
   });
 
   const endAt = g.nodeLonLat(route.nodes.at(-1)!);

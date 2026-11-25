@@ -25,7 +25,7 @@ FLAG_BACKWARD = 1 << 1
 FLAG_STEPS_ESTIMATED = 1 << 2
 FLAG_MAY_CLOSE = 1 << 3
 FLAG_THROUGH_BUILDING = 1 << 4
-FLAG_UNDER_BUILDING = 1 << 5  # road under a building, no tunnel tag: disclose it (Q-007)
+FLAG_UNDER_BUILDING = 1 << 5  # road under a building, no tunnel tag: disclose it
 
 # Node context bits (for the router's node safety re-check)
 CTX_ON_RAILWAY = 1 << 0
@@ -87,6 +87,8 @@ def encode_graph(graph: Graph) -> bytes:
         entry = {"kind": a.kind, "name": a.name, "osm": f"{a.osm_type}{a.osm_id}"}
         if a.opening_hours:
             entry["opening_hours"] = a.opening_hours
+        if a.building:
+            entry["building"] = a.building
         return areas.add(entry)
 
     # Nodes
@@ -210,6 +212,7 @@ def encode_graph(graph: Graph) -> bytes:
         "licence": graph.city.extract_licence,
         "coord_scale": COORD_SCALE,
         "counts": {"nodes": len(node_ids), "edges": len(graph.edges), "ways": len(used_ways)},
+        "confirmed_passages": sorted(graph.city.confirmed_passages),
         "flags": {
             "edge": {
                 "forward": FLAG_FORWARD,
@@ -230,9 +233,9 @@ def encode_graph(graph: Graph) -> bytes:
         "node_tagsets": node_tagsets.items,
         "areas": areas.items,
         "pois": [
-            {"kind": snack.kind, "name": snack.name, "edge": ei}
-            | ({"opening_hours": snack.opening_hours} if snack.opening_hours else {})
-            for ei, snack in graph.snack_stops
+            {"kind": poi.kind, "name": poi.name, "edge": ei}
+            | ({"opening_hours": poi.opening_hours} if poi.opening_hours else {})
+            for ei, poi in graph.poi_stops
         ],
         "sections": [{"name": n, "type": t, "count": len(a)} for n, t, a in sections],
     }

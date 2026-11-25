@@ -5,7 +5,7 @@
  * a route, bytes transferred and JS heap in the page and the planning worker.
  *
  *   npm run build && npm run preview &
- *   node scripts/perf.mjs
+ *   AREA=dc node scripts/perf.mjs      # default: lyon
  */
 import { spawn } from "node:child_process";
 import { mkdtempSync } from "node:fs";
@@ -18,6 +18,16 @@ const PORT = 9335;
 const CPU_SLOWDOWN = Number(process.env.CPU ?? 6);
 const NET = { latency: 150, downloadThroughput: (4 * 1024 * 1024) / 8, uploadThroughput: (1 * 1024 * 1024) / 8 }; // ~slow 4G
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+const AREA = process.env.AREA ?? "lyon";
+// A typical route in each area, between two well-known places.
+const ROUTES = {
+  lyon: "from=4.83200,45.75780&to=4.83360,45.76750&mode=stairs",
+  dc: "from=-77.04340,38.90960&to=-77.00910,38.88990&mode=stairs",
+  arlington: "from=-77.07120,38.89660&to=-77.09530,38.88680&mode=stairs",
+  "silver-spring": "from=-77.03110,38.99390&to=-77.09460,38.98470&mode=stairs",
+  richmond: "from=-77.43250,37.53230&to=-77.45020,37.54680&mode=stairs",
+  baltimore: "from=-76.61050,39.28560&to=-76.59330,39.28230&mode=stairs",
+};
 
 const browser = spawn(BROWSER, ["--headless=new", "--no-first-run", `--user-data-dir=${mkdtempSync(join(tmpdir(), "bd-perf-"))}`, `--remote-debugging-port=${PORT}`, "--use-angle=swiftshader", "--enable-unsafe-swiftshader", "about:blank"], { stdio: "ignore" });
 try {
@@ -58,7 +68,7 @@ try {
   await send("Emulation.setDeviceMetricsOverride", { width: 390, height: 844, deviceScaleFactor: 2, mobile: true });
   await send("Target.setAutoAttach", { autoAttach: true, waitForDebuggerOnStart: true, flatten: true });
 
-  const query = "?from=4.83200,45.75780&to=4.83360,45.76750&fromName=Place%20Bellecour&toName=Place%20des%20Terreaux&mode=stairs";
+  const query = `?${AREA === "lyon" ? "" : `area=${AREA}&`}${ROUTES[AREA]}`;
   const t0 = Date.now();
   await send("Page.navigate", { url: `${URL_BASE}/better-directions/${query}` });
   let ready = 0, routed = 0;
@@ -69,10 +79,10 @@ try {
   }
   const timings = JSON.parse((await evaluate("document.documentElement.dataset.loadTimings")) ?? "{}");
 
-  // Plan another route on the already-loaded graph: a famous route (planning time only).
+  // Plan the same trip in another mode on the already-loaded graph (planning time only).
   await evaluate("document.getElementById('announcer').textContent = ''");
   const p0 = Date.now();
-  await evaluate("document.querySelectorAll('#famous-list button')[4].click()");
+  await evaluate("document.getElementById('mode-parks').click()");
   let planned = 0;
   for (let i = 0; i < 600 && !planned; i++) {
     await sleep(50);
@@ -88,7 +98,7 @@ try {
     if (h) workerHeap = Math.max(workerHeap, h.usedSize);
   }
   const mb = (n) => `${(n / 1e6).toFixed(1)} MB`;
-  console.log(JSON.stringify({ cpuSlowdown: CPU_SLOWDOWN, network: "4 Mbps / 150 ms", timeToReadyMs: ready, timeToFirstRouteMs: routed, workerLoad: timings, secondRoutePlanMs: planned, transferred: mb(bytes), pageHeap: mb(pageHeap?.usedSize ?? 0), workerHeap: mb(workerHeap) }, null, 2));
+  console.log(JSON.stringify({ area: AREA, cpuSlowdown: CPU_SLOWDOWN, network: "4 Mbps / 150 ms", timeToReadyMs: ready, timeToFirstRouteMs: routed, workerLoad: timings, secondRoutePlanMs: planned, transferred: mb(bytes), pageHeap: mb(pageHeap?.usedSize ?? 0), workerHeap: mb(workerHeap) }, null, 2));
   ws.close();
 } finally {
   browser.kill();

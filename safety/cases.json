@@ -1,5 +1,5 @@
 {
-  "about": "Shared safety conformance cases. The Python graph build and the TypeScript router must both return exactly these results. 'excluded' is the reason string, or null if allowed. Never edit a case to make a test pass without the project owner's approval if it loosens a rule.",
+  "about": "Shared safety conformance cases. The Python graph build and the TypeScript router must both return exactly these results. 'excluded' is the reason string, or null if allowed. Never edit a case just to make a test pass; loosening a rule is a deliberate decision, not a test fix.",
   "ways": [
     {
       "name": "plain footway",
@@ -403,7 +403,7 @@
       "excluded": null
     },
     {
-      "name": "highway=corridor with indoor=yes (approved Q-005)",
+      "name": "highway=corridor with indoor=yes",
       "tags": {
         "highway": "corridor",
         "indoor": "yes",
@@ -515,6 +515,73 @@
         "trail_visibility": "bad"
       },
       "excluded": "trail_visibility"
+    },
+    {
+      "name": "primary road with separately mapped sidewalks",
+      "tags": {
+        "highway": "primary",
+        "sidewalk": "separate"
+      },
+      "excluded": "sidewalk_separate"
+    },
+    {
+      "name": "secondary road with sidewalk:both=separate",
+      "tags": {
+        "highway": "secondary",
+        "sidewalk:both": "separate"
+      },
+      "excluded": "sidewalk_separate"
+    },
+    {
+      "name": "tertiary road with both sides separate",
+      "tags": {
+        "highway": "tertiary",
+        "sidewalk:left": "separate",
+        "sidewalk:right": "separate"
+      },
+      "excluded": "sidewalk_separate"
+    },
+    {
+      "name": "one side separate, the other on the road",
+      "tags": {
+        "highway": "primary",
+        "sidewalk:left": "separate",
+        "sidewalk:right": "yes"
+      },
+      "excluded": null
+    },
+    {
+      "name": "busy road with no sidewalk",
+      "tags": {
+        "highway": "secondary",
+        "sidewalk": "no"
+      },
+      "excluded": "no_sidewalk"
+    },
+    {
+      "name": "busy road with no sidewalk but foot=yes",
+      "tags": {
+        "highway": "secondary",
+        "sidewalk": "no",
+        "foot": "yes"
+      },
+      "excluded": null
+    },
+    {
+      "name": "quiet residential street with no sidewalk",
+      "tags": {
+        "highway": "residential",
+        "sidewalk": "no"
+      },
+      "excluded": null
+    },
+    {
+      "name": "residential street with separate sidewalks",
+      "tags": {
+        "highway": "residential",
+        "sidewalk": "separate"
+      },
+      "excluded": null
     }
   ],
   "through_building": [
@@ -694,7 +761,7 @@
       "excluded": "node_access"
     },
     {
-      "name": "tram_level_crossing (approved Q-004)",
+      "name": "tram_level_crossing",
       "tags": {
         "railway": "tram_level_crossing"
       },
@@ -704,7 +771,7 @@
       "excluded": null
     },
     {
-      "name": "tram_crossing (approved Q-004)",
+      "name": "tram_crossing",
       "tags": {
         "railway": "tram_crossing"
       },
@@ -895,28 +962,28 @@
       "track": false
     },
     {
-      "name": "subway_entrance (approved Q-006)",
+      "name": "subway_entrance",
       "tags": {
         "railway": "subway_entrance"
       },
       "track": false
     },
     {
-      "name": "train_station_entrance (approved Q-006)",
+      "name": "train_station_entrance",
       "tags": {
         "railway": "train_station_entrance"
       },
       "track": false
     },
     {
-      "name": "funicular_entrance (approved Q-006)",
+      "name": "funicular_entrance",
       "tags": {
         "railway": "funicular_entrance"
       },
       "track": false
     },
     {
-      "name": "tram_stop (approved Q-006)",
+      "name": "tram_stop",
       "tags": {
         "railway": "tram_stop"
       },
@@ -990,6 +1057,378 @@
         "indoor": "yes"
       },
       "allowed": false
+    }
+  ],
+  "passages": [
+    {
+      "name": "unnamed passage through flats",
+      "tags": {
+        "highway": "footway",
+        "tunnel": "building_passage"
+      },
+      "way_name": "",
+      "building": {
+        "kind": "building",
+        "building": "apartments"
+      },
+      "excluded": "passage_not_public"
+    },
+    {
+      "name": "unnamed passage through an untyped building",
+      "tags": {
+        "highway": "footway",
+        "tunnel": "building_passage"
+      },
+      "way_name": "",
+      "building": {
+        "kind": "building",
+        "building": "yes"
+      },
+      "excluded": "passage_not_public"
+    },
+    {
+      "name": "passage through flats with foot=permissive",
+      "tags": {
+        "highway": "footway",
+        "tunnel": "building_passage",
+        "foot": "permissive"
+      },
+      "way_name": "",
+      "building": {
+        "kind": "building",
+        "building": "apartments"
+      },
+      "excluded": null
+    },
+    {
+      "name": "passage through flats with access=yes",
+      "tags": {
+        "highway": "footway",
+        "tunnel": "building_passage",
+        "access": "yes"
+      },
+      "way_name": "",
+      "building": {
+        "kind": "building",
+        "building": "apartments"
+      },
+      "excluded": null
+    },
+    {
+      "name": "passage with foot=customers (shopping arcade)",
+      "tags": {
+        "highway": "footway",
+        "tunnel": "building_passage",
+        "foot": "customers"
+      },
+      "way_name": "",
+      "building": {
+        "kind": "building",
+        "building": "apartments"
+      },
+      "excluded": null
+    },
+    {
+      "name": "access=destination isn't public access",
+      "tags": {
+        "highway": "footway",
+        "tunnel": "building_passage",
+        "access": "destination"
+      },
+      "way_name": "",
+      "building": {
+        "kind": "building",
+        "building": "apartments"
+      },
+      "excluded": "passage_not_public"
+    },
+    {
+      "name": "named street through flats",
+      "tags": {
+        "highway": "footway",
+        "tunnel": "building_passage"
+      },
+      "way_name": "Rue Ménestrier",
+      "building": {
+        "kind": "building",
+        "building": "apartments"
+      },
+      "excluded": null
+    },
+    {
+      "name": "a name containing traboule doesn't count",
+      "tags": {
+        "highway": "footway",
+        "tunnel": "building_passage"
+      },
+      "way_name": "Traboule du 27",
+      "building": {
+        "kind": "building",
+        "building": "apartments"
+      },
+      "excluded": "passage_not_public"
+    },
+    {
+      "name": "passage through a shop",
+      "tags": {
+        "highway": "footway",
+        "tunnel": "building_passage"
+      },
+      "way_name": "",
+      "building": {
+        "kind": "building",
+        "building": "retail"
+      },
+      "excluded": null
+    },
+    {
+      "name": "passage through a station building",
+      "tags": {
+        "highway": "footway",
+        "tunnel": "building_passage"
+      },
+      "way_name": "",
+      "building": {
+        "kind": "station",
+        "building": "yes"
+      },
+      "excluded": null
+    },
+    {
+      "name": "passage inside a mall area",
+      "tags": {
+        "highway": "footway",
+        "tunnel": "building_passage"
+      },
+      "way_name": "",
+      "building": {
+        "kind": "building",
+        "building": "yes"
+      },
+      "in_public_venue": true,
+      "excluded": null
+    },
+    {
+      "name": "confirmed passage",
+      "tags": {
+        "highway": "footway",
+        "tunnel": "building_passage"
+      },
+      "way_name": "",
+      "building": {
+        "kind": "building",
+        "building": "apartments"
+      },
+      "confirmed": true,
+      "excluded": null
+    },
+    {
+      "name": "not inside a building",
+      "tags": {
+        "highway": "footway",
+        "tunnel": "building_passage"
+      },
+      "way_name": "",
+      "building": null,
+      "excluded": null
+    },
+    {
+      "name": "covered arcade isn't affected",
+      "tags": {
+        "highway": "footway",
+        "covered": "yes"
+      },
+      "way_name": "",
+      "building": {
+        "kind": "building",
+        "building": "apartments"
+      },
+      "excluded": null
+    },
+    {
+      "name": "university corridor",
+      "tags": {
+        "highway": "corridor"
+      },
+      "way_name": "",
+      "building": {
+        "kind": "building",
+        "building": "university"
+      },
+      "excluded": "passage_not_public"
+    },
+    {
+      "name": "hospital corridor",
+      "tags": {
+        "highway": "footway",
+        "indoor": "corridor"
+      },
+      "way_name": "",
+      "building": {
+        "kind": "building",
+        "building": "hospital"
+      },
+      "excluded": "passage_not_public"
+    },
+    {
+      "name": "a name doesn't make a corridor public",
+      "tags": {
+        "highway": "corridor"
+      },
+      "way_name": "Couloir A",
+      "building": {
+        "kind": "building",
+        "building": "office"
+      },
+      "excluded": "passage_not_public"
+    },
+    {
+      "name": "mall corridor",
+      "tags": {
+        "highway": "corridor"
+      },
+      "way_name": "",
+      "building": {
+        "kind": "mall",
+        "building": "mall"
+      },
+      "excluded": null
+    },
+    {
+      "name": "station corridor",
+      "tags": {
+        "highway": "corridor"
+      },
+      "way_name": "",
+      "building": {
+        "kind": "building",
+        "building": "train_station"
+      },
+      "excluded": null
+    },
+    {
+      "name": "corridor with foot=yes",
+      "tags": {
+        "highway": "corridor",
+        "foot": "yes"
+      },
+      "way_name": "",
+      "building": {
+        "kind": "building",
+        "building": "office"
+      },
+      "excluded": null
+    }
+  ],
+  "restricted_areas": [
+    {
+      "name": "footway on a military base",
+      "way": {
+        "highway": "footway"
+      },
+      "area": {
+        "landuse": "military"
+      },
+      "excluded": "military_area"
+    },
+    {
+      "name": "military=* area",
+      "way": {
+        "highway": "footway"
+      },
+      "area": {
+        "military": "barracks"
+      },
+      "excluded": "military_area"
+    },
+    {
+      "name": "foot=yes doesn't open a military base",
+      "way": {
+        "highway": "footway",
+        "foot": "yes"
+      },
+      "area": {
+        "landuse": "military"
+      },
+      "excluded": "military_area"
+    },
+    {
+      "name": "path in private grounds",
+      "way": {
+        "highway": "path"
+      },
+      "area": {
+        "leisure": "garden",
+        "access": "private"
+      },
+      "excluded": "restricted_area"
+    },
+    {
+      "name": "service road in a no-access compound",
+      "way": {
+        "highway": "service"
+      },
+      "area": {
+        "landuse": "commercial",
+        "access": "no"
+      },
+      "excluded": "restricted_area"
+    },
+    {
+      "name": "public footpath across private land",
+      "way": {
+        "highway": "footway",
+        "foot": "designated"
+      },
+      "area": {
+        "landuse": "farmland",
+        "access": "private"
+      },
+      "excluded": null
+    },
+    {
+      "name": "permissive path in private grounds",
+      "way": {
+        "highway": "footway",
+        "access": "permissive"
+      },
+      "area": {
+        "leisure": "park",
+        "access": "private"
+      },
+      "excluded": null
+    },
+    {
+      "name": "ordinary park",
+      "way": {
+        "highway": "footway"
+      },
+      "area": {
+        "leisure": "park"
+      },
+      "excluded": null
+    },
+    {
+      "name": "military=no isn't military",
+      "way": {
+        "highway": "footway"
+      },
+      "area": {
+        "military": "no",
+        "leisure": "park"
+      },
+      "excluded": null
+    },
+    {
+      "name": "access=destination area isn't restricted",
+      "way": {
+        "highway": "footway"
+      },
+      "area": {
+        "landuse": "residential",
+        "access": "destination"
+      },
+      "excluded": null
     }
   ]
 }

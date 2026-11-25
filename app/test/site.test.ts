@@ -11,7 +11,7 @@ import { BASE, CSP } from "../../vite.config";
 
 const DIST = fileURLToPath(new URL("../../dist/", import.meta.url));
 const built = existsSync(join(DIST, "index.html"));
-const SIZE_BUDGET_MB = 100;
+const SIZE_BUDGET_MB = 300; // six areas come to about 185 MB
 /** The only external sites the page links to (user-initiated attribution links, never fetched). */
 const LINK_HOSTS = new Set(["www.openstreetmap.org", "protomaps.com"]);
 
@@ -37,7 +37,7 @@ describe.skipIf(!built)("built site", () => {
     expect(html).not.toMatch(/\son[a-z]+="/); // no inline event handlers
   });
 
-  it("references local files only under the base path, and links out only for attribution", () => {
+  it("loads only local files under the base path; links out only for attribution", () => {
     for (const [, url] of html.matchAll(/(?:src|href)="([^"]+)"/g)) {
       if (url!.startsWith("#")) continue;
       if (url!.startsWith("http")) expect(LINK_HOSTS.has(new URL(url!).host), url).toBe(true);

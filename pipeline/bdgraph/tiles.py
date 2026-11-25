@@ -5,8 +5,8 @@ Usage:
 
 1. Downloads the pinned `pmtiles` CLI (checked against its SHA-256) into data/raw/tools/.
 2. Extracts the city's bbox (zoom 0-15) from the dated Protomaps daily build.
-3. Unpacks it into plain files: app/public/tiles/{z}/{x}/{y}.mvt (decompressed). GitHub Pages
-   can't serve byte ranges correctly (docs/DECISIONS.md D-003), so no single .pmtiles file.
+3. Unpacks it into plain files: app/public/tiles/<city>/{z}/{x}/{y}.mvt (decompressed). GitHub Pages
+   gzips responses and applies byte ranges to the compressed stream, so no single .pmtiles file.
 4. Downloads only the glyph ranges and sprites the style needs, from a pinned commit of
    protomaps/basemaps-assets, with their licences.
 5. Records what it did in data/<city>/tiles.json.
@@ -171,7 +171,7 @@ def main(argv: list[str] | None = None) -> None:
     if not extracted.exists():
         print(f"Extracting {city.name} from Protomaps build {args.build}", file=sys.stderr)
         extract(exe, args.build, city, extracted)
-    count, tile_bytes = unpack(extracted, args.public_dir / "tiles")
+    count, tile_bytes = unpack(extracted, args.public_dir / "tiles" / city.id)
     asset_bytes = fetch_assets(args.public_dir / "basemap")
     record = {
         "source": f"{PROTOMAPS_BUILDS}{args.build}.pmtiles",

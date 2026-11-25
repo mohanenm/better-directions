@@ -11,7 +11,7 @@ const router = new Router(town);
 const at = (x: number, y: number) => nodeAt(town, x, y);
 
 describe("directions", () => {
-  it("start and arrive bookend the steps, and distances add up to the route", () => {
+  it("starts and ends the steps, and distances add up", () => {
     const p = planMode(router, fi, at(0, 0), at(300, 100), "stairs", 1)!;
     const steps = directions(fi, p, "Main Street corner", "the far corner");
     expect(steps[0]!.kind).toBe("start");
@@ -55,7 +55,7 @@ describe("snack tour", () => {
     expect(p.betterStats.snacks.bakery).toBeGreaterThanOrEqual(1);
     expect(p.summary).toMatch(/bakery/);
     const steps = directions(fi, p, "A", "B");
-    expect(steps.some((s) => s.text.includes("Treat stop: Boulangerie Test (open 07:00-19:30)"))).toBe(true);
+    expect(steps.some((s) => s.text.includes("You pass Boulangerie Test (open 07:00-19:30)"))).toBe(true);
     expect(fi.snacks.map((s) => s.name).sort()).toEqual(["Boulangerie Test", "Café Test"]); // the far one wasn't snapped
   });
 });

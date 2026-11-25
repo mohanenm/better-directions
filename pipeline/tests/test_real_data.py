@@ -18,7 +18,7 @@ CITY = load_city(ROOT / "cities" / "lyon.json")
 OSM = ROOT / "data" / "raw" / "lyon.osm.pbf"
 COMMITTED = ROOT / "app" / "public" / "data" / "lyon" / "graph.bin"
 
-# Mapped tram crossings count as crossings (Q-004), so ~95% of the network is one component.
+# Mapped tram crossings count as crossings, so ~95% of the network is one component.
 MIN_COMPONENT_SHARE = 0.93
 
 pytestmark = [

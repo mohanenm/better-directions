@@ -22,6 +22,7 @@ import json
 import sys
 import time
 import urllib.error
+import urllib.parse
 import urllib.request
 from array import array
 from collections.abc import Callable, Sequence
@@ -93,8 +94,98 @@ def _post_with_retries(body: bytes, retries: int) -> list[float]:
     raise AssertionError("unreachable")
 
 
+USGS_URL = (
+    "https://elevation.nationalmap.gov/arcgis/rest/services/3DEPElevation/ImageServer/getSamples"
+)
+# The service returns at most 1,000 samples a request (the first 1,000 points), and each request
+# costs ~18 s whatever its size. A batch it refuses is split in half and retried.
+USGS_BATCH = 1000
+
+
+def usgs_3dep_provider(
+    *, batch: int = USGS_BATCH, pause_s: float = 0.5, retries: int = 5
+) -> Provider:
+    """USGS 3D Elevation Program (bare-earth, 1 m lidar where available; public domain)."""
+
+    def sample(points: Sequence[Point]) -> tuple[list[float | None], int]:
+        """Elevations for points, and how many of them the reply covered."""
+        body = urllib.parse.urlencode(
+            {
+                "geometry": json.dumps(
+                    {
+                        "points": [[x / COORD_SCALE, y / COORD_SCALE] for x, y in points],
+                        "spatialReference": {"wkid": 4326},
+                    }
+                ),
+                "geometryType": "esriGeometryMultipoint",
+                "returnFirstValueOnly": "true",
+                "interpolation": "RSP_BilinearInterpolation",
+                "f": "json",
+            }
+        ).encode()
+        reply = _post_json(USGS_URL, body, "application/x-www-form-urlencoded", retries)
+        if "error" in reply:
+            raise RuntimeError(f"3DEP error: {reply['error']}")
+        out: list[float | None] = [None] * len(points)
+        samples = reply.get("samples", [])
+        for item in samples:
+            try:
+                value = float(item["value"])
+            except (KeyError, TypeError, ValueError):
+                continue  # "NoData"
+            if value > -1000:  # nodata sentinels are large negatives
+                out[item["locationId"]] = value
+        covered = max((item["locationId"] for item in samples), default=-1) + 1
+        return out, min(covered, len(points))
+
+    def fetch(points: Sequence[Point]) -> list[float | None]:
+        out: list[float | None] = []
+        size = batch
+        start = 0
+        while start < len(points):
+            chunk = points[start : start + size]
+            try:
+                values, covered = sample(chunk)
+            except (RuntimeError, urllib.error.URLError, TimeoutError) as exc:
+                if size <= 100:
+                    raise
+                size //= 2
+                print(f"  batch refused ({exc}); trying {size} points", file=sys.stderr)
+                continue
+            if covered == 0:
+                raise RuntimeError("3DEP returned no samples")
+            # A cut-short reply covers only its first points: keep those, ask for the rest.
+            out += values[:covered]
+            start += covered
+            print(f"  {start:,} / {len(points):,} points", file=sys.stderr)
+            if start < len(points):
+                time.sleep(pause_s)
+        return out
+
+    return fetch
+
+
+def _post_json(url: str, body: bytes, content_type: str, retries: int) -> dict:
+    wait = 5.0
+    for attempt in range(retries):
+        req = urllib.request.Request(
+            url, data=body, headers={"User-Agent": USER_AGENT, "Content-Type": content_type}
+        )
+        try:
+            with urllib.request.urlopen(req, timeout=180) as resp:
+                return json.loads(resp.read())
+        except (urllib.error.URLError, TimeoutError, json.JSONDecodeError) as exc:
+            if attempt == retries - 1:
+                raise
+            print(f"  request failed ({exc}); retrying in {wait:.0f}s", file=sys.stderr)
+            time.sleep(wait)
+            wait *= 2
+    raise AssertionError("unreachable")
+
+
 PROVIDERS: dict[str, Callable[[dict], Provider]] = {
     "ign-rge-alti": lambda cfg: ign_provider(cfg.get("resource", "ign_rge_alti_wld")),
+    "usgs-3dep": lambda cfg: usgs_3dep_provider(),
 }
 
 
@@ -129,9 +220,13 @@ def to_point(lon: float, lat: float) -> Point:
 
 
 def fill_cache(
-    points: set[Point], cache: dict[Point, int | None], provider: Provider
+    points: set[Point],
+    cache: dict[Point, int | None],
+    provider: Provider,
+    *,
+    refetch_unknown: bool = False,
 ) -> dict[Point, int | None]:
-    missing = sorted(points - cache.keys())
+    missing = sorted(p for p in points if p not in cache or (refetch_unknown and cache[p] is None))
     if missing:
         print(f"Fetching {len(missing):,} elevations", file=sys.stderr)
         for p, ele in zip(missing, provider(missing), strict=True):
@@ -145,6 +240,9 @@ def main(argv: list[str] | None = None) -> None:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawTextHelpFormatter)
     ap.add_argument("city_config", type=Path)
     ap.add_argument("--data-dir", type=Path, default=Path("data"))
+    ap.add_argument(
+        "--refetch-unknown", action="store_true", help="ask again for points cached as no data"
+    )
     args = ap.parse_args(argv)
 
     city = load_city(args.city_config)
@@ -156,7 +254,9 @@ def main(argv: list[str] | None = None) -> None:
     graph = build_graph(city, args.data_dir / "raw" / f"{city.id}.osm.pbf")
     points = {to_point(lon, lat) for lon, lat in graph.node_coords.values()}
     cache_path = args.data_dir / "raw" / f"{city.id}.elevation.bin"
-    cache = fill_cache(points, load_cache(cache_path), provider)
+    cache = fill_cache(
+        points, load_cache(cache_path), provider, refetch_unknown=args.refetch_unknown
+    )
     save_cache(cache_path, cache)
 
     known = sum(1 for p in points if cache.get(p) is not None)

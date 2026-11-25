@@ -10,7 +10,7 @@ export default tseslint.config(
       "no-constant-condition": ["error", { checkLoops: false }],
       // With noUncheckedIndexedAccess on, every typed-array read in the router's hot loops is
       // `T | undefined`. Bounds come from the decoded graph format (checked at load), so `!` is
-      // the honest annotation there. See docs/DECISIONS.md (D-014).
+      // the honest annotation there.
       "@typescript-eslint/no-non-null-assertion": "off",
     },
   },

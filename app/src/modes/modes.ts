@@ -11,9 +11,9 @@ import { turnAngleDeg } from "../router/geometry";
 import { hashUnit } from "../router/rng";
 import type { FeatureIndex } from "./features";
 import type { CostOfFun } from "./stats";
-import { TURN_DEG, U_TURN_DEG } from "./stats";
+import { STRAIGHT_DEG, TURN_DEG, U_TURN_DEG } from "./stats";
 
-export type ModeId = "buildings" | "trail" | "stairs" | "parks" | "snacks" | "no-right" | "chaos";
+export type ModeId = "buildings" | "trail" | "stairs" | "parks" | "snacks" | "no-right" | "inconvenient" | "chaos";
 
 /** A feature worth a detour: walk to the start of `path`, along it, and on from its end. */
 export interface Collectible {
@@ -53,7 +53,7 @@ const multiplier = (id: string, min: number, factor: (g: Graph, d: number) => nu
 const buildings: Mode = {
   id: "buildings",
   name: "Through buildings",
-  tagline: "Why go round when you can go through?",
+  tagline: "Public passages, arcades and shopping centres. Why go round?",
   cost: (fi) =>
     multiplier("buildings", 0.15, (g, d) => {
       const e = d >>> 1;
@@ -79,17 +79,17 @@ const buildings: Mode = {
   score: (s) => s.buildings * 10 + s.passageM / 10 + s.malls * 5 + s.stations * 3 + s.underBuildings * 0.5,
 };
 
-// --- Trail runner ---------------------------------------------------------------------------------
+// --- Trails -------------------------------------------------------------------------------------
 
 const trail: Mode = {
   id: "trail",
-  name: "Trail runner",
-  tagline: "Dirt under your shoes, or it didn't happen.",
+  name: "Trails",
+  tagline: "Dirt and gravel over pavement, wherever there's a choice.",
   cost: (fi) =>
     multiplier("trail", 0.25, (g, d) => {
       const e = d >>> 1;
       if (fi.isTrail[e]) return 0.25;
-      if (g.s.edge_park[e]) return 0.5;
+      if (fi.parkOf[e]) return 0.5;
       return fi.isPavedRoad[e] ? 2.0 : 1.0;
     }),
   collect: {
@@ -104,12 +104,12 @@ const trail: Mode = {
   score: (s) => s.trailM / 50 + s.trails * 3 + s.parkM / 200,
 };
 
-// --- Stairmaster ----------------------------------------------------------------------------------
+// --- Stairs --------------------------------------------------------------------------------------
 
 const stairs: Mode = {
   id: "stairs",
-  name: "Stairmaster",
-  tagline: "Every staircase is a shortcut to glory.",
+  name: "Stairs",
+  tagline: "Seeks out staircases, mostly going up.",
   cost: (fi) =>
     multiplier("stairs", 0.1, (g, d) => {
       const e = d >>> 1;
@@ -135,16 +135,16 @@ const stairs: Mode = {
   score: (s) => s.staircases * 10 + s.stepsUp / 10 + s.stepsUnknown / 20 + s.stepsDown / 40,
 };
 
-// --- Park hopper ----------------------------------------------------------------------------------
+// --- Parks ---------------------------------------------------------------------------------------
 
 const parks: Mode = {
   id: "parks",
-  name: "Park hopper",
-  tagline: "Collect them all. The parks, that is.",
+  name: "Parks",
+  tagline: "As many parks as the detour allows.",
   cost: (fi) =>
     multiplier("parks", 0.3, (g, d) => {
       const e = d >>> 1;
-      if (g.s.edge_park[e]) return 0.3;
+      if (fi.parkOf[e]) return 0.3;
       if (fi.isTrail[e]) return 0.7;
       return fi.isPavedRoad[e] ? 1.2 : 1.0;
     }),
@@ -156,21 +156,21 @@ const parks: Mode = {
         value: 10 + Math.min(p.pathLengthM, 2000) / 200,
       })),
     keysOf: (fi, d) => {
-      const park = fi.g.s.edge_park[d >>> 1]!;
+      const park = fi.parkOf[d >>> 1]!;
       return park ? [`p:${park}`] : [];
     },
   },
   score: (s) => s.parks * 10 + s.parkM / 100,
 };
 
-// --- Snack tour -----------------------------------------------------------------------------------
+// --- Snacks ---------------------------------------------------------------------------------------
 
 const SNACK_VALUE = { bakery: 12, pastry: 12, chocolate: 10, ice_cream: 10, cafe: 7 } as const;
 
 const snacks: Mode = {
   id: "snacks",
-  name: "Snack tour",
-  tagline: "A bakery a kilometre keeps the grumbles away.",
+  name: "Snacks",
+  tagline: "Past bakeries, pâtisseries, chocolatiers and cafés.",
   cost: (fi) =>
     multiplier("snacks", 0.5, (g, d) => {
       const e = d >>> 1;
@@ -189,15 +189,15 @@ const snacks: Mode = {
     s.snacks.bakery * 10 + s.snacks.pastry * 10 + s.snacks.chocolate * 8 + s.snacks.ice_cream * 8 + Math.min(s.snacks.cafe, 4) * 4,
 };
 
-// --- Never turn right -----------------------------------------------------------------------------
+// --- Left turns only -----------------------------------------------------------------------------
 
 /** Seconds of "pain" per right turn or U-turn: big enough to avoid them almost always. */
 export const RIGHT_TURN_PENALTY_S = 1200;
 
 const noRight: Mode = {
   id: "no-right",
-  name: "Never turn right",
-  tagline: "Three lefts make a right. We'll take the three lefts.",
+  name: "Left turns only",
+  tagline: "Left, or straight on. Never right, if it can help it.",
   cost: (fi) => ({
     id: "no-right",
     turnAware: true,
@@ -211,7 +211,47 @@ const noRight: Mode = {
   score: (s) => -s.rightTurns * 100 - s.uTurns * 100 + s.leftTurns,
 };
 
-// --- Scenic chaos ---------------------------------------------------------------------------------
+// --- Most inconvenient --------------------------------------------------------------------------
+
+/** Cost per busy-road crossing; the planner raises it if the route still crosses more than normal. */
+export const CROSSING_PENALTIES_S = [900, 4000, 20000] as const;
+const INCONVENIENT_MIN = 0.35;
+
+/** Cheap: turning at junctions, climbing or descending. Dear: going straight, crossing busy roads. */
+export function inconvenientModel(fi: FeatureIndex, crossingPenaltyS: number): CostModel {
+  return {
+    id: `inconvenient-${crossingPenaltyS}`,
+    turnAware: true,
+    minCostPerSecond: INCONVENIENT_MIN,
+    edgeCost: (g, d, t, prev) => {
+      const e = d >>> 1;
+      let factor = 1;
+      let extra = 0;
+      const climb = g.climb(e, (d & 1) === 0);
+      if (climb && climb[0] + climb[1] >= 2) factor *= 0.45;
+      if (prev >= 0) {
+        const node = g.tail(d);
+        if (fi.degree[node]! >= 3) {
+          const angle = Math.abs(turnAngleDeg(g, prev, d));
+          if (angle > TURN_DEG && angle <= U_TURN_DEG) factor *= 0.45;
+          else if (angle <= STRAIGHT_DEG) extra += 45;
+        }
+        if (fi.busyNode[node] && !fi.isBusy[prev >>> 1] && !fi.isBusy[e]) extra += crossingPenaltyS;
+      }
+      return t * Math.max(INCONVENIENT_MIN, factor) + extra;
+    },
+  };
+}
+
+const inconvenient: Mode = {
+  id: "inconvenient",
+  name: "Most inconvenient",
+  tagline: "Zig-zags, needless hills, nothing straight. No extra busy-road crossings.",
+  cost: (fi) => inconvenientModel(fi, CROSSING_PENALTIES_S[0]),
+  score: (s) => s.leftTurns + s.rightTurns + 2 * s.straightSkips + (s.climbM + s.descentM) / 5 - 50 * s.busyCrossings,
+};
+
+// --- Random -------------------------------------------------------------------------------------
 
 const CHAOS_MIN = 0.25;
 const CHAOS_MAX = 4;
@@ -257,8 +297,8 @@ export function chaosWeights(fi: FeatureIndex, seed: number): Float32Array {
 
 const chaos: Mode = {
   id: "chaos",
-  name: "Scenic chaos",
-  tagline: "Same start, same end, different adventure every seed.",
+  name: "Random",
+  tagline: "A different detour for every seed. The scenic route. Very scenic.",
   cost: (fi, seed) => {
     const w = chaosWeights(fi, seed);
     return {
@@ -278,6 +318,7 @@ export const MODES: Readonly<Record<ModeId, Mode>> = Object.freeze({
   parks,
   snacks,
   "no-right": noRight,
+  inconvenient,
   chaos,
 });
 

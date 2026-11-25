@@ -1,0 +1,35 @@
+{
+  "id": "dc",
+  "name": "Washington, DC",
+  "extract": {
+    "provider": "Geofabrik",
+    "url": "https://download.geofabrik.de/north-america/us/district-of-columbia-latest.osm.pbf",
+    "licence": "ODbL 1.0",
+    "attribution": "© OpenStreetMap contributors"
+  },
+  "bbox": {
+    "west": -77.12,
+    "south": 38.791,
+    "east": -76.909,
+    "north": 38.996
+  },
+  "center": {
+    "lon": -77.0365,
+    "lat": 38.8977
+  },
+  "default_zoom": 13,
+  "places": {
+    "square_name_prefixes": [],
+    "square_name_suffixes": [
+      " Circle",
+      " Square",
+      " Plaza"
+    ]
+  },
+  "confirmed_passages": [],
+  "terrain": {
+    "provider": "usgs-3dep",
+    "licence": "Public domain (USGS): https://www.usgs.gov/information-policies-and-instructions/copyrights-and-credits",
+    "attribution": "Elevation: USGS 3DEP"
+  }
+}

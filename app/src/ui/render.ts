@@ -2,7 +2,7 @@
 import { CITY } from "../city";
 import type { CostOfFun } from "../modes/stats";
 import type { Step } from "../modes/directions";
-import type { ArtResultMsg, PlanResult } from "./protocol";
+import type { ArtResultMsg, PlanResult, SpellResultMsg, TourResult } from "./protocol";
 import type { ShareCard } from "./share-image";
 
 const el = <K extends keyof HTMLElementTagNameMap>(tag: K, text?: string, className?: string) => {
@@ -28,6 +28,12 @@ export function statItems(r: PlanResult): [string, string][] {
   if (b.trailShare >= 0.05) items.push(["On trails", `${Math.round(b.trailShare * 100)}%`]);
   if (b.parks) items.push(["Parks", String(b.parks)]);
   if (r.mode === "no-right") items.push(["Turns", `${b.leftTurns} left, ${b.rightTurns} right`]);
+  if (r.mode === "inconvenient") {
+    items.push(["Turns", String(b.leftTurns + b.rightTurns + b.uTurns)]);
+    items.push(["Up and down", `${Math.round(b.climbM)} m up, ${Math.round(b.descentM)} m down`]);
+    items.push(["Could have gone straight", `${b.straightSkips} times`]);
+    items.push(["Busy roads crossed", `${b.busyCrossings} (normal: ${n.busyCrossings})`]);
+  }
   return items;
 }
 
@@ -43,6 +49,8 @@ function renderCard(name: string, summary: string, stats: [string, string][], b:
   get("summary").textContent = summary;
   get("legend-better").textContent = legend[0];
   get("legend-normal").textContent = legend[1];
+  // Workouts and crawls have no second line to compare.
+  for (const el of document.querySelectorAll<HTMLElement>(".swatch.normal, #legend-normal")) el.hidden = legend[1] === "";
   get("stats").replaceChildren(
     ...stats.map(([k, v]) => {
       const wrap = el("div");
@@ -64,7 +72,16 @@ function renderCard(name: string, summary: string, stats: [string, string][], b:
 }
 
 export function renderResult(r: PlanResult, onStep: (at: [number, number]) => void): void {
-  renderCard(r.name, r.summary, statItems(r), r.betterStats, [], r.steps, ["Better route", "Normal route"], onStep);
+  const notes = r.strategy === "via-stops" ? ["Goes through the stops you picked, in order."] : [];
+  renderCard(r.name, r.summary, statItems(r), r.betterStats, notes, r.steps, ["Better route", "Normal route"], onStep);
+}
+
+export function renderTour(r: TourResult, onStep: (at: [number, number]) => void): void {
+  renderCard(r.name, r.summary, r.statItems, r.stats, r.notes, r.steps, [r.kind === "crawl" ? "The crawl" : "The loop", ""], onStep);
+}
+
+export function tourCard(r: TourResult): ShareCard {
+  return { name: r.name, summary: r.summary, chips: r.statItems.slice(0, 3), from: r.start, to: r.end, legend: [r.kind === "crawl" ? "The crawl" : "The loop", ""] };
 }
 
 export function artSummary(r: ArtResultMsg): string {
@@ -110,4 +127,39 @@ function renderSteps(steps: Step[], onStep: (at: [number, number]) => void): voi
       return li;
     }),
   );
+}
+
+/** What a spelled walk is called when the word itself isn't to be shown or shared. */
+export const HIDDEN_WORD_NAME = "A word, walked";
+
+export function spellSummary(r: SpellResultMsg): string {
+  return `${r.likeness}% readable, ${(r.stats.lengthM / 1000).toFixed(1)} km, ${Math.max(1, Math.round(r.stats.timeS / 60))} min.`;
+}
+
+function spellStats(r: SpellResultMsg): [string, string][] {
+  const hardest = [...r.letters].sort((a, b) => a.likeness - b.likeness)[0];
+  const items: [string, string][] = [
+    ["Readable", `${r.likeness}%`],
+    ["Walk", `${Math.max(1, Math.round(r.stats.timeS / 60))} min · ${(r.stats.lengthM / 1000).toFixed(1)} km`],
+    ["Letter height", `${r.heightM} m`],
+  ];
+  if (hardest && r.letters.length > 1) items.push(["Hardest letter", `${hardest.char}, ${hardest.likeness}%`]);
+  return items;
+}
+
+export function renderSpell(r: SpellResultMsg, onStep: (at: [number, number]) => void): void {
+  const notes = ["Solid lines are the letters; dotted lines are walks between strokes. The dashed outline is the ideal lettering."];
+  if (r.likeness < 60) notes.push("Streets here don't spell well. A neighbourhood with a regular grid will read better.");
+  renderCard(r.word, spellSummary(r), spellStats(r), r.stats, notes, r.steps, ["Letters", "Ideal outline"], onStep);
+}
+
+export function spellCard(r: SpellResultMsg, showWord: boolean): ShareCard {
+  return {
+    name: showWord ? r.word : HIDDEN_WORD_NAME,
+    summary: spellSummary(r),
+    chips: spellStats(r).slice(0, 3),
+    from: r.start,
+    to: r.end,
+    legend: ["Letters", "Ideal outline"],
+  };
 }

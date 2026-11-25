@@ -27,6 +27,9 @@ class City:
     extract_provider: str
     extract_licence: str
     extract_attribution: str
+    # Passages and corridors confirmed open to the public, by OSM way id. See
+    # docs/ADDING_A_CITY.md: the build excludes unconfirmed ones through private-looking buildings.
+    confirmed_passages: frozenset[int] = frozenset()
 
 
 def load_city(path: Path) -> City:
@@ -40,4 +43,5 @@ def load_city(path: Path) -> City:
         extract_provider=ex["provider"],
         extract_licence=ex["licence"],
         extract_attribution=ex["attribution"],
+        confirmed_passages=frozenset(int(p["way"]) for p in raw.get("confirmed_passages", [])),
     )
