@@ -104,8 +104,8 @@ def test_usgs_provider_reads_samples_by_id_and_skips_no_data(monkeypatch):
         }
 
     monkeypatch.setattr(terrain, "_post_json", fake_post)
-    values = terrain.usgs_3dep_provider(pause_s=0)([(1, 1), (2, 2), (3, 3), (4, 4)])
-    assert values == [18.4, 26.6, None, None]  # missing ids are unknown too
+    values = terrain.usgs_3dep_provider(pause_s=0)([(1, 1), (2, 2), (3, 3)])
+    assert values == [18.4, 26.6, None]
 
 
 def test_usgs_provider_halves_batches_the_service_refuses(monkeypatch):
@@ -124,3 +124,25 @@ def test_usgs_provider_halves_batches_the_service_refuses(monkeypatch):
     values = terrain.usgs_3dep_provider(batch=1000, pause_s=0)([(i, i) for i in range(700)])
     assert values == [1.0] * 700
     assert sizes == [700, 500, 250, 250, 200]  # refused twice, then 250 at a time
+
+
+def test_usgs_provider_continues_after_a_cut_short_reply(monkeypatch):
+    from bdgraph import terrain
+
+    asked = []
+
+    def fake_post(url, body, content_type, retries):
+        n = body.count(b"%5D%2C+%5B") + 1
+        asked.append(n)
+        return {"samples": [{"locationId": i, "value": "2"} for i in range(min(n, 400))]}
+
+    monkeypatch.setattr(terrain, "_post_json", fake_post)
+    values = terrain.usgs_3dep_provider(batch=1000, pause_s=0)([(i, i) for i in range(1000)])
+    assert values == [2.0] * 1000
+    assert asked == [1000, 600, 200]
+
+
+def test_refetch_unknown_asks_again_for_no_data_points():
+    cache = {(1, 1): None, (2, 2): 50}
+    fill_cache({(1, 1), (2, 2)}, cache, lambda pts: [7.0 for _ in pts], refetch_unknown=True)
+    assert cache == {(1, 1): 70, (2, 2): 50}

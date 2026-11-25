@@ -97,9 +97,9 @@ def _post_with_retries(body: bytes, retries: int) -> list[float]:
 USGS_URL = (
     "https://elevation.nationalmap.gov/arcgis/rest/services/3DEPElevation/ImageServer/getSamples"
 )
-# Each request costs ~18 s whatever its size, so batches are large; one the service refuses is
-# split in half and retried.
-USGS_BATCH = 2000
+# The service returns at most 1,000 samples a request (the first 1,000 points), and each request
+# costs ~18 s whatever its size. A batch it refuses is split in half and retried.
+USGS_BATCH = 1000
 
 
 def usgs_3dep_provider(
@@ -107,7 +107,8 @@ def usgs_3dep_provider(
 ) -> Provider:
     """USGS 3D Elevation Program (bare-earth, 1 m lidar where available; public domain)."""
 
-    def sample(points: Sequence[Point]) -> list[float | None]:
+    def sample(points: Sequence[Point]) -> tuple[list[float | None], int]:
+        """Elevations for points, and how many of them the reply covered."""
         body = urllib.parse.urlencode(
             {
                 "geometry": json.dumps(
@@ -126,14 +127,16 @@ def usgs_3dep_provider(
         if "error" in reply:
             raise RuntimeError(f"3DEP error: {reply['error']}")
         out: list[float | None] = [None] * len(points)
-        for item in reply.get("samples", []):
+        samples = reply.get("samples", [])
+        for item in samples:
             try:
                 value = float(item["value"])
             except (KeyError, TypeError, ValueError):
                 continue  # "NoData"
             if value > -1000:  # nodata sentinels are large negatives
                 out[item["locationId"]] = value
-        return out
+        covered = max((item["locationId"] for item in samples), default=-1) + 1
+        return out, min(covered, len(points))
 
     def fetch(points: Sequence[Point]) -> list[float | None]:
         out: list[float | None] = []
@@ -142,14 +145,18 @@ def usgs_3dep_provider(
         while start < len(points):
             chunk = points[start : start + size]
             try:
-                out += sample(chunk)
+                values, covered = sample(chunk)
             except (RuntimeError, urllib.error.URLError, TimeoutError) as exc:
                 if size <= 100:
                     raise
                 size //= 2
                 print(f"  batch refused ({exc}); trying {size} points", file=sys.stderr)
                 continue
-            start += len(chunk)
+            if covered == 0:
+                raise RuntimeError("3DEP returned no samples")
+            # A cut-short reply covers only its first points: keep those, ask for the rest.
+            out += values[:covered]
+            start += covered
             print(f"  {start:,} / {len(points):,} points", file=sys.stderr)
             if start < len(points):
                 time.sleep(pause_s)
@@ -213,9 +220,13 @@ def to_point(lon: float, lat: float) -> Point:
 
 
 def fill_cache(
-    points: set[Point], cache: dict[Point, int | None], provider: Provider
+    points: set[Point],
+    cache: dict[Point, int | None],
+    provider: Provider,
+    *,
+    refetch_unknown: bool = False,
 ) -> dict[Point, int | None]:
-    missing = sorted(points - cache.keys())
+    missing = sorted(p for p in points if p not in cache or (refetch_unknown and cache[p] is None))
     if missing:
         print(f"Fetching {len(missing):,} elevations", file=sys.stderr)
         for p, ele in zip(missing, provider(missing), strict=True):
@@ -229,6 +240,9 @@ def main(argv: list[str] | None = None) -> None:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawTextHelpFormatter)
     ap.add_argument("city_config", type=Path)
     ap.add_argument("--data-dir", type=Path, default=Path("data"))
+    ap.add_argument(
+        "--refetch-unknown", action="store_true", help="ask again for points cached as no data"
+    )
     args = ap.parse_args(argv)
 
     city = load_city(args.city_config)
@@ -240,7 +254,9 @@ def main(argv: list[str] | None = None) -> None:
     graph = build_graph(city, args.data_dir / "raw" / f"{city.id}.osm.pbf")
     points = {to_point(lon, lat) for lon, lat in graph.node_coords.values()}
     cache_path = args.data_dir / "raw" / f"{city.id}.elevation.bin"
-    cache = fill_cache(points, load_cache(cache_path), provider)
+    cache = fill_cache(
+        points, load_cache(cache_path), provider, refetch_unknown=args.refetch_unknown
+    )
     save_cache(cache_path, cache)
 
     known = sum(1 for p in points if cache.get(p) is not None)
