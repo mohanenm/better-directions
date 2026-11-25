@@ -1,0 +1,30 @@
+{
+  "id": "richmond",
+  "name": "Richmond",
+  "extract": {
+    "provider": "Geofabrik",
+    "url": "https://download.geofabrik.de/north-america/us/virginia-latest.osm.pbf",
+    "licence": "ODbL 1.0",
+    "attribution": "© OpenStreetMap contributors"
+  },
+  "bbox": {
+    "west": -77.52,
+    "south": 37.5,
+    "east": -77.4,
+    "north": 37.58
+  },
+  "center": {
+    "lon": -77.44,
+    "lat": 37.54
+  },
+  "default_zoom": 14,
+  "places": {
+    "square_name_prefixes": [],
+    "square_name_suffixes": [
+      " Circle",
+      " Square",
+      " Plaza"
+    ]
+  },
+  "confirmed_passages": []
+}

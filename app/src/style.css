@@ -127,6 +127,11 @@ button.secondary { background: var(--paper); color: var(--accent); border: 1px s
 .status { min-height: 1.5rem; margin: 0.75rem 0; color: var(--ink-soft); }
 .status.error { color: #9f1239; font-weight: 600; }
 
+/* --- Area picker --- */
+.area-row { display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap; margin-bottom: 0.7rem; }
+.area-row label { font-weight: 650; }
+.area-row select { font: inherit; padding: 0.4rem 0.5rem; border-radius: 8px; border: 1px solid var(--field); background: var(--paper); color: var(--ink); }
+
 /* --- Panel sections --- */
 .sections { display: grid; gap: 0.6rem; }
 .section { border: 1px solid var(--line); border-radius: var(--radius); background: var(--paper); }

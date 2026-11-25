@@ -2,13 +2,13 @@
  * Page controller. Everything runs on the device: the planner in a Web Worker, place search over
  * a local list, and location only when the user taps "Use my location".
  */
-import { CITY, cityData } from "./city";
+import { AREAS, CITY, cityData, DEFAULT_AREA, nearestArea } from "./city";
 import "./style.css";
 import { SHAPE_IDS, SHAPES, type ShapeId } from "./art/shapes";
 import { MODE_IDS, MODES, type ModeId } from "./modes/modes";
 import { CRAWL_MINUTES, MAX_STOPS, MIN_STOPS, type CrawlTheme, type WorkoutFocus } from "./modes/options";
 import { attachCombo } from "./ui/combo";
-import { FAMOUS_ROUTES } from "./ui/famous";
+import { FAMOUS } from "./ui/famous";
 import { createMap, type RouteMap } from "./ui/map";
 import type { PinAction } from "./ui/map";
 import type { ArtResultMsg, FromWorker, Pin, PlanResult, ReadyInfo, SpellResultMsg, ToWorker, TourResult } from "./ui/protocol";
@@ -45,8 +45,8 @@ function setStatus(text: string, error = false): void {
 
 // --- Worker ------------------------------------------------------------------------------------
 
-const worker = new Worker(new URL("./worker.ts", import.meta.url), { type: "module" });
-setStatus(`Loading the map of ${CITY.name} (about 3 MB the first time)…`);
+const worker = new Worker(new URL("./worker.ts", import.meta.url), { type: "module", name: CITY.id });
+setStatus(`Loading the map of ${CITY.name} (a few MB the first time)…`);
 
 worker.addEventListener("message", (event: MessageEvent<FromWorker>) => {
   const msg = event.data;
@@ -67,7 +67,8 @@ function onReady(ready: ReadyInfo): void {
   info = ready;
   document.documentElement.dataset["loadTimings"] = JSON.stringify(ready.timings);
   if (ready.dataAsOf) $("#data-date").textContent = `, data as of ${ready.dataAsOf.slice(0, 10)}`;
-  if (ready.terrainAttribution) $("#terrain-credit").textContent = ready.terrainAttribution;
+  $("#terrain-credit").textContent = ready.terrainAttribution;
+  $("#terrain-wrap").hidden = !ready.terrainAttribution;
   Object.assign(state, parseLink(window.location.search, ready.bbox));
   applyOpen();
   routeMap = createMap($("#map"), ready.bbox);
@@ -87,6 +88,46 @@ function onReady(ready: ReadyInfo): void {
   else if (state.workout && state.from) requestWorkout();
   else if (state.from && state.to) requestPlan();
 }
+
+// --- Area ----------------------------------------------------------------------------------------
+
+const areaSelect = $<HTMLSelectElement>("#area");
+areaSelect.replaceChildren(
+  ...AREAS.map((a) => {
+    const o = document.createElement("option");
+    o.value = a.id;
+    o.textContent = a.name;
+    return o;
+  }),
+);
+areaSelect.value = CITY.id;
+document.title = `Better Directions: ${CITY.name}, the long way round`;
+$("#map").setAttribute("aria-label", `Map of ${CITY.name}. Choose places with the search fields, or tap the map. Arrow keys pan, plus and minus zoom.`);
+
+/** Areas are separate downloads, so switching loads the page afresh for the new one. */
+function switchArea(id: string): void {
+  if (id === CITY.id) return;
+  window.location.search = id === DEFAULT_AREA ? "" : `?area=${id}`;
+}
+
+areaSelect.addEventListener("change", () => switchArea(areaSelect.value));
+
+$("#nearest-area").addEventListener("click", () => {
+  if (!("geolocation" in navigator)) {
+    setStatus("Your browser can't share your location.", true);
+    return;
+  }
+  setStatus("Finding the nearest area… (your location stays on this device)");
+  navigator.geolocation.getCurrentPosition(
+    (pos) => {
+      const near = nearestArea(pos.coords.longitude, pos.coords.latitude);
+      if (near.id === CITY.id) setStatus(`${CITY.name} is already the nearest area.`);
+      else switchArea(near.id);
+    },
+    () => setStatus("Couldn't get your location. Pick an area from the list instead.", true),
+    { enableHighAccuracy: false, timeout: 15000, maximumAge: 300000 },
+  );
+});
 
 // --- Panel sections ------------------------------------------------------------------------------
 
@@ -187,7 +228,8 @@ function locate(end: End): void {
       const point: [number, number] = [pos.coords.longitude, pos.coords.latitude];
       const b = info?.bbox;
       if (b && (point[0] < b.west || point[0] > b.east || point[1] < b.south || point[1] > b.north)) {
-        setStatus(`You seem to be outside ${CITY.name}. Better Directions only knows ${CITY.name} for now.`, true);
+        const near = nearestArea(point[0], point[1]);
+        setStatus(near.id === CITY.id ? `You seem to be outside ${CITY.name}.` : `You seem to be outside ${CITY.name}. ${near.name} is the nearest area; pick it above.`, true);
         return;
       }
       setEnd(end, point, "My location");
@@ -325,7 +367,9 @@ function showResult(): void {
 // --- Sharing -------------------------------------------------------------------------------------
 
 function writeLink(): void {
-  history.replaceState(null, "", `${window.location.pathname}${serializeLink(state)}`);
+  const q = serializeLink(state);
+  const withArea = CITY.id === DEFAULT_AREA ? q : `?area=${CITY.id}${q.length > 1 ? `&${q.slice(1)}` : ""}`;
+  history.replaceState(null, "", `${window.location.pathname}${withArea}`);
 }
 
 $("#share").addEventListener("click", async () => {
@@ -692,7 +736,7 @@ function onTour(result: TourResult): void {
 // --- Famous routes -------------------------------------------------------------------------------
 
 $("#famous-list").replaceChildren(
-  ...FAMOUS_ROUTES.map((f) => {
+  ...(FAMOUS[CITY.id] ?? []).map((f) => {
     const li = document.createElement("li");
     const button = document.createElement("button");
     button.type = "button";

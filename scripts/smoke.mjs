@@ -38,6 +38,8 @@ const CASES = [
     query: "?from=4.84500,45.75100&fromName=Guilloti%C3%A8re&spell=HI" },
   { name: "spell-private", width: 390, height: 844, mobile: true, spellPrivate: "ADA",
     query: "?from=4.84500,45.75100&fromName=Guilloti%C3%A8re&open=spell" },
+  { name: "dc-left-turns", width: 1280, height: 800, mobile: false,
+    query: "?area=dc&from=-77.04340,38.90960&to=-77.02970,38.90960&fromName=Dupont%20Circle&toName=Logan%20Circle&mode=no-right" },
   { name: "park-as-stop", width: 1280, height: 800, mobile: false, parkStop: true,
     query: "?from=4.85190,45.77030&to=4.83200,45.75780&fromName=T%C3%AAte%20d%27Or&toName=Place%20Bellecour&mode=trail" },
 ];

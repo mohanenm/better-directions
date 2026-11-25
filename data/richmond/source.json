@@ -1,0 +1,8 @@
+{
+  "provider": "Geofabrik",
+  "dated_url": "https://download.geofabrik.de/north-america/us/virginia/virginia-261124.osm.pbf",
+  "data_as_of": "2026-11-24T21:21:23Z",
+  "licence": "ODbL 1.0",
+  "attribution": "\u00a9 OpenStreetMap contributors",
+  "cropped_sha256": "6d9caa2656ecfb3e170f2db8c20afd83dca1d84dc2e5e98c7c09dfb4e6b76d49"
+}

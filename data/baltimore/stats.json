@@ -1,0 +1,315 @@
+{
+  "city": "baltimore",
+  "graph": {
+    "nodes": 73858,
+    "edges": 102682,
+    "ways": 43623,
+    "length_km": 2995.2,
+    "bytes": 5164268,
+    "gzip_bytes": 1350490
+  },
+  "connectivity": {
+    "nodes_before": 75090,
+    "nodes_kept": 73858,
+    "node_share": 0.9836,
+    "length_share": 0.9809
+  },
+  "terrain": {
+    "source": "none",
+    "edges_with_elevation_share": 0.0,
+    "edges_10pct_or_steeper": 0,
+    "steepest_grade_pct": 0.0,
+    "steepest_name": ""
+  },
+  "edges_by_highway": {
+    "footway": {
+      "edges": 51361,
+      "km": 1151.5
+    },
+    "service": {
+      "edges": 22639,
+      "km": 833.7
+    },
+    "residential": {
+      "edges": 14879,
+      "km": 528.3
+    },
+    "primary": {
+      "edges": 3993,
+      "km": 141.2
+    },
+    "secondary": {
+      "edges": 2403,
+      "km": 82.7
+    },
+    "tertiary": {
+      "edges": 2306,
+      "km": 80.4
+    },
+    "path": {
+      "edges": 1570,
+      "km": 57.1
+    },
+    "cycleway": {
+      "edges": 1035,
+      "km": 48.2
+    },
+    "unclassified": {
+      "edges": 814,
+      "km": 35.3
+    },
+    "pedestrian": {
+      "edges": 891,
+      "km": 22.5
+    },
+    "primary_link": {
+      "edges": 116,
+      "km": 4.4
+    },
+    "track": {
+      "edges": 62,
+      "km": 3.3
+    },
+    "steps": {
+      "edges": 500,
+      "km": 3.0
+    },
+    "secondary_link": {
+      "edges": 57,
+      "km": 1.6
+    },
+    "platform": {
+      "edges": 24,
+      "km": 0.9
+    },
+    "corridor": {
+      "edges": 12,
+      "km": 0.4
+    },
+    "tertiary_link": {
+      "edges": 13,
+      "km": 0.3
+    },
+    "living_street": {
+      "edges": 7,
+      "km": 0.2
+    }
+  },
+  "features": {
+    "building_passage": {
+      "edges": 47,
+      "km": 1.29
+    },
+    "corridor": {
+      "edges": 12,
+      "km": 0.4
+    },
+    "covered": {
+      "edges": 235,
+      "km": 3.15
+    },
+    "through_building": {
+      "edges": 70,
+      "km": 1.31
+    },
+    "under_building": {
+      "edges": 2,
+      "km": 0.14
+    },
+    "may_close": {
+      "edges": 478,
+      "km": 23.78
+    },
+    "steps": {
+      "edges": 500,
+      "km": 3.02
+    },
+    "park_path": {
+      "edges": 5021,
+      "km": 192.41
+    },
+    "unpaved": {
+      "edges": 275,
+      "km": 12.66
+    },
+    "lit": {
+      "edges": 8416,
+      "km": 130.35
+    },
+    "informal": {
+      "edges": 201,
+      "km": 3.41
+    }
+  },
+  "steps": {
+    "total_steps": 8081,
+    "estimated_edges": 250
+  },
+  "distinct": {
+    "parks_on_paths": 196,
+    "buildings_passed_through": 42,
+    "venues": {
+      "mall": 2,
+      "station": 3
+    },
+    "stops": {
+      "artwork": 260,
+      "bakery": 32,
+      "bar": 131,
+      "brewery": 9,
+      "cafe": 90,
+      "chocolate": 4,
+      "gallery": 11,
+      "ice_cream": 18,
+      "museum": 5,
+      "pastry": 6,
+      "pub": 41,
+      "wine_bar": 2,
+      "wine_shop": 1,
+      "winery": 1
+    }
+  },
+  "exclusions": {
+    "ways_by_reason": {
+      "access": 1344,
+      "construction": 24,
+      "fast_road": 106,
+      "foot": 630,
+      "highway_kind": 3,
+      "indoor_not_corridor": 19,
+      "no_foot_permission": 137,
+      "no_sidewalk": 17,
+      "railway": 9,
+      "sidewalk_separate": 1020,
+      "trail_visibility": 3,
+      "walkable": 44807
+    },
+    "segments_dropped": {
+      "military_area": 11,
+      "node:barrier_no_opening": 189,
+      "node:fast_road_unmarked_crossing": 111,
+      "node:node_access": 169,
+      "node:node_foot": 6,
+      "node:node_locked": 22,
+      "node:railway_unmapped_crossing": 252,
+      "passage_not_public": 65,
+      "railway_crossing_geometry": 30,
+      "restricted_area": 781,
+      "through_building_unmapped": 19
+    },
+    "dropped_examples": {
+      "military_area": [
+        255161517,
+        260781997,
+        260782012,
+        1080490150
+      ],
+      "node:barrier_no_opening": [
+        6013541,
+        11998023,
+        69685142,
+        71543355,
+        125721318,
+        138283373,
+        169722274,
+        185999152
+      ],
+      "node:fast_road_unmarked_crossing": [
+        5993419,
+        6002766,
+        6003933,
+        6004389,
+        6006014,
+        6009846,
+        6013171,
+        6019011
+      ],
+      "node:node_access": [
+        5992366,
+        5993462,
+        5996932,
+        6001667,
+        6013458,
+        6021399,
+        24775060,
+        70990384
+      ],
+      "node:node_foot": [
+        6022198,
+        127070308,
+        301559753,
+        336935517,
+        521111791,
+        1054681243
+      ],
+      "node:node_locked": [
+        1063788204,
+        1195352605,
+        1462708282,
+        1462708283,
+        1462708284,
+        1462708285,
+        1473919608,
+        1473919609
+      ],
+      "node:railway_unmapped_crossing": [
+        5993536,
+        5994063,
+        5994481,
+        6002914,
+        6005190,
+        6005515,
+        6007052,
+        6012323
+      ],
+      "passage_not_public": [
+        71543361,
+        107438748,
+        237172883,
+        242167753,
+        242167769,
+        421695650,
+        421695652,
+        437369975
+      ],
+      "railway_crossing_geometry": [
+        95911556,
+        99251708,
+        115239644,
+        208173124,
+        255161470,
+        255250417,
+        255250437,
+        452160429
+      ],
+      "restricted_area": [
+        5992199,
+        5992366,
+        5993487,
+        5993711,
+        6001376,
+        6001377,
+        6002000,
+        6012776
+      ],
+      "through_building_unmapped": [
+        543989569,
+        543991871,
+        800947729,
+        800947730,
+        800947736,
+        800947737,
+        819475919,
+        837428184
+      ]
+    },
+    "nodes_excluded": {
+      "barrier_no_opening": 129,
+      "fast_road_unmarked_crossing": 56,
+      "node_access": 109,
+      "node_foot": 6,
+      "node_locked": 13,
+      "railway_unmapped_crossing": 145
+    }
+  }
+}

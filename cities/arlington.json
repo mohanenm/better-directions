@@ -1,0 +1,30 @@
+{
+  "id": "arlington",
+  "name": "Arlington and Alexandria",
+  "extract": {
+    "provider": "Geofabrik",
+    "url": "https://download.geofabrik.de/north-america/us/virginia-latest.osm.pbf",
+    "licence": "ODbL 1.0",
+    "attribution": "© OpenStreetMap contributors"
+  },
+  "bbox": {
+    "west": -77.172,
+    "south": 38.785,
+    "east": -77.035,
+    "north": 38.935
+  },
+  "center": {
+    "lon": -77.09,
+    "lat": 38.87
+  },
+  "default_zoom": 13,
+  "places": {
+    "square_name_prefixes": [],
+    "square_name_suffixes": [
+      " Circle",
+      " Square",
+      " Plaza"
+    ]
+  },
+  "confirmed_passages": []
+}

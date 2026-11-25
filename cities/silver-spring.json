@@ -1,0 +1,30 @@
+{
+  "id": "silver-spring",
+  "name": "Silver Spring and Bethesda",
+  "extract": {
+    "provider": "Geofabrik",
+    "url": "https://download.geofabrik.de/north-america/us/maryland-latest.osm.pbf",
+    "licence": "ODbL 1.0",
+    "attribution": "© OpenStreetMap contributors"
+  },
+  "bbox": {
+    "west": -77.135,
+    "south": 38.965,
+    "east": -76.985,
+    "north": 39.025
+  },
+  "center": {
+    "lon": -77.06,
+    "lat": 38.99
+  },
+  "default_zoom": 14,
+  "places": {
+    "square_name_prefixes": [],
+    "square_name_suffixes": [
+      " Circle",
+      " Square",
+      " Plaza"
+    ]
+  },
+  "confirmed_passages": []
+}

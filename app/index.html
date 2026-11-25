@@ -6,7 +6,7 @@
     <meta name="referrer" content="no-referrer">
     <meta name="color-scheme" content="light">
     <title>Better Directions: the long way round, on purpose</title>
-    <meta name="description" content="A walking router for Lyon that takes the long way round on purpose: up the staircases, through the traboules, across the parks. For fun.">
+    <meta name="description" content="A walking router that takes the long way round on purpose: up the staircases, through the passages, across the parks. Lyon, Washington DC, Virginia and Maryland. For fun.">
     <link rel="icon" href="/favicon.svg" type="image/svg+xml">
     <script type="module" src="/src/main.ts"></script>
   </head>
@@ -19,9 +19,14 @@
     </header>
 
     <main class="layout">
-      <div id="map" class="map" role="region" aria-label="Map of Lyon. Choose places with the search fields, or tap the map. Arrow keys pan, plus and minus zoom." tabindex="0"></div>
+      <div id="map" class="map" role="region" aria-label="Map. Choose places with the search fields, or tap the map. Arrow keys pan, plus and minus zoom." tabindex="0"></div>
 
       <section id="panel" class="panel" aria-label="Route planner">
+        <div class="area-row">
+          <label for="area">Area</label>
+          <select id="area"></select>
+          <button type="button" class="link-button" id="nearest-area">Nearest to me</button>
+        </div>
         <div class="sections">
           <section class="section" data-section="plan">
             <h2 class="section-head">
@@ -35,7 +40,7 @@
                 <div class="endpoint" data-end="from">
                   <label for="from-input">From</label>
                   <div class="combo">
-                    <input id="from-input" type="text" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="from-list" autocomplete="off" placeholder="Search Lyon, or tap the map" spellcheck="false">
+                    <input id="from-input" type="text" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="from-list" autocomplete="off" placeholder="Search places, or tap the map" spellcheck="false">
                     <ul id="from-list" class="options" role="listbox" aria-label="Matching places" hidden></ul>
                   </div>
                   <div class="endpoint-actions">
@@ -47,7 +52,7 @@
                 <div class="endpoint" data-end="to">
                   <label for="to-input">To</label>
                   <div class="combo">
-                    <input id="to-input" type="text" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="to-list" autocomplete="off" placeholder="Search Lyon, or tap the map" spellcheck="false">
+                    <input id="to-input" type="text" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="to-list" autocomplete="off" placeholder="Search places, or tap the map" spellcheck="false">
                     <ul id="to-list" class="options" role="listbox" aria-label="Matching places" hidden></ul>
                   </div>
                   <div class="endpoint-actions">
@@ -240,7 +245,7 @@
       <p>
         Map data © <a href="https://www.openstreetmap.org/copyright" rel="noopener noreferrer" target="_blank">OpenStreetMap contributors</a> (ODbL)<span id="data-date"></span>
         · Basemap by <a href="https://protomaps.com" rel="noopener noreferrer" target="_blank">Protomaps</a>
-        · <span id="terrain-credit">Elevation: IGN RGE ALTI®</span>
+        <span id="terrain-wrap" hidden>· <span id="terrain-credit"></span></span>
         · <a href="licenses.txt">Licences</a>
       </p>
       <p>No cookies, no tracking. Routes are planned on your device.</p>

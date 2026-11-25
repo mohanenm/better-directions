@@ -58,9 +58,9 @@ export function createMap(container: HTMLElement, bbox: Bbox): RouteMap {
       sources: {
         protomaps: {
           type: "vector",
-          tiles: [`${base}tiles/{z}/{x}/{y}.mvt`],
+          tiles: [`${base}tiles/${CITY.id}/{z}/{x}/{y}.mvt`],
           minzoom: 0,
-          maxzoom: 15,
+          maxzoom: CITY.maxTileZoom,
           bounds: [bbox.west, bbox.south, bbox.east, bbox.north],
         },
       },
