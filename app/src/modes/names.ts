@@ -70,6 +70,10 @@ export function routeName(fi: FeatureIndex, mode: ModeId, stats: CostOfFun, rout
       return stats.rightTurns === 0
         ? pick(["Left, Left, Left", "The Sinister Route", "No Rights Reserved"])
         : pick(["Mostly Left", "Nearly Sinister"]);
+    case "inconvenient": {
+      const turns = stats.leftTurns + stats.rightTurns + stats.uTurns;
+      return pick([`${turns} Turns Later`, "Every Which Way", "Zig, Then Zag", "The Long Way Round"]);
+    }
     case "chaos":
       return pick([`Seed ${seed}`, `Detour #${seed}`, "The Scenic Route. Very Scenic.", "The Long Way, Randomly"]);
   }

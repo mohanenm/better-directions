@@ -28,6 +28,12 @@ export function statItems(r: PlanResult): [string, string][] {
   if (b.trailShare >= 0.05) items.push(["On trails", `${Math.round(b.trailShare * 100)}%`]);
   if (b.parks) items.push(["Parks", String(b.parks)]);
   if (r.mode === "no-right") items.push(["Turns", `${b.leftTurns} left, ${b.rightTurns} right`]);
+  if (r.mode === "inconvenient") {
+    items.push(["Turns", String(b.leftTurns + b.rightTurns + b.uTurns)]);
+    items.push(["Up and down", `${Math.round(b.climbM)} m up, ${Math.round(b.descentM)} m down`]);
+    items.push(["Could have gone straight", `${b.straightSkips} times`]);
+    items.push(["Busy roads crossed", `${b.busyCrossings} (normal: ${n.busyCrossings})`]);
+  }
   return items;
 }
 

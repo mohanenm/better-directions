@@ -49,7 +49,16 @@ export interface CostOfFun {
   snacks: Record<"bakery" | "pastry" | "chocolate" | "ice_cream" | "cafe", number>;
   snackNames: string[];
   mayClose: ClosureNote[];
+  /** Turns taken at junctions where carrying straight on was possible. */
+  straightSkips: number;
+  /** Times the route crosses a primary, secondary, tertiary or trunk road. */
+  busyCrossings: number;
+  /** Metres on ways tagged lit=no. */
+  unlitM: number;
 }
+
+/** Within this many degrees of straight ahead counts as "you could have gone straight". */
+export const STRAIGHT_DEG = 20;
 
 export function costOfFun(fi: FeatureIndex, route: Route): CostOfFun {
   const g = fi.g;
@@ -60,6 +69,7 @@ export function costOfFun(fi: FeatureIndex, route: Route): CostOfFun {
     underBuildings: 0, malls: 0, stations: 0, trailM: 0, trailShare: 0, trails: 0, parks: 0,
     parkNames: [], parkM: 0, leftTurns: 0, rightTurns: 0, uTurns: 0, retracedM: 0, mayClose: [],
     snacks: { bakery: 0, pastry: 0, chocolate: 0, ice_cream: 0, cafe: 0 }, snackNames: [],
+    straightSkips: 0, busyCrossings: 0, unlitM: 0,
   };
   const staircases = new Set<number>();
   const buildings = new Map<number, string>();
@@ -131,14 +141,18 @@ export function costOfFun(fi: FeatureIndex, route: Route): CostOfFun {
       if (!closures.has(key)) closures.set(key, { name, openingHours: hours });
     }
 
+    if (fi.lit[e] === 2) stats.unlitM += len;
     if (i > 0) {
       const node = g.tail(d);
+      const prev = route.dirEdges[i - 1]!;
       if (fi.degree[node]! >= 3) {
-        const angle = turnAngleDeg(g, route.dirEdges[i - 1]!, d);
+        const angle = turnAngleDeg(g, prev, d);
         if (Math.abs(angle) > U_TURN_DEG) stats.uTurns++;
         else if (angle > TURN_DEG) stats.rightTurns++;
         else if (angle < -TURN_DEG) stats.leftTurns++;
+        if (Math.abs(angle) > TURN_DEG && canGoStraight(g, prev, node)) stats.straightSkips++;
       }
+      if (fi.busyNode[node] && !fi.isBusy[prev >>> 1] && !fi.isBusy[e]) stats.busyCrossings++;
     }
   });
 
@@ -155,6 +169,16 @@ export function costOfFun(fi: FeatureIndex, route: Route): CostOfFun {
   stats.trailShare = route.lengthM > 0 ? stats.trailM / route.lengthM : 0;
   stats.mayClose = [...closures.values()];
   return stats;
+}
+
+/** Whether some allowed edge leaves `node` within STRAIGHT_DEG of the heading along `prev`. */
+function canGoStraight(g: FeatureIndex["g"], prev: number, node: number): boolean {
+  for (let i = g.outStart[node]!; i < g.outStart[node + 1]!; i++) {
+    const out = g.outDirEdge[i]!;
+    if (out >>> 1 === prev >>> 1) continue;
+    if (Math.abs(turnAngleDeg(g, prev, out)) <= STRAIGHT_DEG) return true;
+  }
+  return false;
 }
 
 export function minutes(seconds: number): number {
@@ -191,4 +215,12 @@ export function snackSummary(stats: CostOfFun): string[] {
   return (Object.keys(SNACK_WORDS) as (keyof CostOfFun["snacks"])[])
     .filter((k) => stats.snacks[k] > 0)
     .map((k) => `${stats.snacks[k]} ${SNACK_WORDS[k][stats.snacks[k] === 1 ? 0 : 1]}`);
+}
+
+/** "48 turns, 31 m up and 29 m down, could have gone straight 12 times" */
+export function inconvenienceSummary(stats: CostOfFun): string[] {
+  const out = [plural(stats.leftTurns + stats.rightTurns + stats.uTurns, "turn")];
+  if (stats.climbM >= 5 || stats.descentM >= 5) out.push(`${Math.round(stats.climbM)} m up and ${Math.round(stats.descentM)} m down`);
+  if (stats.straightSkips) out.push(`could have gone straight ${plural(stats.straightSkips, "time")}`);
+  return out;
 }

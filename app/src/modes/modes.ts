@@ -11,9 +11,9 @@ import { turnAngleDeg } from "../router/geometry";
 import { hashUnit } from "../router/rng";
 import type { FeatureIndex } from "./features";
 import type { CostOfFun } from "./stats";
-import { TURN_DEG, U_TURN_DEG } from "./stats";
+import { STRAIGHT_DEG, TURN_DEG, U_TURN_DEG } from "./stats";
 
-export type ModeId = "buildings" | "trail" | "stairs" | "parks" | "snacks" | "no-right" | "chaos";
+export type ModeId = "buildings" | "trail" | "stairs" | "parks" | "snacks" | "no-right" | "inconvenient" | "chaos";
 
 /** A feature worth a detour: walk to the start of `path`, along it, and on from its end. */
 export interface Collectible {
@@ -211,6 +211,46 @@ const noRight: Mode = {
   score: (s) => -s.rightTurns * 100 - s.uTurns * 100 + s.leftTurns,
 };
 
+// --- Most inconvenient --------------------------------------------------------------------------
+
+/** Cost per busy-road crossing; the planner raises it if the route still crosses more than normal. */
+export const CROSSING_PENALTIES_S = [900, 4000, 20000] as const;
+const INCONVENIENT_MIN = 0.35;
+
+/** Cheap: turning at junctions, climbing or descending. Dear: going straight, crossing busy roads. */
+export function inconvenientModel(fi: FeatureIndex, crossingPenaltyS: number): CostModel {
+  return {
+    id: `inconvenient-${crossingPenaltyS}`,
+    turnAware: true,
+    minCostPerSecond: INCONVENIENT_MIN,
+    edgeCost: (g, d, t, prev) => {
+      const e = d >>> 1;
+      let factor = 1;
+      let extra = 0;
+      const climb = g.climb(e, (d & 1) === 0);
+      if (climb && climb[0] + climb[1] >= 2) factor *= 0.45;
+      if (prev >= 0) {
+        const node = g.tail(d);
+        if (fi.degree[node]! >= 3) {
+          const angle = Math.abs(turnAngleDeg(g, prev, d));
+          if (angle > TURN_DEG && angle <= U_TURN_DEG) factor *= 0.45;
+          else if (angle <= STRAIGHT_DEG) extra += 45;
+        }
+        if (fi.busyNode[node] && !fi.isBusy[prev >>> 1] && !fi.isBusy[e]) extra += crossingPenaltyS;
+      }
+      return t * Math.max(INCONVENIENT_MIN, factor) + extra;
+    },
+  };
+}
+
+const inconvenient: Mode = {
+  id: "inconvenient",
+  name: "Most inconvenient",
+  tagline: "Zig-zags, needless hills, nothing straight. No extra busy-road crossings.",
+  cost: (fi) => inconvenientModel(fi, CROSSING_PENALTIES_S[0]),
+  score: (s) => s.leftTurns + s.rightTurns + 2 * s.straightSkips + (s.climbM + s.descentM) / 5 - 50 * s.busyCrossings,
+};
+
 // --- Random -------------------------------------------------------------------------------------
 
 const CHAOS_MIN = 0.25;
@@ -278,6 +318,7 @@ export const MODES: Readonly<Record<ModeId, Mode>> = Object.freeze({
   parks,
   snacks,
   "no-right": noRight,
+  inconvenient,
   chaos,
 });
 

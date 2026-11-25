@@ -32,12 +32,17 @@ export function blended(model: CostModel, lambda: number): CostModel {
   };
 }
 
-export function plan(router: Router, start: number, goal: number, model: CostModel): Plan | null {
+/**
+ * `capSeconds` may only tighten the cap (a leg of a longer trip gets its share of the trip's cap);
+ * it can never loosen it below the normal route's time or above the detour cap.
+ */
+export function plan(router: Router, start: number, goal: number, model: CostModel, capSeconds?: number): Plan | null {
   const g = router.g;
   const normal = router.route(start, goal, NORMAL);
   if (!normal) return null;
   assertRouteSafe(g, normal);
-  const capSeconds = detourCapSeconds(normal.timeS);
+  const natural = detourCapSeconds(normal.timeS);
+  capSeconds = capSeconds === undefined ? natural : Math.max(normal.timeS, Math.min(natural, capSeconds));
 
   const attempts: [number, CostModel][] = [[0, model], ...BLENDS.map((l): [number, CostModel] => [l, blended(model, l)])];
   for (const [lambda, m] of attempts) {

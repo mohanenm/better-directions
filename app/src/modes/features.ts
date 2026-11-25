@@ -2,7 +2,7 @@
  * Per-graph feature index, built once: what's a trail, where the staircases, parks and passages
  * are, and a good waypoint for visiting each. Modes and the cost-of-fun stats both read it.
  */
-import type { Poi } from "../graph/format";
+import type { CrawlKind, SnackKind } from "../graph/format";
 import type { Graph } from "../graph/graph";
 
 const UNPAVED = new Set([
@@ -68,9 +68,31 @@ export interface TrailStretch {
   path: number[];
 }
 
+export const SNACK_KINDS: ReadonlySet<string> = new Set(["bakery", "pastry", "chocolate", "ice_cream", "cafe"]);
+
+export type CrawlTheme = "art" | "pub" | "wine";
+export const CRAWL_THEME_OF: Readonly<Record<CrawlKind, CrawlTheme>> = {
+  artwork: "art", gallery: "art", museum: "art",
+  pub: "pub", bar: "pub", brewery: "pub",
+  wine_bar: "wine", winery: "wine", wine_shop: "wine",
+};
+
+/** Roads where crossing means stepping into real traffic. */
+const BUSY_ROADS = new Set(["primary", "primary_link", "secondary", "secondary_link", "tertiary", "tertiary_link", "trunk", "trunk_link"]);
+
+export interface CrawlStop {
+  index: number;
+  kind: CrawlKind;
+  theme: CrawlTheme;
+  name: string;
+  edge: number;
+  dirEdge: number;
+  openingHours: string;
+}
+
 export interface SnackStop {
   index: number;
-  kind: Poi["kind"];
+  kind: SnackKind;
   name: string;
   edge: number;
   /** An allowed direction of the shop's street, as a directed edge: the waypoint. */
@@ -92,6 +114,13 @@ export class FeatureIndex {
   readonly passages: PassageInfo[] = [];
   readonly trails: TrailStretch[] = [];
   readonly snacks: SnackStop[] = [];
+  readonly crawlStops: CrawlStop[] = [];
+  /** 1 on primary, secondary, tertiary and trunk roads (and links). */
+  readonly isBusy: Uint8Array;
+  /** 1 where a node touches a busy road. */
+  readonly busyNode: Uint8Array;
+  /** Street lighting from the lit tag: 1 lit, 2 explicitly unlit, 0 unknown. */
+  readonly lit: Uint8Array;
   /** Edge -> snack stops on it. */
   readonly snacksOnEdge = new Map<number, number[]>();
 
@@ -102,6 +131,9 @@ export class FeatureIndex {
     this.degree = new Uint8Array(g.nodeCount);
     this.midLon = new Float32Array(E);
     this.midLat = new Float32Array(E);
+    this.isBusy = new Uint8Array(E);
+    this.busyNode = new Uint8Array(g.nodeCount);
+    this.lit = new Uint8Array(E);
     const bits = g.meta.flags.edge;
 
     const stairEdges = new Map<number, number[]>();
@@ -128,6 +160,14 @@ export class FeatureIndex {
         push(trailEdges, way, e);
       }
       if (isPavedRoadTags(tags)) this.isPavedRoad[e] = 1;
+      if (BUSY_ROADS.has(tags["highway"] ?? "")) {
+        this.isBusy[e] = 1;
+        this.busyNode[u] = 1;
+        this.busyNode[v] = 1;
+      }
+      const litTag = tags["lit"];
+      if (litTag === "no" || litTag === "disused") this.lit[e] = 2;
+      else if (litTag !== undefined) this.lit[e] = 1;
       if (g.s.edge_steps[e]! > 0) push(stairEdges, way, e);
       const park = g.s.edge_park[e]!;
       if (park) push(parkEdges, park, e);
@@ -188,10 +228,16 @@ export class FeatureIndex {
     for (const poi of g.meta.pois ?? []) {
       const allowed = g.allowedDirs[poi.edge];
       if (!allowed) continue; // the audit disabled its street
-      const index = this.snacks.length;
       const dirEdge = allowed & 1 ? poi.edge * 2 : poi.edge * 2 + 1;
-      this.snacks.push({ index, kind: poi.kind, name: poi.name, edge: poi.edge, dirEdge, openingHours: poi.opening_hours ?? "" });
-      push(this.snacksOnEdge, poi.edge, index);
+      const openingHours = poi.opening_hours ?? "";
+      if (SNACK_KINDS.has(poi.kind)) {
+        const index = this.snacks.length;
+        this.snacks.push({ index, kind: poi.kind as SnackKind, name: poi.name, edge: poi.edge, dirEdge, openingHours });
+        push(this.snacksOnEdge, poi.edge, index);
+      } else if (poi.kind in CRAWL_THEME_OF) {
+        const kind = poi.kind as CrawlKind;
+        this.crawlStops.push({ index: this.crawlStops.length, kind, theme: CRAWL_THEME_OF[kind], name: poi.name, edge: poi.edge, dirEdge, openingHours });
+      }
     }
 
     for (const [way, edges] of trailEdges) {

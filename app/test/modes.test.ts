@@ -125,6 +125,16 @@ describe("each mode is recognisably itself on Lyon sample trips", () => {
     }
   });
 
+  it("most inconvenient: many more turns, no extra busy-road crossings", () => {
+    for (const p of plans("inconvenient")) {
+      const turns = (x: typeof p.betterStats) => x.leftTurns + x.rightTurns + x.uTurns;
+      console.log(`inconvenient: ${p.summary} crossings ${p.betterStats.busyCrossings}/${p.normalStats.busyCrossings}`);
+      expect(p.betterStats.busyCrossings).toBeLessThanOrEqual(p.normalStats.busyCrossings);
+      expect(turns(p.betterStats)).toBeGreaterThanOrEqual(2 * turns(p.normalStats));
+      expect(p.betterStats.straightSkips).toBeGreaterThanOrEqual(5);
+    }
+  });
+
   it("random: a real detour that changes with the seed and only with the seed", () => {
     const [s, t] = trips[1]!;
     const routes = [1, 2, 3, 4, 5].map((seed) => planMode(router, fi, s, t, "chaos", seed)!);
@@ -144,6 +154,6 @@ describe("each mode is recognisably itself on Lyon sample trips", () => {
         expect(second[i]!.better.dirEdges).toEqual(p.better.dirEdges);
       });
     }
-    expect(Object.keys(MODES)).toHaveLength(7);
+    expect(Object.keys(MODES)).toHaveLength(8);
   });
 });

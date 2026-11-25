@@ -85,6 +85,10 @@ const QUIPS: Record<ModeId | "normal" | "art", { start: string[]; arrive: string
     start: ["Left turns only. This was your idea.", "Right turns are off the table."],
     arrive: ["Arrived, mostly by turning left.", "Three lefts made several rights."],
   },
+  inconvenient: {
+    start: ["Straight lines are for other people.", "This will take a while. That's the point."],
+    arrive: ["You made it, eventually.", "Arrived. That was annoying on purpose."],
+  },
   chaos: {
     start: ["The seed decided this. Take it up with the seed.", "Not the quickest way. Not even close."],
     arrive: ["Arrived. Another seed, another way.", "You got here. The seed is satisfied."],

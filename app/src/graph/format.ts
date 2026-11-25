@@ -14,8 +14,11 @@ export interface AreaRef {
   building?: string;
 }
 
+export type SnackKind = "bakery" | "pastry" | "chocolate" | "ice_cream" | "cafe";
+export type CrawlKind = "artwork" | "gallery" | "museum" | "pub" | "bar" | "brewery" | "wine_bar" | "winery" | "wine_shop";
+
 export interface Poi {
-  kind: "bakery" | "pastry" | "chocolate" | "ice_cream" | "cafe";
+  kind: SnackKind | CrawlKind;
   name: string;
   /** The edge (street) the shop is on. */
   edge: number;
