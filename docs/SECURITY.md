@@ -8,7 +8,7 @@ The page makes no requests to other hosts. Scripts, styles, tiles, fonts, sprite
 
 There are no cookies, no local storage and no analytics. The smoke test checks that `document.cookie`, `localStorage` and `sessionStorage` are still empty after planning a route.
 
-Location is read only when you tap "Use my location". The fix stays on the device, and it's snapped to the nearest path before it goes into a link. Shared links and images do contain the start and end points, and the page says so next to the share buttons.
+Location is read only when you tap "My location" or "Nearest to me". The fix stays on the device, and it's snapped to the nearest path before it goes into a link. Shared links and images do contain the start and end points, and the page says so next to the share buttons.
 
 ## Content-Security-Policy
 

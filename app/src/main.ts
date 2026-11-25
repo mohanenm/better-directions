@@ -1,6 +1,6 @@
 /**
  * Page controller. Everything runs on the device: the planner in a Web Worker, place search over
- * a local list, and location only when the user taps "Use my location".
+ * a local list, and location only when the user taps "My location" or "Nearest to me".
  */
 import { AREAS, CITY, cityData, DEFAULT_AREA, nearestArea } from "./city";
 import "./style.css";
@@ -14,6 +14,7 @@ import type { PinAction } from "./ui/map";
 import type { ArtResultMsg, FromWorker, Pin, PlanResult, ReadyInfo, SpellResultMsg, ToWorker, TourResult } from "./ui/protocol";
 import { artCard, planCard, renderArt, renderResult, renderSpell, renderTour, spellCard, tourCard } from "./ui/render";
 import { renderShareImage, type ShareCard } from "./ui/share-image";
+import { initThemeToggle } from "./ui/theme";
 import type { Place } from "./ui/search";
 import { DEFAULT_OPEN, MAX_LINK_STOPS, parseLink, SECTION_IDS, serializeLink, type LinkState, type SectionId } from "./ui/url";
 
@@ -128,6 +129,24 @@ $("#nearest-area").addEventListener("click", () => {
     { enableHighAccuracy: false, timeout: 15000, maximumAge: 300000 },
   );
 });
+
+// --- Theme and phone layout ----------------------------------------------------------------------
+
+initThemeToggle($<HTMLButtonElement>("#theme-toggle"));
+
+/** On phones the panel is a bottom sheet; its handle switches it between half and full height. */
+const sheetToggle = $<HTMLButtonElement>("#sheet-toggle");
+function setSheetFull(full: boolean): void {
+  document.body.classList.toggle("sheet-full", full);
+  sheetToggle.setAttribute("aria-expanded", String(full));
+}
+sheetToggle.addEventListener("click", () => setSheetFull(!document.body.classList.contains("sheet-full")));
+
+/** Draw routes, first lowering a full-height sheet so they can be seen. */
+function drawRoutes(...args: Parameters<RouteMap["setRoutes"]>): void {
+  setSheetFull(false);
+  routeMap?.setRoutes(...args);
+}
 
 // --- Panel sections ------------------------------------------------------------------------------
 
@@ -343,7 +362,7 @@ function onPlan(result: PlanResult): void {
   routeMap?.setMarker("from", result.from);
   routeMap?.setMarker("to", result.to);
   writeLink();
-  routeMap?.setRoutes(result.normal, result.better);
+  drawRoutes(result.normal, result.better);
   routeMap?.setPins(result.pins, parkActions);
   renderResult(result, (at) => routeMap?.flyTo(at));
   clearShareImage();
@@ -403,7 +422,7 @@ $("#make-image").addEventListener("click", async () => {
   clearShareImage();
   setStatus("Drawing your share image…");
   try {
-    shareBlob = await renderShareImage(routeMap.map, lastCard);
+    shareBlob = await renderShareImage(routeMap.map, lastCard, routeMap.visibleBox());
     shareUrl = URL.createObjectURL(shareBlob);
     $<HTMLImageElement>("#share-preview").src = shareUrl;
     $<HTMLAnchorElement>("#share-image-download").href = shareUrl;
@@ -474,7 +493,7 @@ function onArt(result: ArtResultMsg): void {
   const end = result.line.at(-1)!;
   routeMap?.setMarker("to", SHAPES[result.shape].closed ? null : end);
   writeLink();
-  routeMap?.setRoutes(result.template, result.line);
+  drawRoutes(result.template, result.line);
   routeMap?.setPins([], () => []);
   renderArt(result, (at) => routeMap?.flyTo(at));
   clearShareImage();
@@ -540,7 +559,7 @@ function onSpell(result: SpellResultMsg): void {
   routeMap?.setMarker("to", result.end);
   writeLink();
   setShareable(state.spellInLink);
-  routeMap?.setRoutes(result.template, result.strokeLines, result.penUpLines);
+  drawRoutes(result.template, result.strokeLines, result.penUpLines);
   routeMap?.setPins([], () => []);
   renderSpell(result, (at) => routeMap?.flyTo(at));
   clearShareImage();
@@ -725,7 +744,7 @@ function onTour(result: TourResult): void {
   const loops = result.end[0] === result.start[0] && result.end[1] === result.start[1];
   routeMap?.setMarker("to", loops ? null : result.end);
   writeLink();
-  routeMap?.setRoutes([], result.line);
+  drawRoutes([], result.line);
   routeMap?.setPins(result.pins, stopActions);
   renderTour(result, (at) => routeMap?.flyTo(at));
   clearShareImage();

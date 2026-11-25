@@ -5,6 +5,7 @@
  */
 import type { Map as MapLibreMap } from "maplibre-gl";
 import { colour } from "./colours";
+import type { Box } from "./map";
 /** What the share image shows: works for routes and for GPS art. */
 export interface ShareCard {
   name: string;
@@ -20,23 +21,26 @@ export const SHARE_H = 1350;
 const MAP_H = 820;
 const FONT = 'system-ui, -apple-system, "Segoe UI", Roboto, sans-serif';
 
-/** Copy the map's WebGL canvas during a render (the buffer is valid only then), plus markers. */
-function snapshotMap(map: MapLibreMap, ctx: CanvasRenderingContext2D, r: ShareCard): Promise<boolean> {
+/**
+ * Copy the visible part of the map's WebGL canvas (the panel may cover the rest) during a render,
+ * when the buffer is valid, plus the markers.
+ */
+function snapshotMap(map: MapLibreMap, ctx: CanvasRenderingContext2D, r: ShareCard, box: Box): Promise<boolean> {
   return new Promise((resolve) => {
     const timer = setTimeout(() => resolve(false), 3000);
     map.once("render", () => {
       clearTimeout(timer);
       const src = map.getCanvas();
+      const dpr = src.width / src.clientWidth || 1;
       const target = SHARE_W / MAP_H;
-      let sw = src.width;
-      let sh = src.height;
+      let sw = box.width * dpr;
+      let sh = box.height * dpr;
       if (sw / sh > target) sw = sh * target;
       else sh = sw / target;
-      const sx = (src.width - sw) / 2;
-      const sy = (src.height - sh) / 2;
+      const sx = (box.x + box.width / 2) * dpr - sw / 2;
+      const sy = (box.y + box.height / 2) * dpr - sh / 2;
       ctx.drawImage(src, sx, sy, sw, sh, 0, 0, SHARE_W, MAP_H);
-      // The A/B markers are HTML on the page, so draw them onto the image too.
-      const dpr = src.width / src.clientWidth || 1;
+      // The A/B markers are HTML on the page, so draw them onto the image too, white-ringed as there.
       const scale = SHARE_W / sw;
       for (const [point, label, fill] of [[r.from, "A", colour("marker-from")], [r.to, "B", colour("marker-to")]] as const) {
         const px = map.project(point);
@@ -47,9 +51,9 @@ function snapshotMap(map: MapLibreMap, ctx: CanvasRenderingContext2D, r: ShareCa
         ctx.fillStyle = fill;
         ctx.fill();
         ctx.lineWidth = 6;
-        ctx.strokeStyle = colour("paper");
+        ctx.strokeStyle = "#ffffff";
         ctx.stroke();
-        ctx.fillStyle = colour("paper");
+        ctx.fillStyle = "#ffffff";
         ctx.font = `800 28px ${FONT}`;
         ctx.textAlign = "center";
         ctx.textBaseline = "middle";
@@ -77,7 +81,7 @@ function wrap(ctx: CanvasRenderingContext2D, text: string, maxWidth: number): st
   return lines;
 }
 
-export async function renderShareImage(map: MapLibreMap, r: ShareCard): Promise<Blob> {
+export async function renderShareImage(map: MapLibreMap, r: ShareCard, box: Box): Promise<Blob> {
   const canvas = document.createElement("canvas");
   canvas.width = SHARE_W;
   canvas.height = SHARE_H;
@@ -87,7 +91,7 @@ export async function renderShareImage(map: MapLibreMap, r: ShareCard): Promise<
   // Render the map sharper just for the snapshot, then put it back.
   const previousRatio = map.getPixelRatio();
   map.setPixelRatio(Math.min(3, Math.max(previousRatio, SHARE_W / map.getCanvas().clientWidth)));
-  const captured = await snapshotMap(map, ctx, r);
+  const captured = await snapshotMap(map, ctx, r, box);
   map.setPixelRatio(previousRatio);
   if (!captured) {
     ctx.fillStyle = colour("wash");

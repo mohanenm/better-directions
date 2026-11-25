@@ -1,6 +1,8 @@
 /**
  * The map: MapLibre with the self-hosted Protomaps basemap (tiles, fonts and sprites all served
- * by this site), plus the two routes and the start/end markers.
+ * by this site), in the light or dark flavour to match the page, plus the two routes and the
+ * start/end markers. The panel floats over the map, so routes are fitted into the part of the
+ * map it leaves visible.
  */
 import { CITY } from "../city";
 import { layers, namedFlavor } from "@protomaps/basemaps";
@@ -14,9 +16,11 @@ import {
   type LngLatBoundsLike,
   type MapMouseEvent,
   Popup,
+  type StyleSpecification,
 } from "maplibre-gl";
 import maplibreWorkerUrl from "maplibre-gl/dist/maplibre-gl-worker.mjs?url";
 import { colour } from "./colours";
+import { currentTheme, onThemeChange, type Theme } from "./theme";
 import type { Pin } from "./protocol";
 import type { Bbox } from "./url";
 
@@ -31,6 +35,14 @@ export interface PinAction {
   run: () => void;
 }
 
+/** The part of the map not covered by the panel, in CSS pixels from the map's top left. */
+export interface Box {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
 export interface RouteMap {
   map: MapLibreMap;
   /** The normal (dashed) and better (solid) lines; each may be several lines. Pen-up walks are dotted. */
@@ -39,34 +51,58 @@ export interface RouteMap {
   setMarker(end: "from" | "to", point: [number, number] | null): void;
   /** Pins with a popup each; `actions` lists the buttons to offer for a pin. */
   setPins(pins: Pin[], actions: (pin: Pin) => PinAction[]): void;
+  /** The centre of the visible part of the map. */
   centre(): [number, number];
+  visibleBox(): Box;
   flyTo(point: [number, number]): void;
   onTap(handler: (point: [number, number]) => void): void;
 }
 
 const reducedMotion = () => window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
+/** Our own layers, drawn over the basemap, with the palette colour each one takes. */
+const ROUTE_LAYERS: Record<string, [string, string]> = {
+  "normal-line": ["line-color", "route-normal"],
+  "penup-line": ["line-color", "route-better"],
+  "better-casing": ["line-color", "route-casing"],
+  "better-line": ["line-color", "route-better"],
+};
+const ROUTE_SOURCES = ["normal", "better", "penup"];
+
+/** How much of the map the floating panel and header cover on each side. */
+function coveredInsets(container: HTMLElement): { top: number; right: number; bottom: number; left: number } {
+  const map = container.getBoundingClientRect();
+  const insets = { top: 0, right: 0, bottom: 0, left: 0 };
+  const panel = document.getElementById("panel")?.getBoundingClientRect();
+  if (!panel || !panel.width) return insets;
+  if (panel.width < map.width * 0.6) insets.left = Math.max(0, panel.right - map.left); // floating card on the left
+  else insets.bottom = Math.max(0, map.bottom - panel.top); // bottom sheet
+  return insets;
+}
+
 export function createMap(container: HTMLElement, bbox: Bbox): RouteMap {
   // Absolute URLs under the site's base path (works at /better-directions/ or anywhere else).
   const base = new URL(import.meta.env.BASE_URL, window.location.href).href;
+  const basemap = (theme: Theme): StyleSpecification => ({
+    version: 8,
+    glyphs: `${base}basemap/fonts/{fontstack}/{range}.pbf`,
+    sprite: `${base}basemap/sprites/${theme}`,
+    sources: {
+      protomaps: {
+        type: "vector",
+        tiles: [`${base}tiles/${CITY.id}/{z}/{x}/{y}.mvt`],
+        minzoom: 0,
+        maxzoom: CITY.maxTileZoom,
+        bounds: [bbox.west, bbox.south, bbox.east, bbox.north],
+      },
+    },
+    layers: layers("protomaps", namedFlavor(theme), { lang: CITY.labelLang }),
+  });
   const map = new MapLibreMap({
     container,
-    style: {
-      version: 8,
-      glyphs: `${base}basemap/fonts/{fontstack}/{range}.pbf`,
-      sprite: `${base}basemap/sprites/light`,
-      sources: {
-        protomaps: {
-          type: "vector",
-          tiles: [`${base}tiles/${CITY.id}/{z}/{x}/{y}.mvt`],
-          minzoom: 0,
-          maxzoom: CITY.maxTileZoom,
-          bounds: [bbox.west, bbox.south, bbox.east, bbox.north],
-        },
-      },
-      layers: layers("protomaps", namedFlavor("light"), { lang: CITY.labelLang }),
-    },
+    style: basemap(currentTheme()),
     bounds: [bbox.west, bbox.south, bbox.east, bbox.north],
+    fitBoundsOptions: { padding: coveredInsets(container) },
     maxBounds: [bbox.west - 0.03, bbox.south - 0.02, bbox.east + 0.03, bbox.north + 0.02],
     minZoom: 11,
     maxZoom: 19,
@@ -76,6 +112,34 @@ export function createMap(container: HTMLElement, bbox: Bbox): RouteMap {
   });
   map.touchZoomRotate.disableRotation();
   map.addControl(new NavigationControl({ showCompass: false }), "top-right");
+
+  // A new theme swaps the basemap and keeps the routes, recoloured.
+  onThemeChange((theme) => {
+    map.setStyle(basemap(theme), {
+      transformStyle: (previous, next) => ({
+        ...next,
+        sources: { ...next.sources, ...Object.fromEntries(ROUTE_SOURCES.flatMap((id) => (previous?.sources[id] ? [[id, previous.sources[id]!]] : []))) },
+        layers: [
+          ...next.layers,
+          ...(previous?.layers ?? [])
+            .filter((l) => l.id in ROUTE_LAYERS)
+            .map((l) => {
+              const [prop, name] = ROUTE_LAYERS[l.id]!;
+              return { ...l, paint: { ...("paint" in l ? l.paint : {}), [prop]: colour(name) } } as typeof l;
+            }),
+        ],
+      }),
+    });
+  });
+
+  const padding = () => {
+    const c = coveredInsets(container);
+    return { top: 48 + c.top, right: 48 + c.right, bottom: 48 + c.bottom, left: 48 + c.left };
+  };
+  const visibleBox = (): Box => {
+    const c = coveredInsets(container);
+    return { x: c.left, y: c.top, width: Math.max(1, container.clientWidth - c.left - c.right), height: Math.max(1, container.clientHeight - c.top - c.bottom) };
+  };
 
   const markers: Record<"from" | "to", Marker | null> = { from: null, to: null };
   let pinMarkers: Marker[] = [];
@@ -136,7 +200,7 @@ export function createMap(container: HTMLElement, bbox: Bbox): RouteMap {
       (b, p) => b.extend(p),
       new LngLatBounds(all[0]!, all[0]!),
     );
-    map.fitBounds(bounds as LngLatBoundsLike, { padding: 48, duration: reducedMotion() ? 0 : 600, maxZoom: 17 });
+    map.fitBounds(bounds as LngLatBoundsLike, { padding: padding(), duration: reducedMotion() ? 0 : 600, maxZoom: 17 });
   }
 
   return {
@@ -207,11 +271,15 @@ export function createMap(container: HTMLElement, bbox: Bbox): RouteMap {
       });
     },
     centre() {
-      const c = map.getCenter();
+      const box = visibleBox();
+      const c = map.unproject([box.x + box.width / 2, box.y + box.height / 2]);
       return [c.lng, c.lat];
     },
+    visibleBox,
     flyTo(point) {
-      map.easeTo({ center: point, zoom: Math.max(map.getZoom(), 16), duration: reducedMotion() ? 0 : 500 });
+      const box = visibleBox();
+      const offset: [number, number] = [box.x + box.width / 2 - container.clientWidth / 2, box.y + box.height / 2 - container.clientHeight / 2];
+      map.easeTo({ center: point, offset, zoom: Math.max(map.getZoom(), 16), duration: reducedMotion() ? 0 : 500 });
     },
     onTap(handler) {
       map.on("click", (e: MapMouseEvent) => handler([e.lngLat.lng, e.lngLat.lat]));
