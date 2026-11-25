@@ -1,5 +1,5 @@
 /**
- * Route names: "The Stairmaster Special", "Mall Rat Express", "The Croissant Crawl".
+ * Route names: "Stairway to Somewhere", "Through the Shops", "The Croissant Route".
  * Deterministic: the same route, mode and seed always get the same name. Names come from the
  * route's own stats and, where it reads well, a real place on it (a staircase, a park).
  */
@@ -43,34 +43,34 @@ export function routeName(fi: FeatureIndex, mode: ModeId, stats: CostOfFun, rout
   switch (mode) {
     case "stairs": {
       const stair = signatureStaircase(fi, route);
-      if (stats.stepsUp >= 300) return pick([`The ${stats.stepsUp}-Step Stairmaster Special`, "The Calf Destroyer Deluxe", "Stairway to Somewhere"]);
-      if (stair) return pick([`The ${stair} Calf Crusher`, `${stair} or Bust`]);
-      return pick(["The Stairmaster Special", "Up, Up and Away", "The Step Collector"]);
+      if (stats.stepsUp >= 300) return pick([`${stats.stepsUp} Steps Up`, "Stairway to Somewhere", "The Long Way Up"]);
+      if (stair) return pick([`Via ${stair}`, `${stair}, and Then Some`]);
+      return pick(["The Stair Route", "Up and Over", "The Step Collector"]);
     }
     case "buildings":
-      if (stats.malls) return pick(["Mall Rat Express", "The Window Shopper's Shortcut"]);
-      if (stats.buildings >= 5) return pick(["The Secret Passage Shuffle", "Through the Walls Tour", "The Traboule Tango"]);
-      return pick(["The Inside Track", "The Short Cut Through"]);
+      if (stats.malls) return pick(["Through the Shops", "Indoors, Mostly"]);
+      if (stats.buildings >= 5) return pick(["Through the Walls", "The Passage Route", "The Traboule Route"]);
+      return pick(["The Inside Route", "A Short Cut Through"]);
     case "trail":
-      if (stats.trailShare >= 0.5) return pick(["The Mud Lover's Mile", "Dirt Road Diva", "Gravel Rush"]);
-      return pick(["The Off-Pavement Express", "Trail Mix", "Paths Less Paved"]);
+      if (stats.trailShare >= 0.5) return pick(["Mostly Unpaved", "The Gravel Route", "Mud Optional"]);
+      return pick(["Paths Less Paved", "Some Dirt Involved", "Off the Pavement"]);
     case "parks": {
       const park = signaturePark(fi, route);
-      if (stats.parks >= 5) return pick([`The ${stats.parks}-Park Picnic Parade`, "The Completionist's Park Tour", "The Green Grand Tour"]);
-      if (park) return pick([`The ${park} Ramble`, `A Stroll Through ${park}`]);
-      return pick(["The Leafy Loop", "Park Life"]);
+      if (stats.parks >= 5) return pick([`${stats.parks} Parks`, "Park to Park", "The Green Route"]);
+      if (park) return pick([`Via ${park}`, `A Stroll Through ${park}`]);
+      return pick(["The Leafy Route", "Some Grass Involved"]);
     }
     case "snacks": {
       const sweet = stats.snacks.bakery + stats.snacks.pastry + stats.snacks.chocolate;
-      if (stats.snacks.bakery >= 3) return pick(["The Croissant Crawl", "The Bakery Blitz", "Carb Loading Loop"]);
-      if (sweet >= 2) return pick(["The Pastry Pilgrimage", "Sugar Rush Route"]);
-      return pick(["The Coffee Run", "Snack Attack"]);
+      if (stats.snacks.bakery >= 3) return pick(["The Croissant Route", "Bakery to Bakery", "Carbohydrate Corridor"]);
+      if (sweet >= 2) return pick(["The Pastry Route", "Sugar, Then Walking"]);
+      return pick(["The Coffee Route", "Snacks Available"]);
     }
     case "no-right":
       return stats.rightTurns === 0
-        ? pick(["The Sinister Circuit", "Port Side Promenade", "Left Lane Legend"])
-        : pick(["Mostly Left", "The Nearly Sinister Circuit"]);
+        ? pick(["Left, Left, Left", "The Sinister Route", "No Rights Reserved"])
+        : pick(["Mostly Left", "Nearly Sinister"]);
     case "chaos":
-      return pick([`Chaos Route #${seed}`, "The Butterfly Effect", "The Scenic Tangent", `Adventure #${seed}`]);
+      return pick([`Seed ${seed}`, `Detour #${seed}`, "The Scenic Route. Very Scenic.", "The Long Way, Randomly"]);
   }
 }

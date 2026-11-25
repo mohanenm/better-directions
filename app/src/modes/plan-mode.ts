@@ -90,7 +90,7 @@ export function planMode(
 }
 
 /**
- * Scenic chaos: one or two seeded random waypoints inside the detour budget, joined by legs
+ * Random: one or two seeded random waypoints inside the detour budget, joined by legs
  * under the seed's random weights. Same seed + same trip = same route; a new seed is a new
  * adventure. Falls back (fewer waypoints, then none) if a route won't fit the cap.
  */

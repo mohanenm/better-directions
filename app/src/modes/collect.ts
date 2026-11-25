@@ -1,5 +1,5 @@
 /**
- * Collecting search for modes that should go out of their way (Stairmaster, Park hopper, ...).
+ * Collecting search for modes that should go out of their way (stairs, parks, ...).
  *
  * Greedy insertion: start from the mode's direct route; repeatedly pick the unvisited feature
  * with the best value per extra metre (straight-line estimate), insert it where it adds least,

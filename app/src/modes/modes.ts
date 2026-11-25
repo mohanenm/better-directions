@@ -53,7 +53,7 @@ const multiplier = (id: string, min: number, factor: (g: Graph, d: number) => nu
 const buildings: Mode = {
   id: "buildings",
   name: "Through buildings",
-  tagline: "Why go round when you can go through?",
+  tagline: "Public passages, arcades and shopping centres. Why go round?",
   cost: (fi) =>
     multiplier("buildings", 0.15, (g, d) => {
       const e = d >>> 1;
@@ -79,12 +79,12 @@ const buildings: Mode = {
   score: (s) => s.buildings * 10 + s.passageM / 10 + s.malls * 5 + s.stations * 3 + s.underBuildings * 0.5,
 };
 
-// --- Trail runner ---------------------------------------------------------------------------------
+// --- Trails -------------------------------------------------------------------------------------
 
 const trail: Mode = {
   id: "trail",
-  name: "Trail runner",
-  tagline: "Dirt under your shoes, or it didn't happen.",
+  name: "Trails",
+  tagline: "Dirt and gravel over pavement, wherever there's a choice.",
   cost: (fi) =>
     multiplier("trail", 0.25, (g, d) => {
       const e = d >>> 1;
@@ -104,12 +104,12 @@ const trail: Mode = {
   score: (s) => s.trailM / 50 + s.trails * 3 + s.parkM / 200,
 };
 
-// --- Stairmaster ----------------------------------------------------------------------------------
+// --- Stairs --------------------------------------------------------------------------------------
 
 const stairs: Mode = {
   id: "stairs",
-  name: "Stairmaster",
-  tagline: "Every staircase is a shortcut to glory.",
+  name: "Stairs",
+  tagline: "Seeks out staircases, mostly going up.",
   cost: (fi) =>
     multiplier("stairs", 0.1, (g, d) => {
       const e = d >>> 1;
@@ -135,12 +135,12 @@ const stairs: Mode = {
   score: (s) => s.staircases * 10 + s.stepsUp / 10 + s.stepsUnknown / 20 + s.stepsDown / 40,
 };
 
-// --- Park hopper ----------------------------------------------------------------------------------
+// --- Parks ---------------------------------------------------------------------------------------
 
 const parks: Mode = {
   id: "parks",
-  name: "Park hopper",
-  tagline: "Collect them all. The parks, that is.",
+  name: "Parks",
+  tagline: "As many parks as the detour allows.",
   cost: (fi) =>
     multiplier("parks", 0.3, (g, d) => {
       const e = d >>> 1;
@@ -163,14 +163,14 @@ const parks: Mode = {
   score: (s) => s.parks * 10 + s.parkM / 100,
 };
 
-// --- Snack tour -----------------------------------------------------------------------------------
+// --- Snacks ---------------------------------------------------------------------------------------
 
 const SNACK_VALUE = { bakery: 12, pastry: 12, chocolate: 10, ice_cream: 10, cafe: 7 } as const;
 
 const snacks: Mode = {
   id: "snacks",
-  name: "Snack tour",
-  tagline: "A bakery a kilometre keeps the grumbles away.",
+  name: "Snacks",
+  tagline: "Past bakeries, pâtisseries, chocolatiers and cafés.",
   cost: (fi) =>
     multiplier("snacks", 0.5, (g, d) => {
       const e = d >>> 1;
@@ -189,15 +189,15 @@ const snacks: Mode = {
     s.snacks.bakery * 10 + s.snacks.pastry * 10 + s.snacks.chocolate * 8 + s.snacks.ice_cream * 8 + Math.min(s.snacks.cafe, 4) * 4,
 };
 
-// --- Never turn right -----------------------------------------------------------------------------
+// --- Left turns only -----------------------------------------------------------------------------
 
 /** Seconds of "pain" per right turn or U-turn: big enough to avoid them almost always. */
 export const RIGHT_TURN_PENALTY_S = 1200;
 
 const noRight: Mode = {
   id: "no-right",
-  name: "Never turn right",
-  tagline: "Three lefts make a right. We'll take the three lefts.",
+  name: "Left turns only",
+  tagline: "Left, or straight on. Never right, if it can help it.",
   cost: (fi) => ({
     id: "no-right",
     turnAware: true,
@@ -211,7 +211,7 @@ const noRight: Mode = {
   score: (s) => -s.rightTurns * 100 - s.uTurns * 100 + s.leftTurns,
 };
 
-// --- Scenic chaos ---------------------------------------------------------------------------------
+// --- Random -------------------------------------------------------------------------------------
 
 const CHAOS_MIN = 0.25;
 const CHAOS_MAX = 4;
@@ -257,8 +257,8 @@ export function chaosWeights(fi: FeatureIndex, seed: number): Float32Array {
 
 const chaos: Mode = {
   id: "chaos",
-  name: "Scenic chaos",
-  tagline: "Same start, same end, different adventure every seed.",
+  name: "Random",
+  tagline: "A different detour for every seed. The scenic route. Very scenic.",
   cost: (fi, seed) => {
     const w = chaosWeights(fi, seed);
     return {

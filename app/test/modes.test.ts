@@ -84,14 +84,14 @@ describe("each mode is recognisably itself on Lyon sample trips", () => {
   const trips = TRIPS.map(([a, b]) => [index.nearest(PLACES[a]!)!, index.nearest(PLACES[b]!)!] as const);
   const plans = (id: (typeof MODE_IDS)[number], seed = 7) => trips.map(([s, t]) => planMode(router, fi, s, t, id, seed)!);
 
-  it("Stairmaster: at least 5 staircases and 100 steps up on every trip", () => {
+  it("stairs: at least 5 staircases and 100 steps up on every trip", () => {
     for (const p of plans("stairs")) {
       expect(p.betterStats.staircases).toBeGreaterThanOrEqual(Math.max(5, p.normalStats.staircases + 3));
       expect(p.betterStats.stepsUp).toBeGreaterThanOrEqual(100);
     }
   });
 
-  it("Park hopper: at least 4 parks on every trip", () => {
+  it("parks: at least 4 parks on every trip", () => {
     for (const p of plans("parks")) expect(p.betterStats.parks).toBeGreaterThanOrEqual(Math.max(4, p.normalStats.parks + 2));
   });
 
@@ -101,14 +101,14 @@ describe("each mode is recognisably itself on Lyon sample trips", () => {
     }
   });
 
-  it("Trail runner: at least a quarter of the walk on trails", () => {
+  it("trails: at least a quarter of the walk on trails", () => {
     for (const p of plans("trail")) {
       expect(p.betterStats.trailShare).toBeGreaterThanOrEqual(0.25);
       expect(p.betterStats.trailShare).toBeGreaterThan(p.normalStats.trailShare);
     }
   });
 
-  it("Snack tour: 3+ stops, more than normal, at least one bakery-type", () => {
+  it("snacks: 3+ stops, more than normal, at least one bakery-type", () => {
     const count = (s: { snacks: Record<string, number> }) => Object.values(s.snacks).reduce((a, b) => a + b, 0);
     for (const p of plans("snacks")) {
       expect(count(p.betterStats)).toBeGreaterThanOrEqual(3);
@@ -118,14 +118,14 @@ describe("each mode is recognisably itself on Lyon sample trips", () => {
     }
   });
 
-  it("Never turn right: at most one right turn, and fewer than the normal route", () => {
+  it("left turns only: at most one right turn, and fewer than the normal route", () => {
     for (const p of plans("no-right")) {
       expect(p.betterStats.rightTurns).toBeLessThanOrEqual(1);
       expect(p.betterStats.rightTurns).toBeLessThanOrEqual(p.normalStats.rightTurns);
     }
   });
 
-  it("Scenic chaos: a real detour that changes with the seed and only with the seed", () => {
+  it("random: a real detour that changes with the seed and only with the seed", () => {
     const [s, t] = trips[1]!;
     const routes = [1, 2, 3, 4, 5].map((seed) => planMode(router, fi, s, t, "chaos", seed)!);
     expect(new Set(routes.map((p) => p.better.dirEdges.join(","))).size).toBeGreaterThanOrEqual(4);

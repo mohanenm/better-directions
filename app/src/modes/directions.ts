@@ -58,36 +58,36 @@ const GENERIC_NAMES: Record<string, string> = {
 
 const QUIPS: Record<ModeId | "normal" | "art", { start: string[]; arrive: string[] }> = {
   art: {
-    start: ["Somewhere above you, a satellite is about to be impressed.", "You are the pen. The city is the paper."],
-    arrive: ["Masterpiece complete. Check your GPS app.", "Art delivered, one step at a time."],
+    start: ["Record the walk, or nobody will believe you.", "The drawing only exists if your GPS is on."],
+    arrive: ["Done. The shape is in your GPS track, more or less.", "Finished. Squint at the trace."],
   },
   buildings: {
-    start: ["Doors are for amateurs. Let's go through things.", "Today, walls are merely suggestions (mapped ones only)."],
-    arrive: ["You went through it all. Literally.", "Architecture: experienced from the inside."],
+    start: ["Mapped public passages only. If a door is shut, it's shut.", "Through, not round, where the map allows."],
+    arrive: ["You've seen more courtyards than most.", "Arrived, mostly indoors."],
   },
   trail: {
-    start: ["Lace up. Pavement is the enemy.", "Somewhere out there is dirt with your name on it."],
-    arrive: ["Your shoes have stories now.", "Trail conquered. Asphalt weeps."],
+    start: ["Expect mud after rain.", "Pavement avoided where possible."],
+    arrive: ["Your shoes may need attention.", "Arrived, slightly dustier."],
   },
   stairs: {
-    start: ["Your calves called. They want a word.", "Up is the only direction that matters."],
-    arrive: ["Legs: jelly. Spirit: soaring.", "Every step counted. Literally, we counted them."],
+    start: ["Mostly uphill, by design.", "There are stairs ahead. That was the idea."],
+    arrive: ["Sit down if you like.", "Every step was counted, if mapped."],
   },
   parks: {
-    start: ["Gotta visit 'em all.", "Grass ahead. Lots of it."],
-    arrive: ["Park passport: stamped.", "You are now 40% tree."],
+    start: ["The scenic route. Very scenic.", "Greenery ahead, in quantity."],
+    arrive: ["Arrived, eventually, via the trees.", "That was most of the parks."],
   },
   snacks: {
-    start: ["Pace yourself. There are pastries ahead.", "Stretchy trousers recommended."],
-    arrive: ["Fuelled and fulfilled.", "You walked it off. Mostly."],
+    start: ["The shops are on the way. Stopping is up to you.", "Pace yourself."],
+    arrive: ["Probably later than planned.", "Arrived. Crumbs are your own business."],
   },
   "no-right": {
-    start: ["Right turns are cancelled. Lefts only from here.", "We've lost our right-turn privileges. Onward, leftward."],
-    arrive: ["Not a single regret. Or right turn.", "Three lefts make a right, and you made them all."],
+    start: ["Left turns only. This was your idea.", "Right turns are off the table."],
+    arrive: ["Arrived, mostly by turning left.", "Three lefts made several rights."],
   },
   chaos: {
-    start: ["The dice have spoken.", "No plan survives this seed. That's the plan."],
-    arrive: ["Chaos delivered you safely. Somehow.", "Same destination, entirely different adventure."],
+    start: ["The seed decided this. Take it up with the seed.", "Not the quickest way. Not even close."],
+    arrive: ["Arrived. Another seed, another way.", "You got here. The seed is satisfied."],
   },
   normal: { start: ["Off you go."], arrive: ["You're there."] },
 };
@@ -252,9 +252,8 @@ export function describeRoute(fi: FeatureIndex, route: Route, opts: DescribeOpti
         const down = grp.descentM > grp.climbM + 0.5;
         kind = up ? "stairs-up" : down ? "stairs-down" : "stairs";
         const where = grp.name === GENERIC_NAMES["steps"] ? "" : ` (${grp.name})`;
-        const flourish = up && plan.mode === "stairs" && grp.steps >= 20 ? ` ${pick(["Glory awaits.", "Feel the burn.", "Onward and upward."], plan.seed, i)}` : "";
         text = up
-          ? `Climb ${grp.steps} steps${where}, ${Math.round(grp.climbM)} m up.${flourish}`
+          ? `Climb ${grp.steps} steps${where}, ${Math.round(grp.climbM)} m up.`
           : down
             ? `Head down ${grp.steps} steps${where}.`
             : `Take the ${grp.steps} steps${where}.`;
@@ -263,13 +262,13 @@ export function describeRoute(fi: FeatureIndex, route: Route, opts: DescribeOpti
       case "passage": {
         kind = "passage";
         const bname = g.area(grp.building)?.name;
-        text = `Slip through the passage${bname ? ` in ${bname}` : " through the building"} (${Math.round(grp.lengthM)} m).`;
+        text = `Go through the passage${bname ? ` in ${bname}` : " under the building"} (${Math.round(grp.lengthM)} m).`;
         break;
       }
       case "corridor": {
         kind = "corridor";
         const venue = g.area(grp.venue)?.name ?? g.area(grp.building)?.name;
-        text = `Wander the corridors${venue ? ` of ${venue}` : ""} for ${Math.round(grp.lengthM)} m.`;
+        text = `Follow the corridors${venue ? ` of ${venue}` : ""} for ${Math.round(grp.lengthM)} m.`;
         break;
       }
       case "under": {
@@ -280,7 +279,7 @@ export function describeRoute(fi: FeatureIndex, route: Route, opts: DescribeOpti
       }
       case "trail":
         kind = "trail";
-        text = `${onto} and hit the dirt for ${Math.round(grp.lengthM)} m.`;
+        text = `${onto}, unpaved, for ${Math.round(grp.lengthM)} m.`;
         break;
       default:
         text = `${onto} for ${Math.round(grp.lengthM)} m.`;
@@ -289,7 +288,7 @@ export function describeRoute(fi: FeatureIndex, route: Route, opts: DescribeOpti
     if (plan.mode === "snacks") {
       const stop = bestSnack(fi, grp, seenSnacks);
       if (stop) {
-        text += ` Treat stop: ${stop.name}${stop.openingHours ? ` (open ${stop.openingHours})` : ""}.`;
+        text += ` You pass ${stop.name}${stop.openingHours ? ` (open ${stop.openingHours})` : ""}.`;
       }
     }
     if (grp.park && grp.park !== prevPark) {
