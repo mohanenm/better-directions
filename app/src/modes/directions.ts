@@ -12,7 +12,7 @@ import type { FeatureIndex } from "./features";
 import type { ModeId } from "./modes";
 import type { Route } from "../router/astar";
 import type { ModePlan } from "./plan-mode";
-import { minutes } from "./stats";
+import { minutes, TURN_DEG } from "./stats";
 
 export type StepKind =
   | "start" | "walk" | "stairs-up" | "stairs-down" | "stairs" | "passage" | "corridor"
@@ -137,7 +137,7 @@ function groupRoute(fi: FeatureIndex, dirEdges: number[]): Group[] {
     const name = g.edgeName(e) || genericName(g.edgeTags(e)["highway"]);
     const last = groups[groups.length - 1];
     const climb = g.climb(e, forward);
-    const park = g.s.edge_park[e]!;
+    const park = fi.parkOf[e]!;
     if (last && last.category === category && last.name === name && last.park === park) {
       last.dirEdges.push(d);
       last.lengthM += g.s.edge_length_m[e]!;
@@ -191,10 +191,14 @@ function bestSnack(fi: FeatureIndex, grp: Group, seen: Set<number>) {
   return best;
 }
 
-function turnPhrase(angle: number): string {
+/**
+ * Same rule as the turn counts in stats.ts: only a junction (three or more ways) is a turn, and
+ * under TURN_DEG is carrying on. Bends where a path changes name are just "continue".
+ */
+function turnPhrase(angle: number, atJunction: boolean): string {
   const side = angle > 0 ? "right" : "left";
   const a = Math.abs(angle);
-  if (a < 20) return "Continue";
+  if (!atJunction || a <= TURN_DEG) return "Continue";
   if (a < 60) return `Bear ${side}`;
   if (a < 150) return `Turn ${side}`;
   return "Turn around";
@@ -260,7 +264,7 @@ export function describeRoute(fi: FeatureIndex, route: Route, opts: DescribeOpti
     const first = grp.dirEdges[0]!;
     const at = g.nodeLonLat(g.tail(first));
     const prevLast = i > 0 ? groups[i - 1]!.dirEdges.at(-1)! : -1;
-    const turn = prevLast >= 0 ? turnPhrase(turnAngleDeg(g, prevLast, first)) : "Head off";
+    const turn = prevLast >= 0 ? turnPhrase(turnAngleDeg(g, prevLast, first), fi.degree[g.tail(first)]! >= 3) : "Head off";
     const onto = turn === "Continue" ? `Continue on ${grp.name}` : `${turn} onto ${grp.name}`;
     const notes: string[] = [];
     let kind: StepKind = "walk";

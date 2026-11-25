@@ -57,6 +57,9 @@ WAY_KEYS = (
 NODE_KEYS = ("barrier", "access", "foot", "railway", "highway", "crossing", "locked", "entrance")
 
 BUILDING_SAMPLE_SPACING_M = 4.0
+RESTRICTED_SAMPLE_SPACING_M = 10.0
+# Pavements drawn along a base's or estate's fence line stay walkable.
+RESTRICTED_EDGE_TOLERANCE_M = 2.0
 BUILDING_EDGE_TOLERANCE_M = 0.75  # sidewalks drawn on a facade line aren't "inside"
 STEP_RUN_M = 0.3  # horizontal run per step, for estimating step counts
 EXAMPLES_PER_REASON = 8  # OSM way ids listed per drop reason in the stats, for map review
@@ -102,6 +105,8 @@ class OsmData:
     way_reasons: Counter[str] = field(default_factory=Counter)
     rail_values_crossed: Counter[str] = field(default_factory=Counter)
     pois: list[Poi] = field(default_factory=list)
+    # Restricted ground (military, or access=private|no areas): polygons and the tags that matter.
+    restricted: list[tuple[list[Polygon], dict[str, str]]] = field(default_factory=list)
 
 
 def _tags(obj) -> dict[str, str]:
@@ -180,9 +185,22 @@ def snack_kind(tags: dict[str, str]) -> str | None:
 SNACK_KINDS = frozenset({"bakery", "pastry", "chocolate", "ice_cream", "cafe"})
 
 
+# Grounds that lock up: walkable inside, but flagged "may close" (with their hours if mapped).
+# Cemeteries close at night whether or not their hours are mapped; gardens and zoos only count
+# when they have hours.
+CEMETERIES = (("landuse", "cemetery"), ("amenity", "grave_yard"))
+HOURS_GROUNDS = (("leisure", "garden"), ("tourism", "zoo"))
+
+
 def _area_kind(tags: dict[str, str]) -> str | None:
     if tags.get("leisure") == "park":
         return "park"
+    if any(tags.get(k) == v for k, v in CEMETERIES):
+        return "grounds"
+    if any(tags.get(k) == v for k, v in HOURS_GROUNDS) and _has_closing_hours(
+        tags.get("opening_hours")
+    ):
+        return "grounds"
     if tags.get("shop") == "mall":
         return "mall"
     if tags.get("building") == "train_station" or (
@@ -203,7 +221,16 @@ def read_osm(path: Path, proj: LocalProjection) -> OsmData:
 
     # Pass 1: areas.
     area_filter = osmium.filter.KeyFilter(
-        "leisure", "building", "shop", "public_transport", "amenity", "tourism", "craft"
+        "leisure",
+        "building",
+        "shop",
+        "public_transport",
+        "amenity",
+        "tourism",
+        "craft",
+        "landuse",
+        "military",
+        "access",
     )
     for obj in (
         osmium.FileProcessor(str(path))
@@ -220,6 +247,16 @@ def read_osm(path: Path, proj: LocalProjection) -> OsmData:
                     lat = sum(y for _, y in pts) / len(pts)
                     data.pois.append(Poi(poi[0], poi[1], lon, lat, tags.get("opening_hours")))
                 break
+        if safety.is_restricted_area(tags):
+            rings = []
+            for outer in obj.outer_rings():
+                ring = [proj(n.lon, n.lat) for n in outer]
+                holes = [[proj(n.lon, n.lat) for n in inner] for inner in obj.inner_rings(outer)]
+                if len(ring) >= 4:
+                    rings.append(Polygon.from_rings(ring, holes))
+            keep = {k: tags[k] for k in ("landuse", "military", "access") if k in tags}
+            if rings:
+                data.restricted.append((rings, keep))
         kind = _area_kind(tags)
         if kind is None:
             continue
@@ -356,7 +393,10 @@ class _Spatial:
         self.venues = GridIndex(100.0)
         self.polys: list[tuple[int, Polygon]] = []
         for ai, area in enumerate(data.areas):
-            index = {"park": self.parks, "building": self.buildings}.get(area.kind, self.venues)
+            # Closing grounds share the park slot so their hours reach the "may close" notes.
+            index = {"park": self.parks, "grounds": self.parks, "building": self.buildings}.get(
+                area.kind, self.venues
+            )
             for poly in area.polygons:
                 pi = len(self.polys)
                 self.polys.append((ai, poly))
@@ -364,6 +404,12 @@ class _Spatial:
                 if area.kind in ("mall", "station"):
                     # Station and mall buildings are also buildings for the passage rule.
                     self.buildings.insert(pi, poly.bbox)
+        self.restricted_polys: list[tuple[int, Polygon]] = []
+        self.restricted = GridIndex(100.0)
+        for ri, (polys, _) in enumerate(data.restricted):
+            for poly in polys:
+                self.restricted.insert(len(self.restricted_polys), poly.bbox)
+                self.restricted_polys.append((ri, poly))
         self.rail = GridIndex(50.0)
         for i, (a, b, _) in enumerate(data.rail_segments):
             self.rail.insert(i, _seg_bbox(a, b))
@@ -392,6 +438,20 @@ class _Spatial:
                 if poly.contains(p) and poly.boundary_distance(p) > BUILDING_EDGE_TOLERANCE_M:
                     return ai
         return -1
+
+    def restricted_on_segment(self, a: Point, b: Point) -> list[int]:
+        """Restricted areas (indices into data.restricted) the segment passes into."""
+        found: set[int] = set()
+        for p in sample_points(a, b, RESTRICTED_SAMPLE_SPACING_M):
+            for pi in self.restricted.query_point(p):
+                ri, poly = self.restricted_polys[pi]
+                if (
+                    ri not in found
+                    and poly.contains(p)
+                    and poly.boundary_distance(p) > RESTRICTED_EDGE_TOLERANCE_M
+                ):
+                    found.add(ri)
+        return sorted(found)
 
     def crosses(self, a: Point, b: Point, layer: int, which: str) -> bool:
         index, segs = (
@@ -471,6 +531,19 @@ def build_graph(city: City, osm_path: Path) -> Graph:
                     continue
                 if spatial.crosses(pa, pb, layer, "fast"):
                     drop("fast_road_crossing_geometry", way.osm_id)
+                    segs.append(None)
+                    continue
+            if not other_level:
+                restricted = next(
+                    (
+                        r
+                        for ri in spatial.restricted_on_segment(pa, pb)
+                        if (r := safety.restricted_area_exclusion(tags, data.restricted[ri][1]))
+                    ),
+                    None,
+                )
+                if restricted:
+                    drop(restricted, way.osm_id)
                     segs.append(None)
                     continue
             building = spatial.building_on_segment(pa, pb, layer)
@@ -740,15 +813,17 @@ def _has_closing_hours(opening_hours: str | None) -> bool:
 
 def edge_may_close(edge: Edge, way: WayData, areas: list[AreaFeature]) -> bool:
     """Passages that may close: corridors, anything through a building, covered ways inside
-    malls or stations, anything with opening_hours, and paths in parks with opening hours
-    (Lyon's big parks lock their gates at night)."""
+    malls or stations, anything with opening_hours, and paths in parks and grounds (cemeteries,
+    gardens, zoos) with opening hours: Lyon's big parks and Arlington Cemetery lock at night."""
     tags = way.tags
     if _has_closing_hours(tags.get("opening_hours")) or safety.is_indoor_corridor(tags):
         return True
     if edge.attrs.building != -1:
         return True
-    if edge.attrs.park != -1 and _has_closing_hours(areas[edge.attrs.park].opening_hours):
-        return True
+    if edge.attrs.park != -1:
+        area = areas[edge.attrs.park]
+        if area.kind == "grounds" or _has_closing_hours(area.opening_hours):
+            return True
     return edge.attrs.venue != -1 and safety.is_covered(tags)
 
 

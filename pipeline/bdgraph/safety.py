@@ -58,6 +58,19 @@ PASSAGE_COVERED = "yes"
 CORRIDOR_INDOOR = "corridor"
 
 
+# Busy roads: where the sidewalks are mapped as their own ways, or there are none, nobody should
+# be walking down the carriageway.
+BUSY_CARRIAGEWAYS = frozenset(
+    {"primary", "primary_link", "secondary", "secondary_link", "tertiary", "tertiary_link"}
+)
+
+
+def sidewalks_mapped_separately(tags: Tags) -> bool:
+    if tags.get("sidewalk") == "separate" or tags.get("sidewalk:both") == "separate":
+        return True
+    return tags.get("sidewalk:left") == "separate" and tags.get("sidewalk:right") == "separate"
+
+
 def has_mapped_sidewalk(tags: Tags) -> bool:
     if tags.get("sidewalk") in SIDEWALK_PRESENT:
         return True
@@ -89,6 +102,12 @@ def way_exclusion(tags: Tags) -> str | None:
             return "no_foot_permission"
     elif hw not in WALKABLE_HIGHWAYS:
         return "highway_kind"
+
+    if hw in BUSY_CARRIAGEWAYS and tags.get("foot") not in FOOT_PERMITTED:
+        if sidewalks_mapped_separately(tags):
+            return "sidewalk_separate"  # walk the mapped sidewalk, not the carriageway
+        if tags.get("sidewalk") in ("no", "none"):
+            return "no_sidewalk"
 
     indoor = tags.get("indoor")
     if hw != "corridor" and indoor is not None and indoor not in ("no", CORRIDOR_INDOOR):
@@ -170,6 +189,32 @@ def passage_exclusion(
     if name and not is_indoor_corridor(tags) and "traboule" not in name.lower():
         return None
     return "passage_not_public"
+
+
+# Ground the public can't enter. Military land is never walked, whatever its paths say. Other
+# areas tagged access=private|no (estates, gated grounds, secure government sites) only allow
+# ways that are explicitly public.
+WAY_PUBLIC_ACCESS = frozenset({"yes", "permissive"})
+WAY_PUBLIC_FOOT = frozenset({"yes", "designated", "permissive"})
+
+
+def is_military_area(tags: Tags) -> bool:
+    return tags.get("landuse") == "military" or tags.get("military") not in (None, "no")
+
+
+def is_restricted_area(tags: Tags) -> bool:
+    return is_military_area(tags) or tags.get("access") in FORBIDDEN_ACCESS
+
+
+def restricted_area_exclusion(way_tags: Tags, area_tags: Tags) -> str | None:
+    """Why a way inside this area must not be walked, or None."""
+    if is_military_area(area_tags):
+        return "military_area"
+    if area_tags.get("access") in FORBIDDEN_ACCESS:
+        if way_tags.get("access") in WAY_PUBLIC_ACCESS or way_tags.get("foot") in WAY_PUBLIC_FOOT:
+            return None
+        return "restricted_area"
+    return None
 
 
 # Roads that may run under a building without a tunnel tag. Kept, but flagged and disclosed.

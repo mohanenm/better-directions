@@ -41,6 +41,14 @@ const CROSSING_HIGHWAY_NODES = new Set(["crossing", "traffic_signals"]);
 
 const has = (set: Set<string>, v: string | undefined): boolean => v !== undefined && set.has(v);
 
+// Busy roads whose sidewalks are mapped separately, or that have none, aren't walked down the middle.
+const BUSY_CARRIAGEWAYS = new Set(["primary", "primary_link", "secondary", "secondary_link", "tertiary", "tertiary_link"]);
+
+export function sidewalksMappedSeparately(tags: Tags): boolean {
+  if (tags["sidewalk"] === "separate" || tags["sidewalk:both"] === "separate") return true;
+  return tags["sidewalk:left"] === "separate" && tags["sidewalk:right"] === "separate";
+}
+
 export function hasMappedSidewalk(tags: Tags): boolean {
   if (has(SIDEWALK_PRESENT, tags["sidewalk"])) return true;
   return ["left", "right", "both"].some((side) => tags[`sidewalk:${side}`] === "yes");
@@ -61,6 +69,11 @@ export function wayExclusion(tags: Tags): string | null {
     if (!has(FOOT_PERMITTED, tags["foot"])) return "no_foot_permission";
   } else if (!WALKABLE_HIGHWAYS.has(hw)) {
     return "highway_kind";
+  }
+
+  if (BUSY_CARRIAGEWAYS.has(hw) && !has(FOOT_PERMITTED, tags["foot"])) {
+    if (sidewalksMappedSeparately(tags)) return "sidewalk_separate";
+    if (tags["sidewalk"] === "no" || tags["sidewalk"] === "none") return "no_sidewalk";
   }
 
   const indoor = tags["indoor"];
@@ -115,6 +128,23 @@ export function passageExclusion(
   if (has(PUBLIC_AREA_KINDS, building.kind ?? undefined) || has(PUBLIC_BUILDINGS, building.building ?? undefined)) return null;
   if (name !== "" && !isIndoorCorridor(tags) && !name.toLowerCase().includes("traboule")) return null;
   return "passage_not_public";
+}
+
+// Ground the public can't enter: military land never; other private or no-access areas only on
+// explicitly public ways. The build applies this geometrically; the shared cases keep it in step.
+const WAY_PUBLIC_ACCESS = new Set(["yes", "permissive"]);
+const WAY_PUBLIC_FOOT = new Set(["yes", "designated", "permissive"]);
+
+export const isMilitaryArea = (tags: Tags): boolean =>
+  tags["landuse"] === "military" || (tags["military"] !== undefined && tags["military"] !== "no");
+
+export function restrictedAreaExclusion(wayTags: Tags, areaTags: Tags): string | null {
+  if (isMilitaryArea(areaTags)) return "military_area";
+  if (has(FORBIDDEN_ACCESS, areaTags["access"])) {
+    if (has(WAY_PUBLIC_ACCESS, wayTags["access"]) || has(WAY_PUBLIC_FOOT, wayTags["foot"])) return null;
+    return "restricted_area";
+  }
+  return null;
 }
 
 export function mayPassUnderBuildingUnmapped(tags: Tags): boolean {

@@ -67,7 +67,7 @@ function parkPins(route: Route): Pin[] {
   const { g, fi } = state!;
   const order: number[] = [];
   for (const d of route.dirEdges) {
-    const park = g.s.edge_park[d >>> 1]!;
+    const park = state!.fi.parkOf[d >>> 1]!;
     if (park && !order.includes(park)) order.push(park);
   }
   const samples = route.nodes.filter((_, i) => i % 4 === 0).map((n) => g.nodeLonLat(n));

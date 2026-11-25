@@ -118,7 +118,7 @@ export function costOfFun(fi: FeatureIndex, route: Route): CostOfFun {
     const venue = g.s.edge_venue[e]!;
     if (venue) venues.add(venue);
 
-    const park = g.s.edge_park[e]!;
+    const park = fi.parkOf[e]!;
     if (park) {
       parks.set(park, g.area(park)?.name ?? "");
       stats.parkM += len;
@@ -134,7 +134,8 @@ export function costOfFun(fi: FeatureIndex, route: Route): CostOfFun {
     }
 
     if (flags & bits.may_close) {
-      const parkRef = park ? g.area(park) : null;
+      const grounds = g.s.edge_park[e]!;
+      const parkRef = grounds ? g.area(grounds) : null;
       const hours = g.edgeOpeningHours(e) || parkRef?.opening_hours || "";
       const name = parkRef?.opening_hours ? (parkRef.name ?? "a park") : g.edgeName(e) || g.area(g.s.edge_building[e]!)?.name || "a passage";
       const key = `${name}|${hours}`;

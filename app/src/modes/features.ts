@@ -108,6 +108,8 @@ export class FeatureIndex {
   readonly degree: Uint8Array;
   readonly midLon: Float32Array;
   readonly midLat: Float32Array;
+  /** Park area per edge (0 if none). Unlike edge_park, closing grounds such as cemeteries are left out. */
+  readonly parkOf: Uint16Array;
   readonly staircases: Staircase[] = [];
   /** Way index -> staircase index, for step edges. */
   readonly staircaseOfWay = new Map<number, number>();
@@ -133,6 +135,7 @@ export class FeatureIndex {
     this.midLon = new Float32Array(E);
     this.midLat = new Float32Array(E);
     this.isBusy = new Uint8Array(E);
+    this.parkOf = new Uint16Array(E);
     this.busyNode = new Uint8Array(g.nodeCount);
     this.lit = new Uint8Array(E);
     const bits = g.meta.flags.edge;
@@ -170,7 +173,9 @@ export class FeatureIndex {
       if (litTag === "no" || litTag === "disused") this.lit[e] = 2;
       else if (litTag !== undefined) this.lit[e] = 1;
       if (g.s.edge_steps[e]! > 0) push(stairEdges, way, e);
-      const park = g.s.edge_park[e]!;
+      const raw = g.s.edge_park[e]!;
+      const park = raw && g.area(raw)?.kind === "park" ? raw : 0;
+      this.parkOf[e] = park;
       if (park) push(parkEdges, park, e);
       if (g.s.edge_flags[e]! & bits.through_building) {
         const b = g.s.edge_building[e]!;

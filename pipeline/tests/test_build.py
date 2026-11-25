@@ -422,3 +422,26 @@ def test_crawl_stop_kinds():
     assert poi_kind({"amenity": "bar", "name": "Chez Jo", "drink:wine": "served"})[0] == "wine_bar"
     assert poi_kind({"shop": "wine", "name": "Caviste"}) == ("wine_shop", "Caviste")
     assert poi_kind({"amenity": "bar"}) is None  # unnamed bars are skipped
+
+
+def test_paths_on_a_military_base_are_dropped(tmp_path):
+    b = base_town()
+    b.ring([(110, 10), (190, 10), (190, 90), (110, 90)], landuse="military")
+    inside = b.way(["C1", "C2"], highway="footway", foot="yes")
+    graph, g = build(b, tmp_path)
+    assert graph.dropped["military_area"] >= 1
+    assert inside not in way_ids(g)
+
+
+def test_private_grounds_keep_only_public_paths(tmp_path):
+    b = base_town()
+    b.ring([(110, 10), (190, 10), (190, 90), (110, 90)], leisure="garden", access="private")
+    private = b.way(["C1", "C2"], highway="footway")
+    graph, g = build(b, tmp_path)
+    assert graph.dropped["restricted_area"] >= 1
+    assert private not in way_ids(g)
+    b2 = base_town()
+    b2.ring([(110, 10), (190, 10), (190, 90), (110, 90)], leisure="garden", access="private")
+    public = b2.way(["C1", "C2"], highway="footway", foot="designated")
+    _, g2 = build(b2, tmp_path)
+    assert public in way_ids(g2)

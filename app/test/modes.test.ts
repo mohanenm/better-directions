@@ -1,6 +1,7 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { Graph, type LonLat } from "../src/graph/graph";
+import { directions } from "../src/modes/directions";
 import { FeatureIndex, isTrailTags } from "../src/modes/features";
 import { MODE_IDS, MODES } from "../src/modes/modes";
 import { planMode } from "../src/modes/plan-mode";
@@ -122,6 +123,10 @@ describe("each mode is recognisably itself on Lyon sample trips", () => {
     for (const p of plans("no-right")) {
       expect(p.betterStats.rightTurns).toBeLessThanOrEqual(1);
       expect(p.betterStats.rightTurns).toBeLessThanOrEqual(p.normalStats.rightTurns);
+      // The directions never announce a right turn the count doesn't include. (They can mention
+      // fewer: a turn between two unnamed paths is folded into one step.)
+      const rights = directions(fi, p, "A", "B").filter((st) => /^(Turn|Bear) right/.test(st.text)).length;
+      expect(rights).toBeLessThanOrEqual(p.betterStats.rightTurns);
     }
   });
 

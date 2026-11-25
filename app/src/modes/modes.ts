@@ -89,7 +89,7 @@ const trail: Mode = {
     multiplier("trail", 0.25, (g, d) => {
       const e = d >>> 1;
       if (fi.isTrail[e]) return 0.25;
-      if (g.s.edge_park[e]) return 0.5;
+      if (fi.parkOf[e]) return 0.5;
       return fi.isPavedRoad[e] ? 2.0 : 1.0;
     }),
   collect: {
@@ -144,7 +144,7 @@ const parks: Mode = {
   cost: (fi) =>
     multiplier("parks", 0.3, (g, d) => {
       const e = d >>> 1;
-      if (g.s.edge_park[e]) return 0.3;
+      if (fi.parkOf[e]) return 0.3;
       if (fi.isTrail[e]) return 0.7;
       return fi.isPavedRoad[e] ? 1.2 : 1.0;
     }),
@@ -156,7 +156,7 @@ const parks: Mode = {
         value: 10 + Math.min(p.pathLengthM, 2000) / 200,
       })),
     keysOf: (fi, d) => {
-      const park = fi.g.s.edge_park[d >>> 1]!;
+      const park = fi.parkOf[d >>> 1]!;
       return park ? [`p:${park}`] : [];
     },
   },

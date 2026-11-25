@@ -515,6 +515,73 @@
         "trail_visibility": "bad"
       },
       "excluded": "trail_visibility"
+    },
+    {
+      "name": "primary road with separately mapped sidewalks",
+      "tags": {
+        "highway": "primary",
+        "sidewalk": "separate"
+      },
+      "excluded": "sidewalk_separate"
+    },
+    {
+      "name": "secondary road with sidewalk:both=separate",
+      "tags": {
+        "highway": "secondary",
+        "sidewalk:both": "separate"
+      },
+      "excluded": "sidewalk_separate"
+    },
+    {
+      "name": "tertiary road with both sides separate",
+      "tags": {
+        "highway": "tertiary",
+        "sidewalk:left": "separate",
+        "sidewalk:right": "separate"
+      },
+      "excluded": "sidewalk_separate"
+    },
+    {
+      "name": "one side separate, the other on the road",
+      "tags": {
+        "highway": "primary",
+        "sidewalk:left": "separate",
+        "sidewalk:right": "yes"
+      },
+      "excluded": null
+    },
+    {
+      "name": "busy road with no sidewalk",
+      "tags": {
+        "highway": "secondary",
+        "sidewalk": "no"
+      },
+      "excluded": "no_sidewalk"
+    },
+    {
+      "name": "busy road with no sidewalk but foot=yes",
+      "tags": {
+        "highway": "secondary",
+        "sidewalk": "no",
+        "foot": "yes"
+      },
+      "excluded": null
+    },
+    {
+      "name": "quiet residential street with no sidewalk",
+      "tags": {
+        "highway": "residential",
+        "sidewalk": "no"
+      },
+      "excluded": null
+    },
+    {
+      "name": "residential street with separate sidewalks",
+      "tags": {
+        "highway": "residential",
+        "sidewalk": "separate"
+      },
+      "excluded": null
     }
   ],
   "through_building": [
@@ -1249,6 +1316,117 @@
       "building": {
         "kind": "building",
         "building": "office"
+      },
+      "excluded": null
+    }
+  ],
+  "restricted_areas": [
+    {
+      "name": "footway on a military base",
+      "way": {
+        "highway": "footway"
+      },
+      "area": {
+        "landuse": "military"
+      },
+      "excluded": "military_area"
+    },
+    {
+      "name": "military=* area",
+      "way": {
+        "highway": "footway"
+      },
+      "area": {
+        "military": "barracks"
+      },
+      "excluded": "military_area"
+    },
+    {
+      "name": "foot=yes doesn't open a military base",
+      "way": {
+        "highway": "footway",
+        "foot": "yes"
+      },
+      "area": {
+        "landuse": "military"
+      },
+      "excluded": "military_area"
+    },
+    {
+      "name": "path in private grounds",
+      "way": {
+        "highway": "path"
+      },
+      "area": {
+        "leisure": "garden",
+        "access": "private"
+      },
+      "excluded": "restricted_area"
+    },
+    {
+      "name": "service road in a no-access compound",
+      "way": {
+        "highway": "service"
+      },
+      "area": {
+        "landuse": "commercial",
+        "access": "no"
+      },
+      "excluded": "restricted_area"
+    },
+    {
+      "name": "public footpath across private land",
+      "way": {
+        "highway": "footway",
+        "foot": "designated"
+      },
+      "area": {
+        "landuse": "farmland",
+        "access": "private"
+      },
+      "excluded": null
+    },
+    {
+      "name": "permissive path in private grounds",
+      "way": {
+        "highway": "footway",
+        "access": "permissive"
+      },
+      "area": {
+        "leisure": "park",
+        "access": "private"
+      },
+      "excluded": null
+    },
+    {
+      "name": "ordinary park",
+      "way": {
+        "highway": "footway"
+      },
+      "area": {
+        "leisure": "park"
+      },
+      "excluded": null
+    },
+    {
+      "name": "military=no isn't military",
+      "way": {
+        "highway": "footway"
+      },
+      "area": {
+        "military": "no",
+        "leisure": "park"
+      },
+      "excluded": null
+    },
+    {
+      "name": "access=destination area isn't restricted",
+      "way": {
+        "highway": "footway"
+      },
+      "area": {
+        "landuse": "residential",
+        "access": "destination"
       },
       "excluded": null
     }

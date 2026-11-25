@@ -30,7 +30,7 @@ function signatureStaircase(fi: FeatureIndex, route: Route): string | null {
 function signaturePark(fi: FeatureIndex, route: Route): string | null {
   const metres = new Map<number, number>();
   for (const d of route.dirEdges) {
-    const park = fi.g.s.edge_park[d >>> 1]!;
+    const park = fi.parkOf[d >>> 1]!;
     if (park) metres.set(park, (metres.get(park) ?? 0) + fi.g.s.edge_length_m[d >>> 1]!);
   }
   let best: [number, number] | null = null;

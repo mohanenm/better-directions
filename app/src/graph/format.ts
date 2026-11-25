@@ -6,7 +6,8 @@
 export type Tags = Readonly<Record<string, string>>;
 
 export interface AreaRef {
-  kind: "park" | "mall" | "station" | "building";
+  /** grounds: cemeteries, gardens and zoos that close; only their hours matter. */
+  kind: "park" | "grounds" | "mall" | "station" | "building";
   name: string | null;
   osm: string;
   opening_hours?: string;
