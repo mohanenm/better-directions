@@ -22,6 +22,8 @@ export const AREAS: readonly Area[] = Object.freeze([
   { id: "richmond", name: "Richmond", bbox: { west: -77.52, south: 37.5, east: -77.4, north: 37.58 }, center: [-77.44, 37.54], labelLang: "en", maxTileZoom: 15 },
   { id: "baltimore", name: "Baltimore", bbox: { west: -76.68, south: 39.25, east: -76.56, north: 39.33 }, center: [-76.61, 39.29], labelLang: "en", maxTileZoom: 15 },
   { id: "chicago", name: "Chicago", bbox: { west: -87.725, south: 41.84, east: -87.595, north: 42.023 }, center: [-87.6278, 41.8819], labelLang: "en", maxTileZoom: 15 },
+  { id: "copenhagen", name: "Copenhagen", bbox: { west: 12.5, south: 55.62, east: 12.66, north: 55.725 }, center: [12.5683, 55.6761], labelLang: "da", maxTileZoom: 15 },
+  { id: "malmo", name: "Malmö", bbox: { west: 12.9, south: 55.565, east: 13.04, north: 55.62 }, center: [13.0007, 55.605], labelLang: "sv", maxTileZoom: 15 },
 ]);
 
 export const DEFAULT_AREA = "lyon";

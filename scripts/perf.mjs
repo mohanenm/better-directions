@@ -28,6 +28,8 @@ const ROUTES = {
   richmond: "from=-77.43250,37.53230&to=-77.45020,37.54680&mode=stairs",
   baltimore: "from=-76.61050,39.28560&to=-76.59330,39.28230&mode=stairs",
   chicago: "from=-87.64030,41.87890&to=-87.62330,41.88270&mode=stairs",
+  copenhagen: "from=12.56830,55.67610&to=12.58550,55.68030&mode=stairs",
+  malmo: "from=13.00070,55.60500&to=12.97650,55.61330&mode=stairs",
 };
 
 const browser = spawn(BROWSER, ["--headless=new", "--no-first-run", `--user-data-dir=${mkdtempSync(join(tmpdir(), "bd-perf-"))}`, `--remote-debugging-port=${PORT}`, "--use-angle=swiftshader", "--enable-unsafe-swiftshader", "about:blank"], { stdio: "ignore" });

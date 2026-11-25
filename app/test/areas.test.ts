@@ -29,5 +29,7 @@ describe("nearest area", () => {
     expect(nearestArea(4.8, 45.7).id).toBe("lyon");
     expect(nearestArea(-77.45, 37.55).id).toBe("richmond");
     expect(nearestArea(-87.67, 42.0).id).toBe("chicago");
+    expect(nearestArea(12.59, 55.68).id).toBe("copenhagen");
+    expect(nearestArea(13.0, 55.6).id).toBe("malmo");
   });
 });
