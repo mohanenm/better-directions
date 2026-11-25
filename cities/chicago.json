@@ -1,0 +1,35 @@
+{
+  "id": "chicago",
+  "name": "Chicago",
+  "extract": {
+    "provider": "Geofabrik",
+    "url": "https://download.geofabrik.de/north-america/us/illinois-latest.osm.pbf",
+    "licence": "ODbL 1.0",
+    "attribution": "© OpenStreetMap contributors"
+  },
+  "bbox": {
+    "west": -87.725,
+    "south": 41.84,
+    "east": -87.595,
+    "north": 42.023
+  },
+  "center": {
+    "lon": -87.6278,
+    "lat": 41.8819
+  },
+  "default_zoom": 13,
+  "places": {
+    "square_name_prefixes": [],
+    "square_name_suffixes": [
+      " Circle",
+      " Square",
+      " Plaza"
+    ]
+  },
+  "confirmed_passages": [],
+  "terrain": {
+    "provider": "usgs-3dep",
+    "licence": "Public domain (USGS): https://www.usgs.gov/information-policies-and-instructions/copyrights-and-credits",
+    "attribution": "Elevation: USGS 3DEP"
+  }
+}
