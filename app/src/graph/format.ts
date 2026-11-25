@@ -10,6 +10,8 @@ export interface AreaRef {
   name: string | null;
   osm: string;
   opening_hours?: string;
+  /** The building tag, for building areas. */
+  building?: string;
 }
 
 export interface Poi {
@@ -46,6 +48,8 @@ export interface GraphMeta {
   tagsets: Tags[];
   node_tagsets: Tags[];
   areas: (AreaRef | null)[];
+  /** OSM way ids of passages confirmed open to the public. */
+  confirmed_passages?: number[];
   /** Snack stops for the snack tour (absent in older graphs). */
   pois?: Poi[];
   sections: { name: string; type: SectionType; count: number }[];

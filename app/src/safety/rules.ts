@@ -88,6 +88,35 @@ export function mayPassThroughBuilding(tags: Tags): boolean {
   return tags["tunnel"] === "yes" || (bridge !== undefined && bridge !== "no");
 }
 
+// Through a building that isn't public-facing, a passage or corridor needs explicit public
+// access, a street name, or a confirmation: many run through homes, offices and campuses.
+const PUBLIC_BUILDINGS = new Set([
+  "retail", "commercial", "mall", "supermarket", "kiosk", "train_station", "transportation", "public", "civic",
+]);
+export const PUBLIC_AREA_KINDS = new Set(["mall", "station"]);
+const PASSAGE_ACCESS_OK = new Set(["yes", "permissive"]);
+const PASSAGE_FOOT_OK = new Set(["yes", "permissive", "designated", "customers"]);
+
+export interface PassageBuilding {
+  kind?: string | null;
+  building?: string | null;
+}
+
+/** Why a passage or corridor through `building` must not be used, or null. */
+export function passageExclusion(
+  tags: Tags,
+  name: string,
+  building: PassageBuilding | null,
+  opts: { inPublicVenue?: boolean; confirmed?: boolean } = {},
+): string | null {
+  if (building === null || !(isBuildingPassage(tags) || isIndoorCorridor(tags))) return null;
+  if (opts.confirmed || opts.inPublicVenue) return null;
+  if (has(PASSAGE_ACCESS_OK, tags["access"]) || has(PASSAGE_FOOT_OK, tags["foot"])) return null;
+  if (has(PUBLIC_AREA_KINDS, building.kind ?? undefined) || has(PUBLIC_BUILDINGS, building.building ?? undefined)) return null;
+  if (name !== "" && !isIndoorCorridor(tags) && !name.toLowerCase().includes("traboule")) return null;
+  return "passage_not_public";
+}
+
 export function mayPassUnderBuildingUnmapped(tags: Tags): boolean {
   const indoor = tags["indoor"];
   return has(UNDER_BUILDING_ROADS, tags["highway"]) && !("level" in tags) && (indoor === undefined || indoor === "no");

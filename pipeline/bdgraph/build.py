@@ -73,6 +73,7 @@ class AreaFeature:
     polygons: list[Polygon]
     layer: int = 0
     opening_hours: str | None = None
+    building: str | None = None  # the building tag, for the public-passage rule
 
     @property
     def key(self) -> tuple[str, int]:
@@ -195,6 +196,7 @@ def read_osm(path: Path, proj: LocalProjection) -> OsmData:
                     polys,
                     safety.layer_of(tags),
                     tags.get("opening_hours"),
+                    tags.get("building"),
                 )
             )
     data.areas.sort(key=lambda a: (a.osm_type, a.osm_id))
@@ -264,7 +266,7 @@ class SegAttrs:
     park: int  # index into areas, -1 if none
     venue: int
     building: int  # building passed *through* via a mapped passage, -1 if none
-    under_building: int = -1  # building a road runs under without a tunnel tag (Q-007)
+    under_building: int = -1  # building a road runs under without a tunnel tag
 
 
 @dataclass
@@ -402,6 +404,8 @@ def build_graph(city: City, osm_path: Path) -> Graph:
             or safety.is_indoor_corridor(tags)
             or safety.is_covered(tags)
         )
+        name = tags.get("name", "")
+        confirmed = way.osm_id in city.confirmed_passages
         segs: list[Segment | None] = []
         for i in range(len(way.nodes) - 1):
             a, b = way.nodes[i], way.nodes[i + 1]
@@ -430,15 +434,30 @@ def build_graph(city: City, osm_path: Path) -> Graph:
             under = -1
             if building != -1 and not passage_ok:
                 if safety.may_pass_under_building_unmapped(tags):
-                    under = building  # kept, flagged and disclosed (Q-007)
+                    under = building  # kept, flagged and disclosed
                 else:
                     drop("through_building_unmapped", way.osm_id)
                     segs.append(None)
                     continue
             mid = ((pa[0] + pb[0]) / 2, (pa[1] + pb[1]) / 2)
+            venue = spatial.area_at(spatial.venues, mid)
+            if building != -1 and passage_ok:
+                area = data.areas[building]
+                reason = safety.passage_exclusion(
+                    tags,
+                    name,
+                    {"kind": area.kind, "building": area.building},
+                    in_public_venue=venue != -1
+                    and data.areas[venue].kind in safety.PUBLIC_AREA_KINDS,
+                    confirmed=confirmed,
+                )
+                if reason:
+                    drop(reason, way.osm_id)
+                    segs.append(None)
+                    continue
             attrs = SegAttrs(
                 park=spatial.area_at(spatial.parks, mid),
-                venue=spatial.area_at(spatial.venues, mid),
+                venue=venue,
                 building=building if (building != -1 and counts_as_through) else -1,
                 under_building=under,
             )

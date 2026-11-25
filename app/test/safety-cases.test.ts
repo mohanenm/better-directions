@@ -7,6 +7,7 @@ import {
   mayPassThroughBuilding,
   mayPassUnderBuildingUnmapped,
   nodeExclusion,
+  passageExclusion,
   wayExclusion,
 } from "../src/safety/rules";
 
@@ -18,6 +19,10 @@ interface Cases {
   nodes: { name: string; tags: Tags; context: Record<string, boolean>; excluded: string | null }[];
   directions: { name: string; tags: Tags; forward: boolean; backward: boolean }[];
   track_ways: { name: string; tags: Tags; track: boolean }[];
+  passages: {
+    name: string; tags: Tags; way_name: string; building: { kind: string; building: string } | null;
+    in_public_venue?: boolean; confirmed?: boolean; excluded: string | null;
+  }[];
 }
 
 const cases = JSON.parse(readFileSync(new URL("../../safety/cases.json", import.meta.url), "utf8")) as Cases;
@@ -40,5 +45,9 @@ describe("shared safety cases", () => {
   });
   it.each(cases.track_ways.map((c) => [c.name, c] as const))("track way: %s", (_, c) => {
     expect(isTrackRailwayWay(c.tags)).toBe(c.track);
+  });
+  it.each(cases.passages.map((c) => [c.name, c] as const))("passage: %s", (_, c) => {
+    const opts = { inPublicVenue: c.in_public_venue ?? false, confirmed: c.confirmed ?? false };
+    expect(passageExclusion(c.tags, c.way_name, c.building, opts)).toBe(c.excluded);
   });
 });

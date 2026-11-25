@@ -11,6 +11,8 @@ import { bearingDeg } from "../router/geometry";
 import {
   footDirections,
   mayPassThroughBuilding,
+  passageExclusion,
+  PUBLIC_AREA_KINDS,
   mayPassUnderBuildingUnmapped,
   nodeExclusion,
   wayExclusion,
@@ -19,7 +21,7 @@ import {
 export type LonLat = [lon: number, lat: number];
 
 export interface AuditViolation {
-  kind: "way" | "node" | "direction" | "through_building" | "under_building";
+  kind: "way" | "node" | "direction" | "through_building" | "under_building" | "passage";
   edge: number;
   reason: string;
 }
@@ -188,6 +190,7 @@ export function auditGraph(g: DecodedGraph): { allowedDirs: Uint8Array; violatio
   }
 
   const allowedDirs = new Uint8Array(meta.counts.edges);
+  const confirmed = new Set(meta.confirmed_passages ?? []);
   for (let e = 0; e < meta.counts.edges; e++) {
     const w = s.edge_way[e]!;
     const tags = meta.tagsets[s.way_tagset[w]!]!;
@@ -205,6 +208,17 @@ export function auditGraph(g: DecodedGraph): { allowedDirs: Uint8Array; violatio
     if (flags & bits.through_building && !mayPassThroughBuilding(tags)) {
       violations.push({ kind: "through_building", edge: e, reason: "not a mapped passage" });
       continue;
+    }
+    if (flags & bits.through_building) {
+      const venue = meta.areas[s.edge_venue[e]!] ?? null;
+      const reason = passageExclusion(tags, meta.strings[s.way_name[w]!] ?? "", meta.areas[s.edge_building[e]!] ?? null, {
+        inPublicVenue: venue !== null && PUBLIC_AREA_KINDS.has(venue.kind),
+        confirmed: confirmed.has(s.way_osm_id[w]!),
+      });
+      if (reason) {
+        violations.push({ kind: "passage", edge: e, reason });
+        continue;
+      }
     }
     if (flags & bits.under_building && !mayPassUnderBuildingUnmapped(tags)) {
       violations.push({ kind: "under_building", edge: e, reason: "not a road" });

@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import dataclasses
+
 import pytest
 from invariants import assert_output_is_safe
 from osmfixture import base_town, town_city
@@ -19,9 +21,9 @@ from bdgraph.encode import (
 )
 
 
-def build(builder, tmp_path):
+def build(builder, tmp_path, city=None):
     path = builder.write(tmp_path / "town.osm")
-    graph = build_graph(town_city(), path)
+    graph = build_graph(city or town_city(), path)
     return graph, decode_graph(encode_graph(graph))
 
 
@@ -147,12 +149,40 @@ def test_untagged_footway_through_a_building_is_dropped(tmp_path):
 def test_building_passage_is_kept_and_flagged(tmp_path):
     b = base_town()
     b.ring([(120, 20), (180, 20), (180, 80), (120, 80)], building="yes", name="Maison")
-    passage = b.way(["C1", "C2"], highway="footway", tunnel="building_passage")
+    passage = b.way(["C1", "C2"], highway="footway", tunnel="building_passage", foot="permissive")
     _, g = build(b, tmp_path)
     (e,) = edges_of_way(g, passage)
     assert g["edge_flags"][e] & FLAG_THROUGH_BUILDING
     assert g["edge_flags"][e] & FLAG_MAY_CLOSE
     assert g.meta["areas"][g["edge_building"][e]]["name"] == "Maison"
+
+
+def test_unmarked_passage_through_flats_is_dropped(tmp_path):
+    b = base_town()
+    b.ring([(120, 20), (180, 20), (180, 80), (120, 80)], building="apartments")
+    passage = b.way(["C1", "C2"], highway="footway", tunnel="building_passage")
+    graph, g = build(b, tmp_path)
+    assert graph.dropped["passage_not_public"] == 1
+    assert passage not in way_ids(g)
+
+
+def test_confirmed_passage_through_flats_is_kept(tmp_path):
+    b = base_town()
+    b.ring([(120, 20), (180, 20), (180, 80), (120, 80)], building="apartments")
+    passage = b.way(["C1", "C2"], highway="footway", tunnel="building_passage")
+    city = dataclasses.replace(town_city(), confirmed_passages=frozenset({passage}))
+    _, g = build(b, tmp_path, city)
+    assert passage in way_ids(g)
+    assert g.meta["confirmed_passages"] == [passage]
+
+
+def test_university_corridor_is_dropped(tmp_path):
+    b = base_town()
+    b.ring([(120, 20), (180, 20), (180, 80), (120, 80)], building="university")
+    corridor = b.way(["C1", "C2"], highway="corridor", indoor="corridor")
+    graph, g = build(b, tmp_path)
+    assert graph.dropped["passage_not_public"] == 1
+    assert corridor not in way_ids(g)
 
 
 def test_footway_through_a_courtyard_is_not_inside_the_building(tmp_path):
@@ -163,9 +193,9 @@ def test_footway_through_a_courtyard_is_not_inside_the_building(tmp_path):
     # The footway enters and leaves through passages, but its middle runs through the courtyard.
     b.node(115, 50, "P1")
     b.node(185, 50, "P2")
-    b.way(["C1", "P1"], highway="footway", tunnel="building_passage")
+    b.way(["C1", "P1"], highway="footway", tunnel="building_passage", foot="permissive")
     court = b.way(["P1", "P2"], highway="footway")
-    b.way(["P2", "C2"], highway="footway", tunnel="building_passage")
+    b.way(["P2", "C2"], highway="footway", tunnel="building_passage", foot="permissive")
     graph, g = build(b, tmp_path)
     assert graph.dropped["through_building_unmapped"] == 0
     assert court in way_ids(g)

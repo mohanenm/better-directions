@@ -1,10 +1,8 @@
 """The hard safety rules. Pure functions over OSM tag dicts; no mode or setting can change them.
 
-The TypeScript router implements the same rules (Phase 2). Both implementations must pass every
-case in safety/cases.json, so the two can't drift apart silently.
-
-Where the project brief is ambiguous we take the stricter reading. Anything that would loosen a
-rule needs the project owner's approval (see docs/OPEN_QUESTIONS.md).
+The TypeScript router implements the same rules, and both must pass every case in
+safety/cases.json so the two can't drift apart. Where a rule is ambiguous, take the stricter
+reading.
 """
 
 from __future__ import annotations
@@ -50,7 +48,7 @@ FORBIDDEN_FOOT = frozenset({"no", "private", "use_sidepath"})
 FOOT_PERMITTED = frozenset({"yes", "designated", "permissive"})
 SIDEWALK_PRESENT = frozenset({"both", "left", "right", "yes"})
 
-# Stricter than the brief: mountain-grade paths aren't city walks.
+# Mountain-grade paths aren't city walks.
 OK_SAC_SCALES = frozenset({"hiking", "mountain_hiking"})
 BAD_TRAIL_VISIBILITY = frozenset({"bad", "horrible", "no"})
 
@@ -95,7 +93,7 @@ def way_exclusion(tags: Tags) -> str | None:
     indoor = tags.get("indoor")
     if hw != "corridor" and indoor is not None and indoor not in ("no", CORRIDOR_INDOOR):
         # Inside a building but not a mapped corridor: never through a building otherwise.
-        # highway=corridor qualifies whatever its indoor value (approved 2026-11-24, Q-005).
+        # highway=corridor qualifies whatever its indoor value.
         return "indoor_not_corridor"
 
     conveying = tags.get("conveying")
@@ -134,7 +132,47 @@ def may_pass_through_building(tags: Tags) -> bool:
     return tags.get("tunnel") == "yes" or tags.get("bridge") not in (None, "no")
 
 
-# Roads that may run under a building without a tunnel tag (approved 2026-11-24, Q-007).
+# A mapped passage or corridor isn't enough on its own: plenty run through homes, offices,
+# universities and hospitals that the public can't use. Through any building that isn't
+# public-facing, the way needs explicit public access, a street name, or a confirmation.
+PUBLIC_BUILDINGS = frozenset(
+    {"retail", "commercial", "mall", "supermarket", "kiosk", "train_station", "transportation",
+     "public", "civic"}
+)  # fmt: skip
+PUBLIC_AREA_KINDS = frozenset({"mall", "station"})
+PASSAGE_ACCESS_OK = frozenset({"yes", "permissive"})
+PASSAGE_FOOT_OK = frozenset({"yes", "permissive", "designated", "customers"})
+
+
+def passage_exclusion(
+    tags: Tags,
+    name: str,
+    building: Mapping[str, str | None] | None,
+    *,
+    in_public_venue: bool = False,
+    confirmed: bool = False,
+) -> str | None:
+    """Why a passage or corridor through `building` must not be used, or None.
+
+    `building` is {"kind": area kind, "building": building tag} for the building the way runs
+    through, or None if it's not inside one. Covered ways (arcades) aren't affected.
+    """
+    if building is None or not (is_building_passage(tags) or is_indoor_corridor(tags)):
+        return None
+    if confirmed or in_public_venue:
+        return None
+    if tags.get("access") in PASSAGE_ACCESS_OK or tags.get("foot") in PASSAGE_FOOT_OK:
+        return None
+    if building.get("kind") in PUBLIC_AREA_KINDS or building.get("building") in PUBLIC_BUILDINGS:
+        return None
+    # A named street or passage through a building is a public way; an unnamed corridor or
+    # traboule may not be.
+    if name and not is_indoor_corridor(tags) and "traboule" not in name.lower():
+        return None
+    return "passage_not_public"
+
+
+# Roads that may run under a building without a tunnel tag. Kept, but flagged and disclosed.
 # Pedestrian ways inside a footprint are usually indoor routes, so they're not included.
 UNDER_BUILDING_ROADS = frozenset(
     {
@@ -204,7 +242,7 @@ def foot_directions(tags: Tags) -> tuple[bool, bool]:
 # --- Node rules --------------------------------------------------------------------------------
 
 # Mapped crossings. The tram values are OSM's tags for pedestrian and road crossings of tram
-# tracks (approved 2026-11-24, Q-004). Foot access is still checked by node_exclusion.
+# tracks. Foot access is still checked by node_exclusion.
 RAILWAY_CROSSINGS = frozenset(
     {"crossing", "level_crossing", "tram_crossing", "tram_level_crossing"}
 )
@@ -221,7 +259,7 @@ RAILWAY_NON_TRACK = frozenset(
         "signal_box",
         "turntable",
         "traverser",
-        # Entrances and stops aren't rails (approved 2026-11-24, Q-006).
+        # Entrances and stops aren't rails.
         "subway_entrance",
         "train_station_entrance",
         "funicular_entrance",
