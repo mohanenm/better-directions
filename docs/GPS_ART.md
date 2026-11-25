@@ -37,3 +37,13 @@ Planning takes about 115 ms (median) on a laptop. To reproduce: `npx vitest run 
 ## Limitations
 
 Straight-edged shapes suit a city of streets, and Guillotière's regular grid is the best canvas in Lyon. Stars come out worst, because their sharp points fight the grid. Circles and hearts pick up notches in irregular districts. Shapes that overlap the Rhône or Saône distort or fail, since the placement search only nudges by about 100 m. Likeness is purely geometric: it doesn't know that a heart's cusp matters more than a wobble on its side.
+
+## Spelling a word
+
+The Spell a word section draws 2 to 10 capital letters and digits with a stroke font (`app/src/art/font.ts`) made mostly of straight lines and right angles. The word is laid out left to right and sized so the whole walk should take under an hour: letters are between 160 and 450 m tall. If even the smallest size won't fit, the page says so and suggests initials.
+
+Placements are tried at a few rotations (level, ±8°, and the dominant street direction within 700 m), two sizes and five offsets, scored against the street network, and the five best are traced. Each stroke is traced like a shape; between strokes the walk takes the shortest way to the next one, shown dotted on the map. Readability is the same chamfer measure as likeness, per letter and overall, relative to the letter height.
+
+Grids spell far better than old towns. In Guillotière, two-letter words read at about 75%; four-letter words in Lyon come out around 220 m tall to fit the hour and read at about 50%. Below 60% the page says the area spells poorly.
+
+The word never leaves the device unless you tick "Include the word in shared links". Without it, Share link is off, and the share image is titled "A word, walked".

@@ -30,7 +30,7 @@ A crawl visits a few artworks, pubs or wine bars in a sensible order, looping ba
 
 A workout is a 20, 30 or 45-minute loop from your start, collecting staircases, hills or both. It shows the staircases, steps and metres climbed, and notes any stretch tagged as unlit. It makes no claims about calories.
 
-There's also an experimental Draw a shape section that finds a walk drawing a heart, star, square or one-stroke letter with real streets, and scores the likeness. See [docs/GPS_ART.md](docs/GPS_ART.md).
+There's also an experimental Draw a shape section that finds a walk drawing a heart, star, square or one-stroke letter with real streets, and scores the likeness. Spell a word does the same for a name of up to ten letters, with dotted walks between strokes. Grids work much better than Lyon's old town. See [docs/GPS_ART.md](docs/GPS_ART.md).
 
 <img src="docs/images/gps-art-heart.jpg" alt="A heart walked through Guillotière: 85% likeness, 46 minutes" width="480">
 
@@ -52,7 +52,7 @@ The build is also stricter than the rules above in places. It excludes escalator
 
 The page talks to no one but its own site: tiles, fonts, data and code are all self-hosted, and a strict Content-Security-Policy enforces it. There are no cookies, no storage and no analytics.
 
-Your location is used only if you tap "Use my location". It stays on your device, and it's snapped to the nearest path before it goes into a link. Shared links and images do show your start and end points; the page says so next to the share buttons.
+A word you spell stays on your device unless you choose to put it in a link. Your location is used only if you tap "Use my location". It stays on your device, and it's snapped to the nearest path before it goes into a link. Shared links and images do show your start and end points; the page says so next to the share buttons.
 
 ## Performance
 
