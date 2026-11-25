@@ -5,6 +5,7 @@
  */
 import { SHAPE_IDS, type ShapeId } from "../art/shapes";
 import { MODE_IDS, type ModeId } from "../modes/modes";
+import { CRAWL_MINUTES, CRAWL_THEMES, MAX_STOPS, MIN_STOPS, WORKOUT_FOCUSES, WORKOUT_MINUTES, type CrawlTheme, type WorkoutFocus } from "../modes/options";
 
 export interface Bbox {
   west: number;
@@ -25,9 +26,15 @@ export interface LinkState {
   artMinutes: number;
   /** Panel sections that are open. */
   open: SectionId[];
+  /** Points a route must pass through, in order (at most MAX_LINK_STOPS). */
+  stops: [number, number][];
+  workout: { focus: WorkoutFocus; minutes: number } | null;
+  /** toEnd: finish at `to` rather than looping back to `from`. */
+  crawl: { theme: CrawlTheme; count: number; minutes: number; toEnd: boolean } | null;
 }
 
-export const SECTION_IDS = ["plan", "art", "famous", "about"] as const;
+export const MAX_LINK_STOPS = 3;
+export const SECTION_IDS = ["plan", "crawl", "art", "workout", "famous", "about"] as const;
 export type SectionId = (typeof SECTION_IDS)[number];
 export const DEFAULT_OPEN: SectionId[] = ["plan"];
 
@@ -69,6 +76,22 @@ export function parseLink(search: string, bbox: Bbox): LinkState {
   const mode = q.get("mode");
   const seed = Number(q.get("seed"));
   const art = (SHAPE_IDS as string[]).includes(q.get("art") ?? "") ? (q.get("art") as ShapeId) : null;
+  const len = Number(q.get("len"));
+  const focus = q.get("workout");
+  const workout = (WORKOUT_FOCUSES as readonly string[]).includes(focus ?? "")
+    ? { focus: focus as WorkoutFocus, minutes: (WORKOUT_MINUTES as readonly number[]).includes(len) ? len : 30 }
+    : null;
+  const theme = q.get("crawl");
+  const count = Number(q.get("count"));
+  const crawl = (CRAWL_THEMES as readonly string[]).includes(theme ?? "")
+    ? {
+        theme: theme as CrawlTheme,
+        count: Number.isInteger(count) ? Math.max(MIN_STOPS, Math.min(MAX_STOPS[theme as CrawlTheme], count)) : 5,
+        minutes: (CRAWL_MINUTES as readonly number[]).includes(len) ? len : 45,
+        toEnd: q.get("end") === "1",
+      }
+    : null;
+  const fallbackOpen: SectionId[] = art ? ["art"] : crawl ? ["crawl"] : workout ? ["workout"] : DEFAULT_OPEN;
   return {
     from: parsePoint(q.get("from"), bbox),
     to: parsePoint(q.get("to"), bbox),
@@ -78,7 +101,10 @@ export function parseLink(search: string, bbox: Bbox): LinkState {
     seed: Number.isInteger(seed) && seed > 0 && seed < 2 ** 31 ? seed : 1,
     art,
     artMinutes: (ART_LENGTHS as readonly number[]).includes(Number(q.get("len"))) ? Number(q.get("len")) : 40,
-    open: parseOpen(q.get("open"), art ? ["art"] : DEFAULT_OPEN),
+    open: parseOpen(q.get("open"), fallbackOpen),
+    stops: (q.get("via") ?? "").split(";").map((v) => parsePoint(v, bbox)).filter((p): p is [number, number] => p !== null).slice(0, MAX_LINK_STOPS),
+    workout: art ? null : workout,
+    crawl: art || workout ? null : crawl,
   };
 }
 
@@ -94,10 +120,33 @@ export function serializeLink(state: LinkState): string {
     serializeOpen(q, state.open, ["art"]);
     return `?${q.toString()}`;
   }
+  if (state.crawl) {
+    if (state.from) q.set("from", fmt(state.from));
+    if (state.fromName) q.set("fromName", state.fromName);
+    if (state.crawl.toEnd && state.to) {
+      q.set("to", fmt(state.to));
+      if (state.toName) q.set("toName", state.toName);
+      q.set("end", "1");
+    }
+    q.set("crawl", state.crawl.theme);
+    q.set("count", String(state.crawl.count));
+    q.set("len", String(state.crawl.minutes));
+    serializeOpen(q, state.open, ["crawl"]);
+    return `?${q.toString()}`;
+  }
+  if (state.workout) {
+    if (state.from) q.set("from", fmt(state.from));
+    if (state.fromName) q.set("fromName", state.fromName);
+    q.set("workout", state.workout.focus);
+    q.set("len", String(state.workout.minutes));
+    serializeOpen(q, state.open, ["workout"]);
+    return `?${q.toString()}`;
+  }
   if (state.from) q.set("from", fmt(state.from));
   if (state.to) q.set("to", fmt(state.to));
   if (state.fromName) q.set("fromName", state.fromName);
   if (state.toName) q.set("toName", state.toName);
+  if (state.stops.length) q.set("via", state.stops.map(fmt).join(";"));
   q.set("mode", state.mode);
   if (state.mode === "chaos") q.set("seed", String(state.seed));
   serializeOpen(q, state.open, DEFAULT_OPEN);

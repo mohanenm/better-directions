@@ -13,18 +13,27 @@ import {
   type GeoJSONSource,
   type LngLatBoundsLike,
   type MapMouseEvent,
+  Popup,
 } from "maplibre-gl";
 import maplibreWorkerUrl from "maplibre-gl/dist/maplibre-gl-worker.mjs?url";
 import { colour } from "./colours";
+import type { Pin } from "./protocol";
 import type { Bbox } from "./url";
 
 setWorkerUrl(maplibreWorkerUrl);
+
+export interface PinAction {
+  label: string;
+  run: () => void;
+}
 
 export interface RouteMap {
   map: MapLibreMap;
   setRoutes(normal: [number, number][], better: [number, number][]): void;
   clearRoutes(): void;
   setMarker(end: "from" | "to", point: [number, number] | null): void;
+  /** Pins with a popup each; `actions` lists the buttons to offer for a pin. */
+  setPins(pins: Pin[], actions: (pin: Pin) => PinAction[]): void;
   centre(): [number, number];
   flyTo(point: [number, number]): void;
   onTap(handler: (point: [number, number]) => void): void;
@@ -64,6 +73,8 @@ export function createMap(container: HTMLElement, bbox: Bbox): RouteMap {
   map.addControl(new NavigationControl({ showCompass: false }), "top-right");
 
   const markers: Record<"from" | "to", Marker | null> = { from: null, to: null };
+  let pinMarkers: Marker[] = [];
+  let popup: Popup | null = null;
   // Routes that arrive before the style has loaded are drawn once it has.
   let queued: { normal: [number, number][]; better: [number, number][] } | null = null;
 
@@ -137,6 +148,45 @@ export function createMap(container: HTMLElement, bbox: Bbox): RouteMap {
       label.textContent = end === "from" ? "A" : "B";
       el.append(label);
       markers[end] = new Marker({ element: el, anchor: "center" }).setLngLat(point).addTo(map);
+    },
+    setPins(pins, actions) {
+      pinMarkers.forEach((m) => m.remove());
+      popup?.remove();
+      pinMarkers = pins.map((pin) => {
+        const el = document.createElement("button");
+        el.type = "button";
+        el.className = `pin ${pin.kind}`;
+        el.textContent = pin.number ? String(pin.number) : "";
+        el.setAttribute("aria-label", `${pin.number ? `${pin.number}: ` : ""}${pin.name}${pin.kind === "park" ? " (park)" : ""}. Show details.`);
+        el.addEventListener("click", (e) => {
+          e.stopPropagation();
+          popup?.remove();
+          const body = document.createElement("div");
+          body.className = "pin-popup";
+          const title = document.createElement("strong");
+          title.textContent = pin.name;
+          body.append(title);
+          if (pin.detail) {
+            const p = document.createElement("p");
+            p.textContent = pin.detail;
+            body.append(p);
+          }
+          for (const action of actions(pin)) {
+            const b = document.createElement("button");
+            b.type = "button";
+            b.className = "secondary";
+            b.textContent = action.label;
+            b.addEventListener("click", () => {
+              popup?.remove();
+              action.run();
+            });
+            body.append(b);
+          }
+          popup = new Popup({ closeButton: true, maxWidth: "260px", offset: 14 }).setLngLat(pin.at).setDOMContent(body).addTo(map);
+          body.querySelector<HTMLButtonElement>("button")?.focus();
+        });
+        return new Marker({ element: el, anchor: "center" }).setLngLat(pin.at).addTo(map);
+      });
     },
     centre() {
       const c = map.getCenter();

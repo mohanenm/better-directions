@@ -14,6 +14,7 @@
   --route-casing: #ffffff;
   --marker-from: #047857;
   --marker-to: #0f172a;
+  --park-pin: #15803d;
   --warn-bg: #fff7e6;
   --warn-ink: #6b3d00;
   --radius: 12px;
@@ -146,13 +147,30 @@ button.secondary { background: var(--paper); color: var(--accent); border: 1px s
 .help { margin: 0; font-size: 0.85rem; color: var(--ink-soft); }
 .about p { margin: 0 0 0.6rem; font-size: 0.9rem; }
 
-/* --- GPS art --- */
-.art-form { display: grid; gap: 0.5rem; }
-.art-form select { font: inherit; padding: 0.5rem; border-radius: 8px; border: 1px solid var(--field); }
-.art-length { border: 0; padding: 0; margin: 0; display: grid; gap: 0.2rem; }
-.art-length legend { font-weight: 650; margin-bottom: 0.2rem; }
-.art-length label { display: flex; align-items: center; gap: 0.5rem; min-height: 2rem; cursor: pointer; }
-.art-length input { width: 1.15rem; height: 1.15rem; margin: 0; accent-color: var(--accent); }
+/* --- Crawl, workout and shape forms --- */
+.tool-form { display: grid; gap: 0.5rem; }
+.tool-form select { font: inherit; padding: 0.5rem; border-radius: 8px; border: 1px solid var(--field); background: var(--paper); color: var(--ink); }
+.choice { border: 0; padding: 0; margin: 0; display: grid; gap: 0.2rem; }
+.choice legend { font-weight: 650; margin-bottom: 0.2rem; }
+.choice label, .check { display: flex; align-items: center; gap: 0.5rem; min-height: 2rem; cursor: pointer; }
+.choice input, .check input { width: 1.15rem; height: 1.15rem; margin: 0; accent-color: var(--accent); flex: none; }
+
+/* --- Stops picked from park pins --- */
+.stops { border: 1px dashed var(--field); border-radius: 10px; padding: 0.5rem 0.7rem; }
+.stops-title { font-weight: 650; }
+.stops ol { margin: 0.3rem 0; padding-left: 1.3rem; display: grid; gap: 0.2rem; }
+.stops li { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; }
+
+/* --- Pins --- */
+.pin {
+  width: 26px; height: 26px; border-radius: 50%; border: 2px solid #fff; padding: 0; cursor: pointer;
+  box-shadow: 0 1px 4px rgb(0 0 0 / 0.35); font: 800 0.8rem/1 system-ui, sans-serif; color: #fff;
+}
+.pin.park { background: var(--park-pin); }
+.pin.stop { background: var(--accent); }
+.pin-popup { display: grid; gap: 0.4rem; font: 0.9rem/1.4 system-ui, sans-serif; color: var(--ink); }
+.pin-popup p { margin: 0; color: var(--ink-soft); }
+.pin-popup button { padding: 0.4rem 0.6rem; }
 
 /* --- Result --- */
 .result { border-top: 1px solid var(--line); padding-top: 0.75rem; scroll-margin-top: 0.5rem; }

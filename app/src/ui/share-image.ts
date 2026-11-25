@@ -141,13 +141,15 @@ export async function renderShareImage(map: MapLibreMap, r: ShareCard): Promise<
   ctx.moveTo(40, y);
   ctx.lineTo(110, y);
   ctx.stroke();
-  ctx.setLineDash([12, 12]);
-  ctx.strokeStyle = colour("route-normal");
-  ctx.beginPath();
-  ctx.moveTo(380, y);
-  ctx.lineTo(450, y);
-  ctx.stroke();
-  ctx.setLineDash([]);
+  if (r.legend[1]) {
+    ctx.setLineDash([12, 12]);
+    ctx.strokeStyle = colour("route-normal");
+    ctx.beginPath();
+    ctx.moveTo(380, y);
+    ctx.lineTo(450, y);
+    ctx.stroke();
+    ctx.setLineDash([]);
+  }
   ctx.font = `600 28px ${FONT}`;
   ctx.fillStyle = colour("ink");
   ctx.fillText(r.legend[0], 125, y + 10);

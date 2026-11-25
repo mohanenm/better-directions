@@ -30,6 +30,12 @@ const CASES = [
   { name: "famous-and-share", width: 390, height: 844, mobile: true, query: "", famous: true },
   { name: "gps-art-heart", width: 1280, height: 900, mobile: false,
     query: "?from=4.84500,45.75100&fromName=Guilloti%C3%A8re&art=heart&len=55" },
+  { name: "pub-crawl", width: 1280, height: 800, mobile: false, crawl: true,
+    query: "?from=4.83360,45.76750&fromName=Place%20des%20Terreaux&crawl=pub&count=4&len=45" },
+  { name: "workout-stairs", width: 390, height: 844, mobile: true,
+    query: "?from=4.82740,45.76060&fromName=Cath%C3%A9drale%20Saint-Jean&workout=stairs&len=30" },
+  { name: "park-as-stop", width: 1280, height: 800, mobile: false, parkStop: true,
+    query: "?from=4.85190,45.77030&to=4.83200,45.75780&fromName=T%C3%AAte%20d%27Or&toName=Place%20Bellecour&mode=trail" },
 ];
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -104,13 +110,42 @@ async function runCase(c) {
     await evaluate("document.querySelector('#famous-list button').click()");
   }
   const wantRoute = c.expectRoute !== false;
+  const READY = /^(Route|Drawing|Crawl|Loop) ready/;
   let status = "";
-  for (let i = 0; i < 120; i++) {
-    await sleep(250);
-    status = (await evaluate("(document.getElementById('announcer')?.textContent || document.getElementById('status')?.textContent) ?? ''")) ?? "";
-    if (wantRoute ? /^(Route|Drawing) ready/.test(status) : status.startsWith("Pick a start")) break;
-  }
+  const waitForReady = async () => {
+    for (let i = 0; i < 120; i++) {
+      await sleep(250);
+      status = (await evaluate("(document.getElementById('announcer')?.textContent || document.getElementById('status')?.textContent) ?? ''")) ?? "";
+      if (wantRoute ? READY.test(status) : status.startsWith("Pick a start")) break;
+    }
+  };
+  await waitForReady();
   await sleep(1500); // let the map draw the route
+  if (c.parkStop) {
+    // Open a park pin's popup, add it as a stop, and check the route replans through it.
+    await evaluate("document.getElementById('announcer').textContent = ''");
+    const added = await evaluate(`(() => {
+      const pin = [...document.querySelectorAll('.pin.park')][0];
+      if (!pin) return 'no park pins';
+      pin.click();
+      const button = [...document.querySelectorAll('.pin-popup button')].find((b) => b.textContent === 'Add as a stop');
+      if (!button) return 'no Add as a stop button';
+      button.click();
+      return 'ok';
+    })()`);
+    if (added !== "ok") problems.push(`park stop: ${added}`);
+    await waitForReady();
+    await sleep(800);
+    const via = await evaluate("new URLSearchParams(location.search).get('via')");
+    const listed = await evaluate("document.querySelectorAll('#stop-list li').length");
+    if (!via || listed !== 1) problems.push(`park stop: link via=${via}, ${listed} stops listed`);
+  }
+  if (c.crawl) {
+    const pins = await evaluate("document.querySelectorAll('.pin.stop').length");
+    const notes = await evaluate("document.getElementById('notes').textContent");
+    if (pins < 3) problems.push(`crawl: ${pins} stop pins`);
+    if (!/Drink responsibly/.test(notes)) problems.push("crawl: no drinking note");
+  }
   if (c.famous) {
     await evaluate("document.getElementById('make-image').click()");
     let ready = false;
@@ -163,10 +198,10 @@ async function runCase(c) {
     noStorage: await evaluate("localStorage.length === 0 && sessionStorage.length === 0"),
   };
   if (wantRoute) {
-    checks.route = /^(Route|Drawing) ready/.test(status);
+    checks.route = READY.test(status);
     checks.steps = (await evaluate("document.querySelectorAll('#steps li').length")) > 2;
     const summary = (await evaluate("document.getElementById('summary').textContent")) ?? "";
-    checks.summary = /Normal: \d+ min\. Better: \d+ min/.test(summary) || /likeness/.test(summary);
+    checks.summary = /Normal: \d+ min\. Better: \d+ min/.test(summary) || /likeness|-minute loop|min of walking/.test(summary);
     checks.seedRowHiddenUnlessChaos = await evaluate("(getComputedStyle(document.getElementById('seed-row')).display === 'none') === !location.search.includes('mode=chaos')");
   }
   // Accessibility tree: every interactive control and image needs a name; landmarks must exist.
@@ -199,7 +234,7 @@ async function runCase(c) {
       const b = e.getBoundingClientRect();
       if (!b.width || !b.height) continue;
       // A radio inside a tall enough label is covered by the label.
-      const label = e.type === 'radio' ? e.closest('label') ?? e.nextElementSibling : null;
+      const label = e.type === 'radio' || e.type === 'checkbox' ? e.closest('label') ?? e.nextElementSibling : null;
       const t = label ? label.getBoundingClientRect() : b;
       if (t.height < 24 || t.width < 24) out.push('small target: ' + (e.textContent || e.value).trim().slice(0, 30) + ' ' + Math.round(t.width) + 'x' + Math.round(t.height));
     }

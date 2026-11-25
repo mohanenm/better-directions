@@ -6,14 +6,16 @@ import { CITY, cityData } from "./city";
 import "./style.css";
 import { SHAPE_IDS, SHAPES, type ShapeId } from "./art/shapes";
 import { MODE_IDS, MODES, type ModeId } from "./modes/modes";
+import { CRAWL_MINUTES, MAX_STOPS, MIN_STOPS, type CrawlTheme, type WorkoutFocus } from "./modes/options";
 import { attachCombo } from "./ui/combo";
 import { FAMOUS_ROUTES } from "./ui/famous";
 import { createMap, type RouteMap } from "./ui/map";
-import type { ArtResultMsg, FromWorker, PlanResult, ReadyInfo } from "./ui/protocol";
-import { artCard, planCard, renderArt, renderResult } from "./ui/render";
+import type { PinAction } from "./ui/map";
+import type { ArtResultMsg, FromWorker, Pin, PlanResult, ReadyInfo, ToWorker, TourResult } from "./ui/protocol";
+import { artCard, planCard, renderArt, renderResult, renderTour, tourCard } from "./ui/render";
 import { renderShareImage, type ShareCard } from "./ui/share-image";
 import type { Place } from "./ui/search";
-import { DEFAULT_OPEN, parseLink, SECTION_IDS, serializeLink, type LinkState, type SectionId } from "./ui/url";
+import { DEFAULT_OPEN, MAX_LINK_STOPS, parseLink, SECTION_IDS, serializeLink, type LinkState, type SectionId } from "./ui/url";
 
 type End = "from" | "to";
 
@@ -22,7 +24,14 @@ const statusEl = $("#status");
 const resultEl = $("#result");
 const goButton = $<HTMLButtonElement>("#go");
 
-const state: LinkState = { from: null, to: null, fromName: null, toName: null, mode: "stairs", seed: 1, art: null, artMinutes: 40, open: [...DEFAULT_OPEN] };
+const state: LinkState = {
+  from: null, to: null, fromName: null, toName: null, mode: "stairs", seed: 1, art: null, artMinutes: 40,
+  open: [...DEFAULT_OPEN], stops: [], workout: null, crawl: null,
+};
+/** Names for the stops the user picked (links carry only the points). */
+const stopNames: string[] = [];
+/** Crawl stops the user swapped or skipped this session. */
+let crawlSkip: number[] = [];
 let places: Place[] = [];
 let routeMap: RouteMap | null = null;
 let info: ReadyInfo | null = null;
@@ -48,6 +57,7 @@ worker.addEventListener("message", (event: MessageEvent<FromWorker>) => {
     goButton.disabled = false;
     setStatus(msg.message, true);
   } else if (msg.type === "art") onArt(msg.result);
+  else if (msg.type === "tour") onTour(msg.result);
   else onPlan(msg.result);
 });
 
@@ -61,8 +71,13 @@ function onReady(ready: ReadyInfo): void {
   routeMap = createMap($("#map"), ready.bbox);
   routeMap.onTap(onMapTap);
   syncInputs();
-  setStatus(state.from && (state.to || state.art) ? "" : "Pick a start and an end: search, or tap the map.");
+  syncToolForms();
+  renderStops();
+  const canPlan = state.from && (state.to || state.art || state.crawl || state.workout);
+  setStatus(canPlan ? "" : "Pick a start and an end: search, or tap the map.");
   if (state.art && state.from) requestArt();
+  else if (state.crawl && state.from) requestCrawl();
+  else if (state.workout && state.from) requestWorkout();
   else if (state.from && state.to) requestPlan();
 }
 
@@ -230,9 +245,15 @@ $<HTMLFormElement>("#planner").addEventListener("submit", (e) => {
   requestPlan();
 });
 
+function send(msg: ToWorker): void {
+  worker.postMessage(msg);
+}
+
 function requestPlan(): void {
   if (!info) return;
   state.art = null;
+  state.crawl = null;
+  state.workout = null;
   if (!state.from || !state.to) {
     setStatus("Pick both a start and an end first.", true);
     return;
@@ -240,7 +261,7 @@ function requestPlan(): void {
   requestId++;
   goButton.disabled = true;
   setStatus(`Planning a ${MODES[state.mode].name.toLowerCase()} route…`);
-  worker.postMessage({
+  send({
     type: "plan",
     id: requestId,
     from: state.from,
@@ -249,6 +270,7 @@ function requestPlan(): void {
     toName: state.toName ?? "your destination",
     mode: state.mode,
     seed: state.seed,
+    stops: state.stops,
   });
 }
 
@@ -262,6 +284,7 @@ function onPlan(result: PlanResult): void {
   routeMap?.setMarker("to", result.to);
   writeLink();
   routeMap?.setRoutes(result.normal, result.better);
+  routeMap?.setPins(result.pins, parkActions);
   renderResult(result, (at) => routeMap?.flyTo(at));
   clearShareImage();
   showResult();
@@ -364,6 +387,8 @@ $<HTMLFormElement>("#art-form").addEventListener("submit", (e) => {
     return;
   }
   state.art = artShape.value as ShapeId;
+  state.crawl = null;
+  state.workout = null;
   state.artMinutes = Number(document.querySelector<HTMLInputElement>('input[name="art-len"]:checked')?.value ?? 40);
   requestArt();
 });
@@ -376,7 +401,7 @@ function requestArt(): void {
   if (len) len.checked = true;
   if (!state.open.includes("art")) setOpen("art", true);
   setStatus(`Drawing a ${SHAPES[state.art].label.toLowerCase()} with ${CITY.name}'s streets…`);
-  worker.postMessage({ type: "art", id: requestId, start: state.from, fromName: state.fromName ?? "your start", shape: state.art, minutes: state.artMinutes });
+  send({ type: "art", id: requestId, start: state.from, fromName: state.fromName ?? "your start", shape: state.art, minutes: state.artMinutes });
 }
 
 function onArt(result: ArtResultMsg): void {
@@ -388,10 +413,196 @@ function onArt(result: ArtResultMsg): void {
   routeMap?.setMarker("to", SHAPES[result.shape].closed ? null : end);
   writeLink();
   routeMap?.setRoutes(result.template, result.line);
+  routeMap?.setPins([], () => []);
   renderArt(result, (at) => routeMap?.flyTo(at));
   clearShareImage();
   showResult();
   $("#announcer").textContent = `Drawing ready. ${lastCard.summary} Step-by-step directions follow the stats.`;
+}
+
+// --- Stops from park pins ------------------------------------------------------------------------
+
+function parkActions(pin: Pin): PinAction[] {
+  if (pin.kind !== "park") return [];
+  const already = state.stops.some((p) => p[0] === pin.at[0] && p[1] === pin.at[1]);
+  if (already || state.stops.length >= MAX_LINK_STOPS || !state.to) return [];
+  return [{
+    label: "Add as a stop",
+    run: () => {
+      state.stops.push(pin.at);
+      stopNames[state.stops.length - 1] = pin.name;
+      renderStops();
+      requestPlan();
+    },
+  }];
+}
+
+function renderStops(): void {
+  $("#stops").hidden = state.stops.length === 0;
+  $("#stop-list").replaceChildren(
+    ...state.stops.map((_, i) => {
+      const li = document.createElement("li");
+      const name = document.createElement("span");
+      name.textContent = stopNames[i] ?? `Stop ${i + 1}`;
+      const remove = document.createElement("button");
+      remove.type = "button";
+      remove.className = "link-button";
+      remove.textContent = "Remove";
+      remove.setAttribute("aria-label", `Remove ${name.textContent}`);
+      remove.addEventListener("click", () => {
+        state.stops.splice(i, 1);
+        stopNames.splice(i, 1);
+        renderStops();
+        if (state.from && state.to) requestPlan();
+        else writeLink();
+      });
+      li.append(name, remove);
+      return li;
+    }),
+  );
+}
+
+// --- Crawls and workouts -------------------------------------------------------------------------
+
+const radioValue = (name: string) => document.querySelector<HTMLInputElement>(`input[name="${name}"]:checked`)?.value ?? "";
+const setRadio = (name: string, value: string | number) => {
+  const r = document.querySelector<HTMLInputElement>(`input[name="${name}"][value="${value}"]`);
+  if (r) r.checked = true;
+};
+const crawlCount = $<HTMLSelectElement>("#crawl-count");
+
+function fillCrawlCounts(theme: CrawlTheme, selected: number): void {
+  crawlCount.replaceChildren(
+    ...Array.from({ length: MAX_STOPS[theme] - MIN_STOPS + 1 }, (_, i) => {
+      const o = document.createElement("option");
+      o.value = String(MIN_STOPS + i);
+      o.textContent = String(MIN_STOPS + i);
+      return o;
+    }),
+  );
+  crawlCount.value = String(Math.min(selected, MAX_STOPS[theme]));
+}
+fillCrawlCounts("art", 5);
+document.querySelectorAll<HTMLInputElement>('input[name="crawl-theme"]').forEach((r) =>
+  r.addEventListener("change", () => fillCrawlCounts(r.value as CrawlTheme, Number(crawlCount.value))),
+);
+
+function syncToolForms(): void {
+  if (state.crawl) {
+    setRadio("crawl-theme", state.crawl.theme);
+    fillCrawlCounts(state.crawl.theme, state.crawl.count);
+    setRadio("crawl-len", state.crawl.minutes);
+    $<HTMLInputElement>("#crawl-end").checked = state.crawl.toEnd;
+  }
+  if (state.workout) {
+    setRadio("workout-focus", state.workout.focus);
+    setRadio("workout-len", state.workout.minutes);
+  }
+}
+
+function needFrom(what: string): boolean {
+  if (state.from) return true;
+  setStatus(`Pick a From point first; the ${what} starts there.`, true);
+  if (!state.open.includes("plan")) setOpen("plan", true);
+  input("from").focus();
+  return false;
+}
+
+$<HTMLFormElement>("#crawl-form").addEventListener("submit", (e) => {
+  e.preventDefault();
+  if (!needFrom("crawl")) return;
+  const toEnd = $<HTMLInputElement>("#crawl-end").checked;
+  if (toEnd && !state.to) {
+    setStatus("Pick a To point to finish there, or untick the box to loop back.", true);
+    return;
+  }
+  const minutes = Number(radioValue("crawl-len"));
+  state.crawl = {
+    theme: radioValue("crawl-theme") as CrawlTheme,
+    count: Number(crawlCount.value),
+    minutes: (CRAWL_MINUTES as readonly number[]).includes(minutes) ? minutes : 45,
+    toEnd,
+  };
+  crawlSkip = [];
+  requestCrawl();
+});
+
+function requestCrawl(): void {
+  if (!info || !state.from || !state.crawl) return;
+  state.art = null;
+  state.workout = null;
+  requestId++;
+  if (!state.open.includes("crawl")) setOpen("crawl", true);
+  setStatus("Planning the crawl…");
+  send({
+    type: "crawl",
+    id: requestId,
+    start: state.from,
+    end: state.crawl.toEnd ? state.to : null,
+    fromName: state.fromName ?? "your start",
+    toName: state.toName ?? "your end",
+    theme: state.crawl.theme,
+    stops: state.crawl.count,
+    minutes: state.crawl.minutes,
+    skip: crawlSkip,
+  });
+}
+
+$<HTMLFormElement>("#workout-form").addEventListener("submit", (e) => {
+  e.preventDefault();
+  if (!needFrom("loop")) return;
+  state.workout = { focus: radioValue("workout-focus") as WorkoutFocus, minutes: Number(radioValue("workout-len")) };
+  requestWorkout();
+});
+
+function requestWorkout(): void {
+  if (!info || !state.from || !state.workout) return;
+  state.art = null;
+  state.crawl = null;
+  requestId++;
+  if (!state.open.includes("workout")) setOpen("workout", true);
+  setStatus("Planning the loop…");
+  send({ type: "workout", id: requestId, start: state.from, fromName: state.fromName ?? "your start", minutes: state.workout.minutes, focus: state.workout.focus });
+}
+
+function stopActions(pin: Pin): PinAction[] {
+  if (pin.kind !== "stop" || pin.stopIndex === undefined || !state.crawl) return [];
+  const index = pin.stopIndex;
+  const actions: PinAction[] = [{
+    label: "Swap for another",
+    run: () => {
+      crawlSkip.push(index);
+      requestCrawl();
+    },
+  }];
+  if (state.crawl.count > MIN_STOPS) {
+    actions.push({
+      label: "Skip this stop",
+      run: () => {
+        crawlSkip.push(index);
+        state.crawl!.count--;
+        syncToolForms();
+        requestCrawl();
+      },
+    });
+  }
+  return actions;
+}
+
+function onTour(result: TourResult): void {
+  goButton.disabled = false;
+  lastCard = tourCard(result);
+  state.from = result.start;
+  routeMap?.setMarker("from", result.start);
+  const loops = result.end[0] === result.start[0] && result.end[1] === result.start[1];
+  routeMap?.setMarker("to", loops ? null : result.end);
+  writeLink();
+  routeMap?.setRoutes([], result.line);
+  routeMap?.setPins(result.pins, stopActions);
+  renderTour(result, (at) => routeMap?.flyTo(at));
+  clearShareImage();
+  showResult();
+  $("#announcer").textContent = `${result.kind === "crawl" ? "Crawl" : "Loop"} ready. ${result.summary} Step-by-step directions follow the stats.`;
 }
 
 // --- Famous routes -------------------------------------------------------------------------------
@@ -406,15 +617,27 @@ $("#famous-list").replaceChildren(
     const pitch = document.createElement("span");
     pitch.textContent = f.pitch;
     const meta = document.createElement("small");
-    meta.textContent = `${MODES[f.mode].name} · ${f.fromName} to ${f.toName}`;
+    meta.textContent =
+      f.kind === "plan" ? `${MODES[f.mode].name} · ${f.fromName} to ${f.toName}` : `${f.kind === "crawl" ? "Crawl" : "Workout"} · from ${f.fromName}`;
     button.append(title, pitch, meta);
     button.addEventListener("click", () => {
-      state.mode = f.mode;
-      state.seed = f.seed;
       setEnd("from", f.from, f.fromName);
-      setEnd("to", f.to, f.toName);
-      syncInputs();
-      requestPlan();
+      if (f.kind === "plan") {
+        state.mode = f.mode;
+        state.seed = f.seed;
+        setEnd("to", f.to, f.toName);
+        syncInputs();
+        requestPlan();
+      } else if (f.kind === "crawl") {
+        state.crawl = { theme: f.theme, count: f.count, minutes: f.minutes, toEnd: false };
+        crawlSkip = [];
+        syncToolForms();
+        requestCrawl();
+      } else {
+        state.workout = { focus: f.focus, minutes: f.minutes };
+        syncToolForms();
+        requestWorkout();
+      }
     });
     li.append(button);
     return li;

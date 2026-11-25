@@ -56,6 +56,12 @@
                   </div>
                 </div>
 
+                <div class="stops" id="stops" hidden>
+                  <span class="stops-title">Stops on the way</span>
+                  <ol id="stop-list"></ol>
+                  <p class="help">Tap a park pin on the map to add it as a stop (up to three).</p>
+                </div>
+
                 <fieldset class="modes">
                   <legend>Mode</legend>
                   <div class="mode-list" id="mode-list"></div>
@@ -71,6 +77,36 @@
             </div>
           </section>
 
+          <section class="section" data-section="crawl">
+            <h2 class="section-head">
+              <button type="button" id="crawl-head" aria-expanded="false" aria-controls="crawl-body">
+                <span class="section-title">Crawls</span>
+                <span class="section-summary">Art, pubs or wine: a few stops in a sensible order.</span>
+              </button>
+            </h2>
+            <div id="crawl-body" class="section-body" role="region" aria-labelledby="crawl-head" hidden>
+              <form id="crawl-form" class="tool-form" novalidate>
+                <p class="help">Starts from your From point. Stops are chosen and ordered by route, not by rating.</p>
+                <fieldset class="choice">
+                  <legend>Theme</legend>
+                  <label><input type="radio" name="crawl-theme" value="art" checked> Art: murals, sculptures, galleries</label>
+                  <label><input type="radio" name="crawl-theme" value="pub"> Pubs and bars</label>
+                  <label><input type="radio" name="crawl-theme" value="wine"> Wine bars and shops</label>
+                </fieldset>
+                <label for="crawl-count">Stops</label>
+                <select id="crawl-count"></select>
+                <fieldset class="choice">
+                  <legend>Walking time</legend>
+                  <label><input type="radio" name="crawl-len" value="30"> About 30 min</label>
+                  <label><input type="radio" name="crawl-len" value="45" checked> About 45 min</label>
+                  <label><input type="radio" name="crawl-len" value="60"> About an hour</label>
+                </fieldset>
+                <label class="check"><input type="checkbox" id="crawl-end"> Finish at the To point instead of looping back</label>
+                <button type="submit" class="secondary">Plan the crawl</button>
+              </form>
+            </div>
+          </section>
+
           <section class="section" data-section="art">
             <h2 class="section-head">
               <button type="button" id="art-head" aria-expanded="false" aria-controls="art-body">
@@ -79,11 +115,11 @@
               </button>
             </h2>
             <div id="art-body" class="section-body" role="region" aria-labelledby="art-head" hidden>
-              <form id="art-form" class="art-form" novalidate>
+              <form id="art-form" class="tool-form" novalidate>
                 <p class="help">Starts from your From point and loops back, or ends where the letter ends.</p>
                 <label for="art-shape">Shape</label>
                 <select id="art-shape"></select>
-                <fieldset class="art-length">
+                <fieldset class="choice">
                   <legend>Walk length</legend>
                   <label><input type="radio" name="art-len" value="25"> Short, about 25 min</label>
                   <label><input type="radio" name="art-len" value="40" checked> Medium, about 40 min</label>
@@ -94,11 +130,38 @@
             </div>
           </section>
 
+          <section class="section" data-section="workout">
+            <h2 class="section-head">
+              <button type="button" id="workout-head" aria-expanded="false" aria-controls="workout-body">
+                <span class="section-title">Workout</span>
+                <span class="section-summary">A loop with stairs, hills or both.</span>
+              </button>
+            </h2>
+            <div id="workout-body" class="section-body" role="region" aria-labelledby="workout-head" hidden>
+              <form id="workout-form" class="tool-form" novalidate>
+                <p class="help">Starts and ends at your From point. Longer loops prefer lit streets.</p>
+                <fieldset class="choice">
+                  <legend>Focus</legend>
+                  <label><input type="radio" name="workout-focus" value="stairs" checked> Stairs: as many staircases as fit</label>
+                  <label><input type="radio" name="workout-focus" value="hills"> Hills: as much climbing as fits</label>
+                  <label><input type="radio" name="workout-focus" value="mixed"> Mixed</label>
+                </fieldset>
+                <fieldset class="choice">
+                  <legend>Length</legend>
+                  <label><input type="radio" name="workout-len" value="20"> 20 min</label>
+                  <label><input type="radio" name="workout-len" value="30" checked> 30 min</label>
+                  <label><input type="radio" name="workout-len" value="45"> 45 min</label>
+                </fieldset>
+                <button type="submit" class="secondary">Plan the loop</button>
+              </form>
+            </div>
+          </section>
+
           <section class="section" data-section="famous">
             <h2 class="section-head">
               <button type="button" id="famous-head" aria-expanded="false" aria-controls="famous-body">
                 <span class="section-title">Famous routes</span>
-                <span class="section-summary">Eight good ones to start with.</span>
+                <span class="section-summary">A few good ones to start with.</span>
               </button>
             </h2>
             <div id="famous-body" class="section-body" role="region" aria-labelledby="famous-head" hidden>
@@ -114,7 +177,7 @@
               </button>
             </h2>
             <div id="about-body" class="section-body about" role="region" aria-labelledby="about-head" hidden>
-              <p>Better Directions finds a deliberately longer walk between two places, and shows the normal route next to it so you know what the detour costs.</p>
+              <p>Better Directions finds a deliberately longer walk between two places, and shows the normal route next to it so you know what the detour costs. It also plans crawls, workout loops and walks that draw a shape.</p>
               <p>It only uses paths that are open to walkers in OpenStreetMap. It never routes along railways, motorways, construction or anything marked private, and it only goes through buildings by mapped public passages. It can still be wrong: the map may be out of date, and gates and doors close. Follow signs, and skip anything that looks closed or unsafe.</p>
               <p>Everything runs on your device. There are no cookies, no tracking and no accounts, and the page talks to no one but this site. Your location is used only when you tap "Use my location", and it stays on your device. Shared links and images include your start and end points.</p>
             </div>

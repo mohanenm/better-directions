@@ -2,7 +2,7 @@
 import { CITY } from "../city";
 import type { CostOfFun } from "../modes/stats";
 import type { Step } from "../modes/directions";
-import type { ArtResultMsg, PlanResult } from "./protocol";
+import type { ArtResultMsg, PlanResult, TourResult } from "./protocol";
 import type { ShareCard } from "./share-image";
 
 const el = <K extends keyof HTMLElementTagNameMap>(tag: K, text?: string, className?: string) => {
@@ -49,6 +49,8 @@ function renderCard(name: string, summary: string, stats: [string, string][], b:
   get("summary").textContent = summary;
   get("legend-better").textContent = legend[0];
   get("legend-normal").textContent = legend[1];
+  // Workouts and crawls have no second line to compare.
+  for (const el of document.querySelectorAll<HTMLElement>(".swatch.normal, #legend-normal")) el.hidden = legend[1] === "";
   get("stats").replaceChildren(
     ...stats.map(([k, v]) => {
       const wrap = el("div");
@@ -70,7 +72,16 @@ function renderCard(name: string, summary: string, stats: [string, string][], b:
 }
 
 export function renderResult(r: PlanResult, onStep: (at: [number, number]) => void): void {
-  renderCard(r.name, r.summary, statItems(r), r.betterStats, [], r.steps, ["Better route", "Normal route"], onStep);
+  const notes = r.strategy === "via-stops" ? ["Goes through the stops you picked, in order."] : [];
+  renderCard(r.name, r.summary, statItems(r), r.betterStats, notes, r.steps, ["Better route", "Normal route"], onStep);
+}
+
+export function renderTour(r: TourResult, onStep: (at: [number, number]) => void): void {
+  renderCard(r.name, r.summary, r.statItems, r.stats, r.notes, r.steps, [r.kind === "crawl" ? "The crawl" : "The loop", ""], onStep);
+}
+
+export function tourCard(r: TourResult): ShareCard {
+  return { name: r.name, summary: r.summary, chips: r.statItems.slice(0, 3), from: r.start, to: r.end, legend: [r.kind === "crawl" ? "The crawl" : "The loop", ""] };
 }
 
 export function artSummary(r: ArtResultMsg): string {
