@@ -1,8 +1,8 @@
 # Deploys the static site to GitHub Pages at https://mohanenm.github.io/better-directions/
 #
-# NOT ENABLED. This workflow only runs when started by hand (workflow_dispatch), and it does
-# nothing until GitHub Pages is switched on for the repository with "GitHub Actions" as the
-# source (Settings > Pages). Both steps are deliberately left to the project owner.
+# Runs only when started by hand (Actions > Deploy to GitHub Pages > Run workflow), so merging
+# into main does not redeploy. Pages is set to use "GitHub Actions" as its source
+# (Settings > Pages); the github-pages environment only accepts deploys from main.
 name: Deploy to GitHub Pages
 
 on:
