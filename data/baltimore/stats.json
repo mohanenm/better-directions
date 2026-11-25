@@ -5,8 +5,8 @@
     "edges": 102682,
     "ways": 43623,
     "length_km": 2995.2,
-    "bytes": 5164268,
-    "gzip_bytes": 1350490
+    "bytes": 5164444,
+    "gzip_bytes": 1455362
   },
   "connectivity": {
     "nodes_before": 75090,
@@ -15,11 +15,11 @@
     "length_share": 0.9809
   },
   "terrain": {
-    "source": "none",
-    "edges_with_elevation_share": 0.0,
-    "edges_10pct_or_steeper": 0,
-    "steepest_grade_pct": 0.0,
-    "steepest_name": ""
+    "source": "Elevation: USGS 3DEP",
+    "edges_with_elevation_share": 1.0,
+    "edges_10pct_or_steeper": 255,
+    "steepest_grade_pct": 41.9,
+    "steepest_name": "North Calvert Street"
   },
   "edges_by_highway": {
     "footway": {

@@ -5,8 +5,8 @@
     "edges": 42313,
     "ways": 18954,
     "length_km": 1760.1,
-    "bytes": 2299992,
-    "gzip_bytes": 703792
+    "bytes": 2300168,
+    "gzip_bytes": 757242
   },
   "connectivity": {
     "nodes_before": 32878,
@@ -15,10 +15,10 @@
     "length_share": 0.9791
   },
   "terrain": {
-    "source": "none",
-    "edges_with_elevation_share": 0.0,
-    "edges_10pct_or_steeper": 0,
-    "steepest_grade_pct": 0.0,
+    "source": "Elevation: USGS 3DEP",
+    "edges_with_elevation_share": 1.0,
+    "edges_10pct_or_steeper": 330,
+    "steepest_grade_pct": 37.8,
     "steepest_name": ""
   },
   "edges_by_highway": {

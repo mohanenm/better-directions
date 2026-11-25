@@ -223,7 +223,7 @@ const SILVER_SPRING: readonly FamousRoute[] = [
     kind: "crawl",
     title: "Downtown Silver Spring Art",
     pitch: "Public art around downtown Silver Spring, back to the Metro.",
-    theme: "art", count: 5, minutes: 30,
+    theme: "art", count: 5, minutes: 45,
     from: [-77.0311, 38.9939], fromName: "Silver Spring station",
   },
 ];

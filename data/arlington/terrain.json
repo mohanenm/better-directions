@@ -1,0 +1,9 @@
+{
+  "provider": "usgs-3dep",
+  "resource": null,
+  "licence": "Public domain (USGS): https://www.usgs.gov/information-policies-and-instructions/copyrights-and-credits",
+  "attribution": "Elevation: USGS 3DEP",
+  "fetched": "2026-11-25",
+  "points": 249959,
+  "points_with_elevation": 249959
+}

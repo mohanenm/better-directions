@@ -5,8 +5,8 @@
     "edges": 196186,
     "ways": 80626,
     "length_km": 5720.1,
-    "bytes": 9835184,
-    "gzip_bytes": 2674054
+    "bytes": 9835360,
+    "gzip_bytes": 2877244
   },
   "connectivity": {
     "nodes_before": 146446,
@@ -15,11 +15,11 @@
     "length_share": 0.9867
   },
   "terrain": {
-    "source": "none",
-    "edges_with_elevation_share": 0.0,
-    "edges_10pct_or_steeper": 0,
-    "steepest_grade_pct": 0.0,
-    "steepest_name": ""
+    "source": "Elevation: USGS 3DEP",
+    "edges_with_elevation_share": 1.0,
+    "edges_10pct_or_steeper": 1310,
+    "steepest_grade_pct": 66.8,
+    "steepest_name": "Exorcist Steps"
   },
   "edges_by_highway": {
     "footway": {
