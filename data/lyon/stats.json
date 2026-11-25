@@ -5,8 +5,8 @@
     "edges": 174338,
     "ways": 78061,
     "length_km": 4351.8,
-    "bytes": 9161188,
-    "gzip_bytes": 2664124
+    "bytes": 9235900,
+    "gzip_bytes": 2679726
   },
   "connectivity": {
     "nodes_before": 139745,
@@ -155,6 +155,22 @@
     "venues": {
       "mall": 8,
       "station": 12
+    },
+    "stops": {
+      "artwork": 394,
+      "bakery": 441,
+      "bar": 388,
+      "brewery": 18,
+      "cafe": 413,
+      "chocolate": 79,
+      "gallery": 51,
+      "ice_cream": 25,
+      "museum": 8,
+      "pastry": 68,
+      "pub": 119,
+      "wine_bar": 10,
+      "wine_shop": 36,
+      "winery": 2
     }
   },
   "exclusions": {

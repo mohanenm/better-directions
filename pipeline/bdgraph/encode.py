@@ -233,9 +233,9 @@ def encode_graph(graph: Graph) -> bytes:
         "node_tagsets": node_tagsets.items,
         "areas": areas.items,
         "pois": [
-            {"kind": snack.kind, "name": snack.name, "edge": ei}
-            | ({"opening_hours": snack.opening_hours} if snack.opening_hours else {})
-            for ei, snack in graph.snack_stops
+            {"kind": poi.kind, "name": poi.name, "edge": ei}
+            | ({"opening_hours": poi.opening_hours} if poi.opening_hours else {})
+            for ei, poi in graph.poi_stops
         ],
         "sections": [{"name": n, "type": t, "count": len(a)} for n, t, a in sections],
     }

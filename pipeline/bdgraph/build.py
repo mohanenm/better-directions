@@ -20,6 +20,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 import sys
 from collections import Counter, defaultdict
 from dataclasses import dataclass, field
@@ -100,7 +101,7 @@ class OsmData:
     fast_segments: list[tuple[Point, Point, int]] = field(default_factory=list)
     way_reasons: Counter[str] = field(default_factory=Counter)
     rail_values_crossed: Counter[str] = field(default_factory=Counter)
-    snacks: list[Snack] = field(default_factory=list)
+    pois: list[Poi] = field(default_factory=list)
 
 
 def _tags(obj) -> dict[str, str]:
@@ -108,10 +109,10 @@ def _tags(obj) -> dict[str, str]:
 
 
 @dataclass(frozen=True)
-class Snack:
-    """A named place to eat something sweet or drink a coffee, for the snack tour."""
+class Poi:
+    """A place the snack tour or a crawl can stop at."""
 
-    kind: str  # bakery | pastry | chocolate | ice_cream | cafe
+    kind: str  # see POI_KINDS
     name: str
     lon: float
     lat: float
@@ -120,19 +121,63 @@ class Snack:
 
 SNACK_SHOPS = {"bakery": "bakery", "pastry": "pastry", "confectionery": "chocolate",
                "chocolate": "chocolate", "ice_cream": "ice_cream"}  # fmt: skip
-SNAP_SNACK_M = 40.0
+SNAP_POI_M = 40.0
+
+# Wine bars are rarely tagged bar=wine; in Lyon most only show it in their name.
+WINE_WORDS = re.compile(
+    r"\b(vins?|wine|caves?|caviste|vinoth[eè]que|winery|bar [àa] vins?)\b", re.I
+)
+ARTWORK_LABELS = {"mural": "Mural", "sculpture": "Sculpture", "statue": "Statue", "bust": "Bust",
+                  "installation": "Installation", "mosaic": "Mosaic", "street_art": "Street art",
+                  "graffiti": "Graffiti", "flacking": "Pavement mosaic", "pixel_art": "Pixel art",
+                  "fountain": "Fountain", "relief": "Relief"}  # fmt: skip
+
+
+def poi_kind(tags: dict[str, str]) -> tuple[str, str] | None:
+    """(kind, display name) for a snack or crawl stop, or None."""
+    name = tags.get("name")
+    if tags.get("tourism") == "artwork" and tags.get("indoor") != "yes":
+        label = ARTWORK_LABELS.get(tags.get("artwork_type", ""), "Artwork")
+        return "artwork", name or label
+    if name is None:
+        return None
+    if tags.get("shop") in SNACK_SHOPS:
+        return SNACK_SHOPS[tags["shop"]], name
+    if tags.get("amenity") == "ice_cream":
+        return "ice_cream", name
+    if tags.get("amenity") == "cafe":
+        return "cafe", name
+    if tags.get("tourism") == "gallery":
+        return "gallery", name
+    if tags.get("tourism") == "museum" and (
+        tags.get("museum") == "art" or re.search(r"\b(art|arts|beaux-arts)\b", name, re.I)
+    ):
+        return "museum", name
+    if tags.get("craft") == "winery":
+        return "winery", name
+    if tags.get("shop") == "wine":
+        return "wine_shop", name
+    if tags.get("amenity") in ("bar", "pub", "biergarten"):
+        if (
+            tags.get("bar") == "wine"
+            or tags.get("drink:wine") in ("yes", "served")
+            or WINE_WORDS.search(name)
+        ):
+            return "wine_bar", name
+        if tags.get("microbrewery") == "yes":
+            return "brewery", name
+        return ("bar" if tags["amenity"] == "bar" else "pub"), name
+    if tags.get("craft") == "brewery":
+        return "brewery", name
+    return None
 
 
 def snack_kind(tags: dict[str, str]) -> str | None:
-    if "name" not in tags:
-        return None
-    if tags.get("shop") in SNACK_SHOPS:
-        return SNACK_SHOPS[tags["shop"]]
-    if tags.get("amenity") == "ice_cream":
-        return "ice_cream"
-    if tags.get("amenity") == "cafe":
-        return "cafe"
-    return None
+    found = poi_kind(tags)
+    return found[0] if found and found[0] in SNACK_KINDS else None
+
+
+SNACK_KINDS = frozenset({"bakery", "pastry", "chocolate", "ice_cream", "cafe"})
 
 
 def _area_kind(tags: dict[str, str]) -> str | None:
@@ -158,7 +203,7 @@ def read_osm(path: Path, proj: LocalProjection) -> OsmData:
 
     # Pass 1: areas.
     area_filter = osmium.filter.KeyFilter(
-        "leisure", "building", "shop", "public_transport", "amenity"
+        "leisure", "building", "shop", "public_transport", "amenity", "tourism", "craft"
     )
     for obj in (
         osmium.FileProcessor(str(path))
@@ -166,16 +211,14 @@ def read_osm(path: Path, proj: LocalProjection) -> OsmData:
         .with_filter(osmium.filter.EntityFilter(osmium.osm.AREA))
     ):
         tags = _tags(obj)
-        snack = snack_kind(tags)
-        if snack:
+        poi = poi_kind(tags)
+        if poi:
             for outer in obj.outer_rings():
                 pts = [(n.lon, n.lat) for n in outer][:-1]
                 if pts:
                     lon = sum(x for x, _ in pts) / len(pts)
                     lat = sum(y for _, y in pts) / len(pts)
-                    data.snacks.append(
-                        Snack(snack, tags["name"], lon, lat, tags.get("opening_hours"))
-                    )
+                    data.pois.append(Poi(poi[0], poi[1], lon, lat, tags.get("opening_hours")))
                 break
         kind = _area_kind(tags)
         if kind is None:
@@ -210,11 +253,11 @@ def read_osm(path: Path, proj: LocalProjection) -> OsmData:
             tags = {k: v for k, v in all_tags.items() if k in NODE_KEYS}
             if tags:
                 data.node_tags[obj.id] = tags
-            snack = snack_kind(all_tags)
-            if snack:
+            poi = poi_kind(all_tags)
+            if poi:
                 loc = obj.location
-                data.snacks.append(
-                    Snack(snack, all_tags["name"], loc.lon, loc.lat, all_tags.get("opening_hours"))
+                data.pois.append(
+                    Poi(poi[0], poi[1], loc.lon, loc.lat, all_tags.get("opening_hours"))
                 )
             continue
         if not obj.is_way():
@@ -301,8 +344,8 @@ class Graph:
     # Terrain: elevations in decimetres keyed by microdegree (lon, lat); None = no data.
     elevations: dict[tuple[int, int], int | None] = field(default_factory=dict)
     terrain: dict[str, str] = field(default_factory=dict)  # provider, licence, attribution
-    # Snack stops snapped to the street they're on: (edge index, Snack), sorted.
-    snack_stops: list[tuple[int, Snack]] = field(default_factory=list)
+    # Snack and crawl stops snapped to the street they're on: (edge index, Poi), sorted.
+    poi_stops: list[tuple[int, Poi]] = field(default_factory=list)
 
 
 class _Spatial:
@@ -473,7 +516,7 @@ def build_graph(city: City, osm_path: Path) -> Graph:
     used = {n for e in edges for n in e.nodes}
     node_coords = {n: node_coords[n] for n in sorted(used)}
     junctions = sorted({e.nodes[0] for e in edges} | {e.nodes[-1] for e in edges})
-    snack_stops = _snap_snacks(data.snacks, edges, node_coords, proj, bbox)
+    poi_stops = _snap_pois(data.pois, edges, node_coords, proj, bbox)
     dropped_examples = {r: sorted(ids)[:EXAMPLES_PER_REASON] for r, ids in sorted(examples.items())}
     return Graph(
         city,
@@ -485,18 +528,18 @@ def build_graph(city: City, osm_path: Path) -> Graph:
         excluded_nodes,
         component,
         dropped_examples,
-        snack_stops=snack_stops,
+        poi_stops=poi_stops,
     )
 
 
-def _snap_snacks(
-    snacks: list[Snack],
+def _snap_pois(
+    pois: list[Poi],
     edges: list[Edge],
     node_coords: dict[int, tuple[float, float]],
     proj: LocalProjection,
     bbox: BBox,
-) -> list[tuple[int, Snack]]:
-    """Snap each snack stop to the nearest edge (the street it's on) within SNAP_SNACK_M."""
+) -> list[tuple[int, Poi]]:
+    """Snap each stop to the nearest edge (the street it's on) within SNAP_POI_M."""
     index = GridIndex(50.0)
     shapes: list[list[Point]] = []
     for ei, e in enumerate(edges):
@@ -505,12 +548,12 @@ def _snap_snacks(
         xs = [x for x, _ in pts]
         ys = [y for _, y in pts]
         index.insert(ei, (min(xs), min(ys), max(xs), max(ys)))
-    out: dict[tuple[int, str, str], Snack] = {}
-    r = SNAP_SNACK_M
-    for snack in snacks:
-        if not bbox.contains(snack.lon, snack.lat):
+    out: dict[tuple[int, str, str], Poi] = {}
+    r = SNAP_POI_M
+    for poi in pois:
+        if not bbox.contains(poi.lon, poi.lat):
             continue
-        p = proj(snack.lon, snack.lat)
+        p = proj(poi.lon, poi.lat)
         best, best_d = -1, r
         for ei in sorted(index.query_bbox((p[0] - r, p[1] - r, p[0] + r, p[1] + r))):
             pts = shapes[ei]
@@ -518,7 +561,7 @@ def _snap_snacks(
             if d < best_d:
                 best, best_d = ei, d
         if best != -1:
-            out.setdefault((best, snack.kind, snack.name), snack)
+            out.setdefault((best, poi.kind, poi.name), poi)
     return [(ei, s) for (ei, _, _), s in sorted(out.items())]
 
 

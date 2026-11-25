@@ -397,3 +397,28 @@ def test_snack_stops_are_snapped_to_the_street_they_are_on(tmp_path):
     # The bakery at (305, 55) is on Cross Street 3 (x = 300), not at a junction.
     wi = g["edge_way"][poi["edge"]]
     assert g.meta["strings"][g["way_name"][wi]] == "Cross Street 3"
+
+
+def test_crawl_stop_kinds():
+    from bdgraph.build import poi_kind
+
+    assert poi_kind({"tourism": "artwork", "artwork_type": "mural"}) == ("artwork", "Mural")
+    assert poi_kind({"tourism": "artwork", "name": "Mur des Canuts"}) == (
+        "artwork",
+        "Mur des Canuts",
+    )
+    assert poi_kind({"tourism": "artwork", "indoor": "yes", "name": "X"}) is None
+    assert poi_kind({"tourism": "museum", "name": "Musée des Beaux-Arts"}) == (
+        "museum",
+        "Musée des Beaux-Arts",
+    )
+    assert poi_kind({"tourism": "museum", "name": "Musée de l'Imprimerie"}) is None
+    assert poi_kind({"amenity": "pub", "name": "The Shamrock"}) == ("pub", "The Shamrock")
+    assert poi_kind({"amenity": "bar", "name": "Le Zinc", "microbrewery": "yes"}) == (
+        "brewery",
+        "Le Zinc",
+    )
+    assert poi_kind({"amenity": "bar", "name": "La Cave à Vins"}) == ("wine_bar", "La Cave à Vins")
+    assert poi_kind({"amenity": "bar", "name": "Chez Jo", "drink:wine": "served"})[0] == "wine_bar"
+    assert poi_kind({"shop": "wine", "name": "Caviste"}) == ("wine_shop", "Caviste")
+    assert poi_kind({"amenity": "bar"}) is None  # unnamed bars are skipped
