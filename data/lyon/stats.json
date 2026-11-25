@@ -5,8 +5,8 @@
     "edges": 178002,
     "ways": 79906,
     "length_km": 4367.8,
-    "bytes": 9712240,
-    "gzip_bytes": 3106764
+    "bytes": 9356240,
+    "gzip_bytes": 2704689
   },
   "connectivity": {
     "nodes_before": 144968,
@@ -17,8 +17,8 @@
   "terrain": {
     "source": "Elevation: IGN RGE ALTI\u00ae",
     "edges_with_elevation_share": 1.0,
-    "edges_10pct_or_steeper": 1596,
-    "steepest_grade_pct": 70.5,
+    "edges_10pct_or_steeper": 1597,
+    "steepest_grade_pct": 70.4,
     "steepest_name": ""
   },
   "edges_by_highway": {
@@ -44,7 +44,7 @@
     },
     "path": {
       "edges": 2924,
-      "km": 140.3
+      "km": 140.4
     },
     "primary": {
       "edges": 3976,
@@ -52,7 +52,7 @@
     },
     "secondary": {
       "edges": 4123,
-      "km": 128.2
+      "km": 128.1
     },
     "pedestrian": {
       "edges": 4355,
@@ -76,7 +76,7 @@
     },
     "corridor": {
       "edges": 3498,
-      "km": 10.8
+      "km": 10.9
     },
     "primary_link": {
       "edges": 220,
@@ -130,7 +130,7 @@
     },
     "park_path": {
       "edges": 7704,
-      "km": 238.6
+      "km": 238.59
     },
     "unpaved": {
       "edges": 7354,
