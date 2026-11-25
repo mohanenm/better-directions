@@ -44,7 +44,9 @@ export function collectRoute(
   mode: Mode,
   model: CostModel,
   capSeconds: number,
+  opts: { maxRetraceShare?: number } = {},
 ): Route | null {
+  const maxRetrace = opts.maxRetraceShare ?? MAX_RETRACE_SHARE;
   const collect = mode.collect;
   if (!collect) return null;
   const g = fi.g;
@@ -109,7 +111,7 @@ export function collectRoute(
     const [before, after] = legs2;
     const trialLegs = [...legs.slice(0, at), before, after, ...legs.slice(at + 1)];
     const trialStops = [...stops.slice(0, at + 1), { enter: cIn, exit: cOut, path: c.path }, ...stops.slice(at + 1)];
-    if (retraceShare(router, assemble(router, trialStops, trialLegs)) > MAX_RETRACE_SHARE) {
+    if (retraceShare(router, assemble(router, trialStops, trialLegs)) > maxRetrace) {
       rejected.add(c.key); // an out-and-back to this feature would be dull
       continue;
     }
