@@ -3,7 +3,7 @@
 A walking router for Lyon that takes the long way round on purpose. Pick a start, an end and a mode, and it finds the *better* route: up every staircase, through the traboules, along the dirt paths, past the bakeries. The normal route is drawn next to it, with the cost:
 
 > Normal: 23 min. Better: 33 min, 10 staircases, 591 steps up.
-> *(Cathédrale Saint-Jean to the Basilique de Fourvière, Stairmaster)*
+> *(Cathédrale Saint-Jean to the Basilique de Fourvière, Stairs mode)*
 
 **For fun.** Use common sense, follow signs and local rules, and don't follow it anywhere that looks unsafe or closed.
 
@@ -14,16 +14,16 @@ It's a static site with no server, accounts or tracking. Routes are planned on y
 ## Modes
 
 - **Through buildings**: mapped public passages, arcades and shopping-centre corridors. Terreaux to Croix-Rousse walks through 10 buildings for 13 extra minutes.
-- **Trail runner**: dirt and gravel over pavement. Jean Macé to Bellecour is half trail.
-- **Stairmaster**: goes out of its way for staircases, climbed upwards. Saint-Jean to Fourvière: 591 steps up, 10 extra minutes.
-- **Park hopper**: collects parks. Terreaux to Croix-Rousse passes eight.
-- **Snack tour**: bakeries, pâtisseries, chocolatiers, ice cream and cafés. Bellecour to Terreaux: 4 bakeries and 10 other stops for 4 extra minutes.
-- **Never turn right**: left turns and straight on only. Saint-Jean to Fourvière: 33 lefts, no rights.
-- **Scenic chaos**: random, from a seed, so the same link gives the same detour.
+- **Trails**: dirt and gravel over pavement. Jean Macé to Bellecour is half trail.
+- **Stairs**: goes out of its way for staircases, climbed upwards. Saint-Jean to Fourvière: 591 steps up, 10 extra minutes.
+- **Parks**: collects parks. Terreaux to Croix-Rousse passes eight.
+- **Snacks**: bakeries, pâtisseries, chocolatiers, ice cream and cafés. Bellecour to Terreaux: 4 bakeries and 10 other stops for 4 extra minutes.
+- **Left turns only**: left or straight on, never right if it can help it. Saint-Jean to Fourvière: 33 lefts, no rights.
+- **Random**: a detour picked by a seed, so the same link gives the same route. The scenic route. Very scenic.
 
-Every route gets a name, and can be shared as a link or as an image drawn on your phone. The landing panel has eight famous routes to try.
+Every route gets a name, and can be shared as a link or as an image drawn on your phone. The Famous routes section has eight to try.
 
-There's also an experimental GPS art panel that draws a heart, star, square or one-stroke letter with real streets and scores the likeness. See [docs/GPS_ART.md](docs/GPS_ART.md).
+There's also an experimental Draw a shape section that finds a walk drawing a heart, star, square or one-stroke letter with real streets, and scores the likeness. See [docs/GPS_ART.md](docs/GPS_ART.md).
 
 <img src="docs/images/gps-art-heart.jpg" alt="A heart walked through Guillotière: 85% likeness, 46 minutes" width="480">
 
