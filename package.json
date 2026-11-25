@@ -22,7 +22,8 @@
     "smoke": "node scripts/smoke.mjs",
     "perf": "node scripts/perf.mjs",
     "notices": "node scripts/notices.mjs",
-    "pages:local": "vite build && vite preview"
+    "pages:local": "vite build && vite preview",
+    "pages:gz": "vite build && node scripts/serve-gz.mjs dist"
   },
   "devDependencies": {
     "@eslint/js": "10.0.1",
