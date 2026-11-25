@@ -1,0 +1,168 @@
+{
+  "city": "dundee",
+  "graph": {
+    "nodes": 902,
+    "edges": 1168,
+    "ways": 491,
+    "length_km": 70.4,
+    "bytes": 74460,
+    "gzip_bytes": 26466
+  },
+  "connectivity": {
+    "nodes_before": 1194,
+    "nodes_kept": 902,
+    "node_share": 0.7554,
+    "length_share": 0.7135
+  },
+  "terrain": {
+    "source": "Elevation: USGS 3DEP",
+    "edges_with_elevation_share": 1.0,
+    "edges_10pct_or_steeper": 61,
+    "steepest_grade_pct": 24.3,
+    "steepest_name": "Harvey Creek Trail"
+  },
+  "edges_by_highway": {
+    "residential": {
+      "edges": 342,
+      "km": 29.3
+    },
+    "service": {
+      "edges": 314,
+      "km": 17.9
+    },
+    "footway": {
+      "edges": 396,
+      "km": 16.9
+    },
+    "path": {
+      "edges": 26,
+      "km": 2.1
+    },
+    "unclassified": {
+      "edges": 35,
+      "km": 1.9
+    },
+    "primary": {
+      "edges": 42,
+      "km": 1.5
+    },
+    "secondary": {
+      "edges": 11,
+      "km": 0.9
+    },
+    "pedestrian": {
+      "edges": 1,
+      "km": 0.0
+    },
+    "steps": {
+      "edges": 1,
+      "km": 0.0
+    }
+  },
+  "features": {
+    "building_passage": {
+      "edges": 0,
+      "km": 0
+    },
+    "corridor": {
+      "edges": 0,
+      "km": 0
+    },
+    "covered": {
+      "edges": 8,
+      "km": 0.1
+    },
+    "through_building": {
+      "edges": 0,
+      "km": 0
+    },
+    "under_building": {
+      "edges": 0,
+      "km": 0
+    },
+    "may_close": {
+      "edges": 21,
+      "km": 0.69
+    },
+    "steps": {
+      "edges": 1,
+      "km": 0.01
+    },
+    "park_path": {
+      "edges": 43,
+      "km": 1.89
+    },
+    "unpaved": {
+      "edges": 87,
+      "km": 10.15
+    },
+    "lit": {
+      "edges": 293,
+      "km": 14.16
+    },
+    "informal": {
+      "edges": 1,
+      "km": 0.03
+    }
+  },
+  "steps": {
+    "total_steps": 32,
+    "estimated_edges": 1
+  },
+  "distinct": {
+    "parks_on_paths": 6,
+    "buildings_passed_through": 0,
+    "venues": {},
+    "stops": {
+      "bar": 1,
+      "brewery": 1,
+      "wine_shop": 3,
+      "winery": 6
+    }
+  },
+  "exclusions": {
+    "ways_by_reason": {
+      "access": 214,
+      "fast_road": 11,
+      "foot": 10,
+      "highway_kind": 2,
+      "no_sidewalk": 11,
+      "sidewalk_separate": 1,
+      "walkable": 639
+    },
+    "segments_dropped": {
+      "node:barrier_no_opening": 2,
+      "node:fast_road_unmarked_crossing": 9,
+      "node:node_access": 2,
+      "node:railway_unmapped_crossing": 2
+    },
+    "dropped_examples": {
+      "node:barrier_no_opening": [
+        1417756274
+      ],
+      "node:fast_road_unmarked_crossing": [
+        5396504,
+        5399927,
+        5404996,
+        409582611,
+        778501810,
+        778517566,
+        788792220,
+        898328504
+      ],
+      "node:node_access": [
+        1417770162,
+        1448483072
+      ],
+      "node:railway_unmapped_crossing": [
+        1417653551
+      ]
+    },
+    "nodes_excluded": {
+      "barrier_no_opening": 1,
+      "fast_road_unmarked_crossing": 8,
+      "node_access": 2,
+      "railway_unmapped_crossing": 1
+    }
+  }
+}

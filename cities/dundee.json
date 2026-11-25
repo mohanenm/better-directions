@@ -1,0 +1,35 @@
+{
+  "id": "dundee",
+  "name": "Dundee",
+  "extract": {
+    "provider": "Geofabrik",
+    "url": "https://download.geofabrik.de/north-america/us/oregon-latest.osm.pbf",
+    "licence": "ODbL 1.0",
+    "attribution": "© OpenStreetMap contributors"
+  },
+  "bbox": {
+    "west": -123.045,
+    "south": 45.262,
+    "east": -122.99,
+    "north": 45.297
+  },
+  "center": {
+    "lon": -123.0103,
+    "lat": 45.2779
+  },
+  "default_zoom": 13,
+  "places": {
+    "square_name_prefixes": [],
+    "square_name_suffixes": [
+      " Circle",
+      " Square",
+      " Plaza"
+    ]
+  },
+  "confirmed_passages": [],
+  "terrain": {
+    "provider": "usgs-3dep",
+    "licence": "Public domain (USGS): https://www.usgs.gov/information-policies-and-instructions/copyrights-and-credits",
+    "attribution": "Elevation: USGS 3DEP"
+  }
+}
