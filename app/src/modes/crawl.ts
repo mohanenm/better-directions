@@ -194,7 +194,11 @@ export function planCrawl(router: Router, fi: FeatureIndex, opts: CrawlOptions):
   const notes: string[] = [];
   if (drinks) notes.push(DRINK_NOTE);
   if (stats.unlitM >= 50) notes.push(`About ${Math.round(stats.unlitM / 10) * 10} m of the walk is on paths tagged as unlit.`);
-  const stopNotes = best.stops.map((s) => eveningNote(s.openingHours, opts.theme));
+  const stopNotes = best.stops.map((s) => {
+    if (opts.theme !== "art") return eveningNote(s.openingHours, opts.theme);
+    if (s.kind !== "gallery" && s.kind !== "museum") return ""; // outdoor art is always there
+    return s.openingHours ? `Open ${s.openingHours}.` : "Opening hours not mapped.";
+  });
   if (stopNotes.some(Boolean)) notes.push(HOURS_NOTE);
   const noun = { art: ["artwork", "artworks"], pub: ["pub", "pubs"], wine: ["wine stop", "wine stops"] }[opts.theme];
   const n = best.stops.length;
