@@ -338,3 +338,9 @@ These don't loosen any rule, so they didn't need approval. Each is in `safety/ca
 - **Choice:** `.github/workflows/pages.yml` runs only via `workflow_dispatch`. It runs typecheck, lint, build and the full test suite, then uploads `dist/` and deploys. Action SHAs are pinned; `pages: write` and `id-token: write` are granted only to the deploy job. GitHub Pages itself (Settings > Pages > Source: GitHub Actions) is left off.
 - **Why:** the brief says to stop before deploying. Enabling and running it is the project owner's call.
 - **Reversible:** add a `push` trigger to deploy on merges.
+
+## D-041 Deploy to Pages on every merge to main
+
+- **Choice:** `pages.yml` now also runs on `push` to `main`, so every merged PR deploys. The manual trigger stays for redeploys. Supersedes the manual-only part of D-040.
+- **Why:** the owner asked for deploys to happen automatically (2026-11-24). Work now goes through branches and PRs, so `main` only changes by merge, and the deploy job reruns the full test suite before uploading.
+- **Reversible:** remove the `push` trigger.
