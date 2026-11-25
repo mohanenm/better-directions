@@ -21,13 +21,13 @@ const PORT = 9333;
 mkdirSync(OUT, { recursive: true });
 
 const CASES = [
-  { name: "phone-stairs", width: 420, height: 2800, mobile: true,
+  { name: "phone-stairs", width: 390, height: 844, mobile: true, scroll: true,
     query: "?from=4.83200,45.75780&to=4.83360,45.76750&fromName=Place%20Bellecour&toName=Place%20des%20Terreaux&mode=stairs" },
-  { name: "desktop-buildings", width: 1280, height: 860, mobile: false,
+  { name: "desktop-buildings", width: 1280, height: 800, mobile: false, scroll: true,
     query: "?from=4.82740,45.76060&to=4.82250,45.76230&fromName=Cath%C3%A9drale%20Saint-Jean&toName=Basilique%20de%20Fourvi%C3%A8re&mode=buildings" },
   { name: "phone-empty", width: 420, height: 900, mobile: true, query: "", expectRoute: false },
-  { name: "keyboard-only", width: 420, height: 2000, mobile: true, query: "", keyboard: true },
-  { name: "famous-and-share", width: 420, height: 3200, mobile: true, query: "", famous: true },
+  { name: "keyboard-only", width: 390, height: 844, mobile: true, query: "", keyboard: true },
+  { name: "famous-and-share", width: 390, height: 844, mobile: true, query: "", famous: true },
   { name: "gps-art-heart", width: 1280, height: 900, mobile: false,
     query: "?from=4.84500,45.75100&fromName=Guilloti%C3%A8re&art=heart&len=55" },
 ];
@@ -124,6 +124,29 @@ async function runCase(c) {
     if (!ready || img.w !== 1080 || img.h !== 1350) problems.push(`share image wrong size: ${JSON.stringify(img)}`);
     if (img.colours < 20) problems.push(`share image map area looks blank (${img.colours} colours)`);
     console.log(`  share image ${img.w}x${img.h}, ${img.colours} sampled colours, route "${img.name}"`);
+  }
+  if (c.scroll) {
+    // Scrolling the panel to the bottom must move only the panel: not the page, map or footer.
+    const layout = () => evaluate(`JSON.stringify({
+      pageScroll: window.scrollY, pageTaller: document.scrollingElement.scrollHeight - innerHeight,
+      mapTop: Math.round(document.getElementById('map').getBoundingClientRect().top),
+      footerBottom: Math.round(document.querySelector('.attribution').getBoundingClientRect().bottom),
+      panelScroll: document.getElementById('panel').scrollTop })`).then(JSON.parse);
+    const before = await layout();
+    const box = JSON.parse(await evaluate("JSON.stringify(document.getElementById('panel').getBoundingClientRect())"));
+    const x = box.x + box.width / 2, y = box.y + box.height / 2;
+    for (let i = 0; i < 20; i++) {
+      await send("Input.dispatchMouseEvent", { type: "mouseWheel", x, y, deltaX: 0, deltaY: 400 });
+      await sleep(50);
+    }
+    await sleep(500);
+    const after = await layout();
+    if (after.panelScroll <= before.panelScroll) problems.push("scroll: the panel didn't scroll");
+    if (after.pageScroll !== 0 || after.pageTaller > 0) problems.push(`scroll: the page scrolls (${JSON.stringify(after)})`);
+    if (after.mapTop !== before.mapTop) problems.push(`scroll: the map moved from ${before.mapTop} to ${after.mapTop}`);
+    if (after.footerBottom !== c.height) problems.push(`scroll: the footer isn't at the bottom (${after.footerBottom})`);
+    await evaluate("document.getElementById('panel').scrollTop = 0");
+    await sleep(200);
   }
   const shot = await send("Page.captureScreenshot", { format: "png" });
   writeFileSync(join(OUT, `${c.name}.png`), Buffer.from(shot.result.data, "base64"));

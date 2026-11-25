@@ -21,8 +21,13 @@
 
 * { box-sizing: border-box; }
 [hidden] { display: none !important; }
-html, body { margin: 0; height: 100%; }
-body { display: flex; flex-direction: column; min-height: 100dvh; }
+/* A fixed app shell: only the panel scrolls, so the map and footer never move. dvh tracks
+   mobile browser toolbars; vh is the fallback. */
+html, body { margin: 0; height: 100%; overflow: hidden; overscroll-behavior: none; }
+body {
+  display: grid; grid-template-rows: auto minmax(0, 1fr) auto;
+  height: 100vh; height: 100dvh;
+}
 
 .visually-hidden {
   position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
@@ -49,9 +54,14 @@ a { color: var(--accent); }
 .novelty { margin: 0; font-size: 0.85rem; color: var(--ink-soft); }
 
 /* --- Layout: map on top on phones, side panel on wide screens --- */
-.layout { flex: 1; display: flex; flex-direction: column; min-height: 0; }
-.map { height: 48vh; min-height: 260px; }
-.panel { padding: 1rem; overflow-y: auto; }
+.layout { display: flex; flex-direction: column; min-height: 0; }
+.map { flex: none; height: 38vh; height: 38dvh; min-height: 200px; }
+/* position: relative keeps the visually hidden elements inside the scroller; without it they sit
+   relative to the page and make the whole page scrollable. */
+.panel {
+  position: relative; flex: 1; min-height: 0; padding: 1rem;
+  overflow-y: auto; overscroll-behavior: contain; -webkit-overflow-scrolling: touch;
+}
 
 @media (min-width: 900px) {
   .layout { flex-direction: row-reverse; }
@@ -163,8 +173,14 @@ button.secondary { background: var(--paper); color: var(--accent); border: 1px s
 .marker.to { background: var(--ink); }
 
 /* --- Attribution: always visible --- */
-.attribution { border-top: 1px solid var(--line); padding: 0.4rem 1rem; font-size: 0.75rem; color: var(--ink-soft); background: var(--paper); }
-.attribution p { margin: 0.15rem 0; }
+.attribution {
+  border-top: 1px solid var(--line); padding: 0.3rem 1rem calc(0.3rem + env(safe-area-inset-bottom));
+  font-size: 0.75rem; color: var(--ink-soft); background: var(--paper);
+}
+.attribution p { margin: 0.1rem 0; }
+@media (max-width: 600px) {
+  .attribution { font-size: 0.7rem; line-height: 1.35; }
+}
 
 @media (prefers-reduced-motion: reduce) {
   * { scroll-behavior: auto !important; transition: none !important; animation: none !important; }
