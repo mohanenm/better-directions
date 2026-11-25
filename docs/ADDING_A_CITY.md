@@ -13,7 +13,7 @@ Copy `cities/lyon.json` and change:
 - `id` and `name`: a short id used in paths, and the display name.
 - `extract.url`: the smallest Geofabrik (or similar) region containing the city. A `*-latest.osm.pbf` URL is fine; the fetch step records which dated file it got.
 - `bbox`: west, south, east, north. Keep it to the walkable city, roughly 10 to 15 km across; the graph and tiles grow with it.
-- `terrain`: an elevation provider with bare-earth heights. `ign-rge-alti` covers France only; elsewhere, add a provider to `PROVIDERS` in `pipeline/bdgraph/terrain.py` for the country's open terrain model. Don't use surface models such as Copernicus GLO-30 or SRTM, which put city streets on rooftops. Without `terrain`, every climb is unknown and the app still works.
+- `terrain`: an elevation provider with bare-earth heights. `ign-rge-alti` covers France and `usgs-3dep` the United States (1 m lidar in most cities, public domain); elsewhere, add a provider to `PROVIDERS` in `pipeline/bdgraph/terrain.py` for the country's open terrain model. Don't use surface models such as Copernicus GLO-30 or SRTM, which put city streets on rooftops. Without `terrain`, every climb is unknown and the app still works. The 3DEP service takes about 18 seconds a request however many points it holds, so the provider asks for 2,000 at a time: DC's 144,000 points take about 25 minutes.
 - `places.square_name_prefixes` and `places.square_name_suffixes`: street names that mean "square" locally, so squares mapped only as streets show up in search. French and Italian names put it first ("Place ", "Piazza "); American ones put it last (" Circle", " Square", " Plaza"), and DC's NW/NE/SW/SE quadrant suffix is ignored.
 - `confirmed_passages`: start empty. See step 4.
 

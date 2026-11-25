@@ -22,6 +22,7 @@ import json
 import sys
 import time
 import urllib.error
+import urllib.parse
 import urllib.request
 from array import array
 from collections.abc import Callable, Sequence
@@ -93,8 +94,91 @@ def _post_with_retries(body: bytes, retries: int) -> list[float]:
     raise AssertionError("unreachable")
 
 
+USGS_URL = (
+    "https://elevation.nationalmap.gov/arcgis/rest/services/3DEPElevation/ImageServer/getSamples"
+)
+# Each request costs ~18 s whatever its size, so batches are large; one the service refuses is
+# split in half and retried.
+USGS_BATCH = 2000
+
+
+def usgs_3dep_provider(
+    *, batch: int = USGS_BATCH, pause_s: float = 0.5, retries: int = 5
+) -> Provider:
+    """USGS 3D Elevation Program (bare-earth, 1 m lidar where available; public domain)."""
+
+    def sample(points: Sequence[Point]) -> list[float | None]:
+        body = urllib.parse.urlencode(
+            {
+                "geometry": json.dumps(
+                    {
+                        "points": [[x / COORD_SCALE, y / COORD_SCALE] for x, y in points],
+                        "spatialReference": {"wkid": 4326},
+                    }
+                ),
+                "geometryType": "esriGeometryMultipoint",
+                "returnFirstValueOnly": "true",
+                "interpolation": "RSP_BilinearInterpolation",
+                "f": "json",
+            }
+        ).encode()
+        reply = _post_json(USGS_URL, body, "application/x-www-form-urlencoded", retries)
+        if "error" in reply:
+            raise RuntimeError(f"3DEP error: {reply['error']}")
+        out: list[float | None] = [None] * len(points)
+        for item in reply.get("samples", []):
+            try:
+                value = float(item["value"])
+            except (KeyError, TypeError, ValueError):
+                continue  # "NoData"
+            if value > -1000:  # nodata sentinels are large negatives
+                out[item["locationId"]] = value
+        return out
+
+    def fetch(points: Sequence[Point]) -> list[float | None]:
+        out: list[float | None] = []
+        size = batch
+        start = 0
+        while start < len(points):
+            chunk = points[start : start + size]
+            try:
+                out += sample(chunk)
+            except (RuntimeError, urllib.error.URLError, TimeoutError) as exc:
+                if size <= 100:
+                    raise
+                size //= 2
+                print(f"  batch refused ({exc}); trying {size} points", file=sys.stderr)
+                continue
+            start += len(chunk)
+            print(f"  {start:,} / {len(points):,} points", file=sys.stderr)
+            if start < len(points):
+                time.sleep(pause_s)
+        return out
+
+    return fetch
+
+
+def _post_json(url: str, body: bytes, content_type: str, retries: int) -> dict:
+    wait = 5.0
+    for attempt in range(retries):
+        req = urllib.request.Request(
+            url, data=body, headers={"User-Agent": USER_AGENT, "Content-Type": content_type}
+        )
+        try:
+            with urllib.request.urlopen(req, timeout=180) as resp:
+                return json.loads(resp.read())
+        except (urllib.error.URLError, TimeoutError, json.JSONDecodeError) as exc:
+            if attempt == retries - 1:
+                raise
+            print(f"  request failed ({exc}); retrying in {wait:.0f}s", file=sys.stderr)
+            time.sleep(wait)
+            wait *= 2
+    raise AssertionError("unreachable")
+
+
 PROVIDERS: dict[str, Callable[[dict], Provider]] = {
     "ign-rge-alti": lambda cfg: ign_provider(cfg.get("resource", "ign_rge_alti_wld")),
+    "usgs-3dep": lambda cfg: usgs_3dep_provider(),
 }
 
 

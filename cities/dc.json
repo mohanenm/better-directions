@@ -26,5 +26,10 @@
       " Plaza"
     ]
   },
-  "confirmed_passages": []
+  "confirmed_passages": [],
+  "terrain": {
+    "provider": "usgs-3dep",
+    "licence": "Public domain (USGS): https://www.usgs.gov/information-policies-and-instructions/copyrights-and-credits",
+    "attribution": "Elevation: USGS 3DEP"
+  }
 }

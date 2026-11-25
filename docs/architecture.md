@@ -18,7 +18,7 @@ The build keeps only the largest strongly connected component (respecting one-wa
 
 ### Terrain
 
-Climb comes from a bare-earth terrain model, not a surface model: Copernicus and SRTM put city streets on rooftops. For Lyon that's IGN's RGE ALTI, queried point by point through the Géoplateforme service for only the points the graph uses (about 50 requests). Bridges, tunnels and levelled ways take their endpoints' heights. Missing values stay unknown rather than guessed. The provider is set per city, and without one every climb is unknown and the app still works.
+Climb comes from a bare-earth terrain model, not a surface model: Copernicus and SRTM put city streets on rooftops. For Lyon that's IGN's RGE ALTI, queried through the Géoplateforme service for only the points the graph uses (about 50 requests); for the US areas, the USGS 3D Elevation Program's image service, 2,000 points a request. Bridges, tunnels and levelled ways take their endpoints' heights. Missing values stay unknown rather than guessed. The provider is set per city, and without one every climb is unknown and the app still works.
 
 ### Basemap
 
