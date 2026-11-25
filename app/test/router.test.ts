@@ -3,7 +3,8 @@ import { CostModelError, NORMAL, Router, type CostModel } from "../src/router/as
 import { turnAngleDeg } from "../src/router/geometry";
 import { hashUnit } from "../src/router/rng";
 import { FLAT_SPEED_MS, edgeTimeSeconds, toblerKmh } from "../src/router/time";
-import { loadFixture, nodeAt, wayNames } from "./helpers";
+import { Graph } from "../src/graph/graph";
+import { decodeFixture, loadFixture, nodeAt, wayNames } from "./helpers";
 
 const town = loadFixture("minitown.bin");
 const townRouter = new Router(town);
@@ -64,6 +65,19 @@ describe("router on the mini-town", () => {
     for (let i = 1; i < r.dirEdges.length; i++) {
       expect(turnAngleDeg(town, r.dirEdges[i - 1]!, r.dirEdges[i]!)).toBeLessThanOrEqual(30);
     }
+  });
+});
+
+describe("unusable nodes", () => {
+  it("won't start, even a zero-length route, at a node the audit locked", () => {
+    const decoded = decodeFixture("minitown.bin");
+    const plain = new Graph(decodeFixture("minitown.bin"));
+    const n = nodeAt(plain, 100, 0);
+    decoded.meta.node_tagsets.push({ barrier: "gate", locked: "yes" });
+    decoded.s.node_tagset[n] = decoded.meta.node_tagsets.length - 1;
+    const locked = new Router(new Graph(decoded));
+    expect(locked.route(n, n, NORMAL)).toBeNull();
+    expect(new Router(plain).route(n, n, NORMAL)?.nodes).toEqual([n]);
   });
 });
 
