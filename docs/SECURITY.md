@@ -1,18 +1,18 @@
-# Security and privacy notes
+# Security and privacy
 
-Better Directions is a static site: HTML, JavaScript, the walking graph, map tiles, fonts and sprites, all served from GitHub Pages under `/better-directions/`. There is no server code, no database and no accounts.
+Better Directions is a static site served from GitHub Pages: HTML, JavaScript, the walking graph, map tiles, fonts and sprites. There is no server code, no database and no accounts. To report a security problem, open an issue; leave out exploit details and ask for a private contact if it's sensitive.
 
-## What the page does and doesn't do
+## Privacy
 
-- **No third-party requests.** Scripts, styles, tiles, fonts, sprites, the graph and the places list are all served by the site itself. The browser smoke test (`npm run smoke`) fails on any request to another host.
-- **No cookies, no storage, no analytics.** The smoke test checks `document.cookie`, `localStorage` and `sessionStorage` are empty after planning a route.
-- **Location only on request.** The browser's geolocation is used only when someone taps "Use my location". The fix stays on the device and is snapped to the nearest path before it goes into the URL.
-- **Shareable links contain start and end points.** The page says so next to the Share button. Points are snapped to the nearest path, not the exact tap or GPS fix.
-- **Planning happens on the device,** in a Web Worker.
+The page makes no requests to other hosts. Scripts, styles, tiles, fonts, sprites, the graph and the places list all come from the site itself, and the browser smoke test (`npm run smoke`) fails on any request elsewhere.
+
+There are no cookies, no local storage and no analytics. The smoke test checks that `document.cookie`, `localStorage` and `sessionStorage` are still empty after planning a route.
+
+Location is read only when you tap "Use my location". The fix stays on the device, and it's snapped to the nearest path before it goes into a link. Shared links and images do contain the start and end points, and the page says so next to the share buttons.
 
 ## Content-Security-Policy
 
-GitHub Pages can't send custom HTTP headers, so the policy is a `<meta http-equiv>` tag. The production build adds it (see `vite.config.ts`), and `app/test/site.test.ts` checks it's there:
+Pages can't send custom headers, so the policy is a `<meta http-equiv>` tag, added by the production build (`vite.config.ts`) as the first element in `<head>`:
 
 ```
 default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data: blob:;
@@ -20,50 +20,34 @@ font-src 'self'; connect-src 'self'; worker-src 'self'; child-src 'self'; manife
 base-uri 'none'; form-action 'none'; object-src 'none'
 ```
 
-- No `unsafe-inline`, no `unsafe-eval` and no wildcards. The built HTML has no inline scripts, event handlers or style attributes; a test checks this.
-- MapLibre loads its worker from a same-origin file, so there's no `blob:` worker. Its only `eval` path is for optional plugins (such as the right-to-left text plugin), which we don't load.
-- `img-src` allows `data:` and `blob:` because MapLibre builds sprite and marker images in memory.
+There's no `unsafe-inline`, `unsafe-eval` or wildcard, and the built HTML has no inline scripts, event handlers or style attributes. `app/test/site.test.ts` checks all of this on every build. `img-src` allows `data:` and `blob:` because MapLibre builds sprite and marker images in memory, and share images are `blob:` URLs. MapLibre's worker loads from a same-origin file. Its one `eval` path is the optional plugin loader, which the page never calls and the policy would block anyway.
 
-**What a meta CSP can't do:**
+A meta policy can't set `frame-ancestors`, `report-to` or `sandbox`. So other sites can frame the page, but the page has no sensitive actions to hijack. Violations aren't reported anywhere, which is consistent with collecting nothing.
 
-- `frame-ancestors`, so we can't stop other sites from framing the page (clickjacking protection needs a header). The page has no sensitive actions, so the risk is low.
-- `report-uri` and `report-to`, so violations aren't reported anywhere. That's fine: we collect nothing.
-- `sandbox`.
-- It also only applies once the parser reaches it. That's why it's the first thing in `<head>`.
+## How the safety rules are tested
+
+The walking rules are listed in the [README](../README.md). They're enforced when the graph is built, re-checked when the page loads (any edge breaking a rule is disabled), respected by the search, and re-checked on every finished route. The Python build and the TypeScript router both pass the same cases in `safety/cases.json`.
+
+On top of that, a property test (`app/test/safety-property.test.ts`) plans random routes on the real Lyon graph and checks each one with its own independent oracle: no excluded way or node, no one-way walked backwards, no gaps, and nothing over the detour cap. It covers four synthetic cost models (including an adversarial one that craves passages, stairs and places that close), every mode with random seeds, GPS art with random shapes, starts and lengths, and a copy of the graph with random ways made private and nodes locked. CI runs 300 routes per case.
+
+Before the first release it ran at ten times that count: 33,000 routes across the models and modes, 600 GPS art drawings and 3,000 routes on the tampered graph, in 30 minutes, with no violations. The real graph's load-time audit finds nothing to disable.
 
 ## Supply chain
 
-- **npm dependencies:**
-  - Runtime: `maplibre-gl` and `@protomaps/basemaps`.
-  - Development: `vite`, `typescript`, `vitest`, `eslint`, `typescript-eslint`, `@eslint/js`, `fast-check` and `@types/node`.
-  - All are pinned exactly in `package-lock.json`, and `npm audit` reports 0 vulnerabilities as of 2026-11-24.
-  - npm blocked the optional `fsevents` install script; it isn't needed.
-- **Python build tools:** pinned in `requirements-dev.txt`.
-- **`pmtiles` command-line tool:** pinned to v1.31.2 and checked against the release's SHA-256 before use.
-- **Basemap fonts and sprites:** fetched from a pinned commit of `protomaps/basemaps-assets`.
-- **CI:** pinned action SHAs, `contents: read`, and no persisted credentials.
+The page ships two runtime packages, `maplibre-gl` and `@protomaps/basemaps`, and their 24 dependencies, all under BSD, ISC or MIT licences. Their licence texts are in `licenses.txt`, linked from the footer and generated by `npm run notices`. Development tools are Vite, TypeScript, Vitest, ESLint (with typescript-eslint), fast-check and the Node types. Everything is pinned in `package-lock.json`, and `npm audit` reported no vulnerabilities at the last release.
 
-## Data safety
+The Python build tools are pinned in `requirements-dev.txt` and never shipped. The `pmtiles` command-line tool is pinned to a release and checked against its SHA-256 before use, and the basemap fonts and sprites come from a pinned commit of `protomaps/basemaps-assets`.
 
-The routing safety rules are documented in the README and in `safety/cases.json`. They're enforced at build time, audited again when the page loads, filtered during search, and re-checked on every finished route.
+CI and deploy workflows pin every action to a commit SHA, run with `contents: read` and don't persist checkout credentials. Only the deploy job gets `pages: write` and `id-token: write`.
 
-## Pre-launch security review (Phase 7, 2026-11-24)
+## Review checklist
 
-| Check | Result |
-|---|---|
-| Secrets in tracked files and full git history (cloud keys, GitHub tokens, private keys, `key=`, `secret=`, `password=`, `token=`) | None |
-| `.env`, key or credential files committed | None |
-| Personal data (email addresses) in tracked text | None (the only matches are sprite file names like `light@2x.png`) |
-| `innerHTML`, `outerHTML`, `insertAdjacentHTML`, `eval`, `new Function`, `document.write` in our code | None. All dynamic text is set with `textContent`. |
-| `eval` / `new Function` in built bundles | One: MapLibre's optional plugin loader, never called. The CSP (no `unsafe-eval`) would block it anyway. |
-| `npm audit` (all deps, and runtime only) | 0 vulnerabilities |
-| Runtime dependency licences (26 packages) | BSD-3-Clause, BSD-2-Clause, ISC, MIT. All shipped with their texts in `licenses.txt`. |
-| CSP meta, no inline scripts, handlers or style attributes, base path, relative links resolve | Checked by `app/test/site.test.ts` on every build |
-| Third-party requests, cookies, storage, CSP violations in a real browser | None, checked by `npm run smoke` across six scenarios |
-| Untrusted input | URL parameters are validated (city bbox, known modes and shapes, integer seeds, control characters stripped, 80-character names) and rendered only as text. The graph file is audited against the safety rules at load. |
-| CI and deploy workflows | Pinned action SHAs; `contents: read` by default; `pages: write` and `id-token: write` only in the deploy job; no persisted checkout credentials; the deploy is manual-trigger only |
+Before a release, check that:
 
-**Not done, and why:**
+- no secrets, keys, `.env` files or personal data are in tracked files or history;
+- there's no `innerHTML`, `outerHTML`, `insertAdjacentHTML`, `eval`, `new Function` or `document.write` in our code (dynamic text uses `textContent`);
+- `npm audit` is clean;
+- URL parameters are still validated (inside the city, known modes and shapes, integer seeds, names stripped of control characters and capped at 80 characters) and only ever rendered as text;
+- `npm run smoke` passes: no CSP violations, third-party requests, cookies or storage.
 
-- **No automated accessibility audit** with axe or Lighthouse: those need tools we haven't approved. Instead, the smoke test checks the browser's accessibility tree (every control and image named, landmarks present), a test checks colour contrast from the stylesheet, and a keyboard-only flow is tested end to end.
-- **No `pip-audit`:** it's a new tool. The Python packages (`osmium`, `pmtiles`, `pytest`, `ruff`) are build-time only, pinned, and never shipped to users.
+The last full review, at the first release, found nothing. Two things haven't been done: an `axe` or Lighthouse accessibility audit (the smoke test covers names, landmarks, heading order, target sizes and focus instead), and `pip-audit` for the build-only Python packages.
