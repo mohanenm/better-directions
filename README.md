@@ -1,6 +1,6 @@
 # Better Directions
 
-A walking router that takes the long way round on purpose, for Lyon, Washington DC, Arlington and Alexandria, Silver Spring and Bethesda, Richmond, Baltimore, Chicago, Copenhagen and Malmö. Pick a start, an end and a mode, and it finds the *better* route: up every staircase, through the traboules, along the dirt paths, past the bakeries. The normal route is drawn next to it, with the cost:
+A walking router that takes the long way round on purpose, for Lyon, Washington DC, Arlington and Alexandria, Silver Spring and Bethesda, Richmond, Baltimore, Chicago, Newberg and Dundee in Oregon, Copenhagen and Malmö. Pick a start, an end and a mode, and it finds the *better* route: up every staircase, through the traboules, along the dirt paths, past the bakeries. The normal route is drawn next to it, with the cost:
 
 > Normal: 23 min. Better: 33 min, 10 staircases, 591 steps up.
 > *(Cathédrale Saint-Jean to the Basilique de Fourvière, Stairs mode)*
@@ -73,6 +73,8 @@ Measured on an emulated low-end phone (6× slower CPU, slow 4G, empty cache), th
 | Richmond | 1.7 MB | 5.3 s |
 | Malmö | 1.0 MB | 3.9 s |
 | Silver Spring and Bethesda | 1.1 MB | 3.4 s |
+| Newberg | 0.6 MB | 3.4 s |
+| Dundee | 0.4 MB | 3.0 s |
 
 After that, a new route takes about a quarter of a second. The page and planner use under 20 MB of JavaScript heap, plus the graph itself.
 

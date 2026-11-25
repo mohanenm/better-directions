@@ -1,6 +1,6 @@
 # Adding a city
 
-The site serves several areas, each with its own graph, places list and tiles, loaded only when someone picks it. Adding one takes an afternoon, mostly downloads, plus time to pick good famous routes. The US areas (Washington DC, Arlington and Alexandria, Silver Spring and Bethesda, Richmond, Baltimore, Chicago), Copenhagen and Malmö were added this way; the notes below include what they taught.
+The site serves several areas, each with its own graph, places list and tiles, loaded only when someone picks it. Adding one takes an afternoon, mostly downloads, plus time to pick good famous routes. The US areas (Washington DC, Arlington and Alexandria, Silver Spring and Bethesda, Richmond, Baltimore, Chicago, Newberg, Dundee), Copenhagen and Malmö were added this way; the notes below include what they taught.
 
 ## 1. Check the data
 
@@ -33,7 +33,7 @@ Use a Protomaps build dated on or just after the OSM extract, so the map and the
 
 Open `data/<id>/STATS.md`.
 
-The largest strongly connected component should cover over 90% of the network's length. If it doesn't, look at the exclusion counts and their example OSM links. In Lyon the culprit was tram crossings tagged `railway=tram_crossing`, which the rules now treat as crossings.
+The largest strongly connected component should cover over 90% of the network's length. If it doesn't, look at the exclusion counts and their example OSM links. In Lyon the culprit was tram crossings tagged `railway=tram_crossing`, which the rules now treat as crossings. In small towns the cause is often a highway with no sidewalk: Newberg and Dundee in Oregon are joined only by Highway 99W, so the build kept Newberg and dropped Dundee entirely. They're now two areas. Expect small towns to land just under 90%, because rural lanes off fast roads are cut off too.
 
 Spot-check the example ways for each drop reason. If a safety rule looks wrong for the city, don't loosen it to make the numbers better. A rule change is a deliberate decision, and it goes through `safety/cases.json` for both implementations.
 
