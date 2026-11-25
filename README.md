@@ -48,7 +48,7 @@ These rules are hard-coded, and no mode or setting can change them:
 - Passages, corridors and parks that may close are flagged, with their hours where mapped. Late at night there's an extra warning.
 - A better route takes at most four times the normal walking time, and never more than an hour unless the normal walk is longer. Routes through stops you pick are measured against the normal route through the same stops. Shapes, crawls and workouts are limited to an hour.
 
-The rules run when the graph is built, again when the page loads, during the search, and on every finished route. The Python build and the TypeScript router pass the same cases in [safety/cases.json](safety/cases.json). A property test plans random routes in every mode and checks each one independently; before the first release it ran 36,600 of them with no violations. Details are in [docs/SECURITY.md](docs/SECURITY.md).
+The rules run when the graph is built, again when the page loads, during the search, and on every finished route. The Python build and the TypeScript router pass the same cases in [safety/cases.json](safety/cases.json). A property test plans random routes, loops, crawls and drawings in every area and checks each one independently; before this release it ran about 83,000 of them. Details are in [docs/SECURITY.md](docs/SECURITY.md).
 
 The build is also stricter than the rules above in places. It excludes escalators with unknown direction, mountain paths, gaps in fences that aren't gates, and footways drawn through buildings.
 
@@ -60,7 +60,18 @@ A word you spell stays on your device unless you choose to put it in a link. You
 
 ## Performance
 
-On an emulated low-end phone (6× slower CPU, slow 4G, empty cache), the first route on a first visit is ready in about 7.6 seconds, most of it downloading the 2.7 MB walking graph once. After that, a new route takes about 0.2 seconds. The page uses around 40 MB of memory, most of it the graph.
+Measured on an emulated low-end phone (6× slower CPU, slow 4G, empty cache), the first route on a first visit is ready in 3 to 9 seconds depending on the area, mostly downloading its walking graph once:
+
+| Area | Download | First route |
+|---|---:|---:|
+| Lyon | 3.3 MB | 8.7 s |
+| Washington, DC | 3.4 MB | 8.6 s |
+| Arlington and Alexandria | 2.5 MB | 7.0 s |
+| Baltimore | 1.9 MB | 5.8 s |
+| Richmond | 1.7 MB | 5.3 s |
+| Silver Spring and Bethesda | 1.1 MB | 3.4 s |
+
+After that, a new route takes about a quarter of a second. The page and planner use under 20 MB of JavaScript heap, plus the graph itself.
 
 ## Known issues
 
