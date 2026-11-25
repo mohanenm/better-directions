@@ -173,6 +173,61 @@ async function runCase(c) {
   for (const n of unnamed.slice(0, 5)) problems.push(`a11y: unnamed ${n.role.value}`);
   const roles = new Set(ax.filter((n) => !n.ignored).map((n) => n.role?.value));
   for (const landmark of ["banner", "main", "contentinfo"]) if (!roles.has(landmark)) problems.push(`a11y: no ${landmark} landmark`);
+  // Page structure: ids, references, heading order, target sizes (WCAG 2.5.8), tab order.
+  const structure = JSON.parse(await evaluate(`JSON.stringify((() => {
+    const out = [];
+    const ids = [...document.querySelectorAll('[id]')].map((e) => e.id);
+    for (const d of new Set(ids.filter((x, i) => ids.indexOf(x) !== i))) out.push('duplicate id ' + d);
+    for (const e of document.querySelectorAll('[aria-controls],[aria-labelledby],[aria-describedby],label[for]')) {
+      for (const a of ['aria-controls', 'aria-labelledby', 'aria-describedby', 'for']) {
+        for (const id of (e.getAttribute(a) || '').split(/\\s+/).filter(Boolean)) if (!document.getElementById(id)) out.push(a + ' points at missing #' + id);
+      }
+    }
+    let prev = 0;
+    for (const h of document.querySelectorAll('h1,h2,h3,h4,h5,h6')) {
+      if (h.closest('[hidden]')) continue;
+      const level = +h.tagName[1];
+      if (prev && level > prev + 1) out.push('heading skips a level: ' + h.textContent.trim().slice(0, 30));
+      prev = level;
+    }
+    for (const e of document.querySelectorAll('button, a[href], input, select, summary')) {
+      if (e.closest('.attribution p') || e.closest('[hidden]')) continue; // inline links in a sentence are exempt
+      const b = e.getBoundingClientRect();
+      if (!b.width || !b.height) continue;
+      // A radio inside a tall enough label is covered by the label.
+      const label = e.type === 'radio' ? e.closest('label') ?? e.nextElementSibling : null;
+      const t = label ? label.getBoundingClientRect() : b;
+      if (t.height < 24 || t.width < 24) out.push('small target: ' + (e.textContent || e.value).trim().slice(0, 30) + ' ' + Math.round(t.width) + 'x' + Math.round(t.height));
+    }
+    if ([...document.querySelectorAll('[tabindex]')].some((e) => +e.getAttribute('tabindex') > 0)) out.push('positive tabindex');
+    return out;
+  })())`));
+  for (const p of structure.slice(0, 8)) problems.push(`a11y: ${p}`);
+  if (c.keyboard) {
+    // Every tab stop must be on screen and show a focus indicator.
+    await evaluate("document.activeElement?.blur()");
+    let stops = 0;
+    for (let i = 0; i < 200; i++) {
+      await key("Tab", 9);
+      const f = JSON.parse(await evaluate(`JSON.stringify((() => {
+        const e = document.activeElement;
+        if (!e || e === document.body) return null;
+        if (e.dataset.smokeSeen) return { repeat: true };
+        e.dataset.smokeSeen = '1';
+        const ring = (el) => { const s = getComputedStyle(el); return (s.outlineStyle !== 'none' && parseFloat(s.outlineWidth) > 0) || s.boxShadow !== 'none'; };
+        const b = e.getBoundingClientRect();
+        return { name: e.tagName + ' ' + (e.textContent || e.getAttribute('aria-label') || '').trim().slice(0, 25),
+          ring: ring(e) || (e.type === 'radio' && e.nextElementSibling && ring(e.nextElementSibling)),
+          visible: b.width > 0 && b.height > 0 && b.bottom > 0 && b.top < innerHeight };
+      })())`));
+      if (!f) continue;
+      if (f.repeat) break;
+      stops++;
+      if (!f.ring) problems.push(`a11y: no focus indicator on ${f.name}`);
+      if (!f.visible) problems.push(`a11y: focused element off screen: ${f.name}`);
+    }
+    if (stops < 10) problems.push(`a11y: only ${stops} tab stops`);
+  }
   for (const [k, ok] of Object.entries(checks)) if (!ok) problems.push(`check failed: ${k}`);
   console.log(`${c.name}: ${problems.length ? "PROBLEMS" : "ok"} | ${status.slice(0, 140)}`);
   for (const p of problems) console.log(`  - ${p}`);
