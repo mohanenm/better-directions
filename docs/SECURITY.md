@@ -46,3 +46,24 @@ base-uri 'none'; form-action 'none'; object-src 'none'
 ## Data safety
 
 The routing safety rules are documented in the README and in `safety/cases.json`. They're enforced at build time, audited again when the page loads, filtered during search, and re-checked on every finished route.
+
+## Pre-launch security review (Phase 7, 2026-11-24)
+
+| Check | Result |
+|---|---|
+| Secrets in tracked files and full git history (cloud keys, GitHub tokens, private keys, `key=`, `secret=`, `password=`, `token=`) | None |
+| `.env`, key or credential files committed | None |
+| Personal data (email addresses) in tracked text | None (the only matches are sprite file names like `light@2x.png`) |
+| `innerHTML`, `outerHTML`, `insertAdjacentHTML`, `eval`, `new Function`, `document.write` in our code | None. All dynamic text is set with `textContent`. |
+| `eval` / `new Function` in built bundles | One: MapLibre's optional plugin loader, never called. The CSP (no `unsafe-eval`) would block it anyway. |
+| `npm audit` (all deps, and runtime only) | 0 vulnerabilities |
+| Runtime dependency licences (26 packages) | BSD-3-Clause, BSD-2-Clause, ISC, MIT. All shipped with their texts in `licenses.txt`. |
+| CSP meta, no inline scripts, handlers or style attributes, base path, relative links resolve | Checked by `app/test/site.test.ts` on every build |
+| Third-party requests, cookies, storage, CSP violations in a real browser | None, checked by `npm run smoke` across six scenarios |
+| Untrusted input | URL parameters are validated (city bbox, known modes and shapes, integer seeds, control characters stripped, 80-character names) and rendered only as text. The graph file is audited against the safety rules at load. |
+| CI and deploy workflows | Pinned action SHAs; `contents: read` by default; `pages: write` and `id-token: write` only in the deploy job; no persisted checkout credentials; the deploy is manual-trigger only |
+
+**Not done, and why:**
+
+- **No automated accessibility audit** with axe or Lighthouse: those need tools we haven't approved. Instead, the smoke test checks the browser's accessibility tree (every control and image named, landmarks present), a test checks colour contrast from the stylesheet, and a keyboard-only flow is tested end to end.
+- **No `pip-audit`:** it's a new tool. The Python packages (`osmium`, `pmtiles`, `pytest`, `ruff`) are build-time only, pinned, and never shipped to users.

@@ -9,7 +9,88 @@
 - [x] **Phase 4: The web page.** Done 2026-11-24.
 - [x] **Phase 5: Delight.** Done 2026-11-24.
 - [x] **Phase 6: GPS art (stretch).** Done 2026-11-24, experimental.
-- [ ] Phase 7: Hardening and launch prep (no deploy)
+- [x] **Phase 7: Hardening and launch prep.** Done 2026-11-24. **Waiting for your go-ahead to deploy.**
+
+## Phase 7: Hardening and launch prep (2026-11-24)
+
+### Safety property test at 10× the CI count
+
+`PROPERTY_RUNS=3000`, 29.5 minutes. All 14 tests passed:
+
+| Run | Count |
+|---|---|
+| Synthetic cost models (normal, random weights, never-right, adversarial) | 4 × 3,000 = 12,000 routes |
+| Real modes with random seeds (Through buildings, Trail runner, Stairmaster, Park hopper, Snack tour, Never turn right, Scenic chaos) | 7 × 3,000 = 21,000 routes |
+| GPS art drawings (random start × shape × length) | 600 |
+| Routes on a deliberately tampered graph (2 models × 1,500) | 3,000 |
+| The real graph's load-time audit | 0 violations |
+
+No route used an excluded way or node, walked a one-way the wrong way, broke connectivity or exceeded its cap.
+
+### Performance (low-end phone emulation, D-036)
+
+`npm run perf`: 6× CPU, 4 Mbps / 150 ms, cold cache, with gzip like Pages.
+
+| | Graph v1 | Graph v2 (D-037) |
+|---|---|---|
+| Graph download (gzipped) | 3.4 MB | **3.0 MB** on the wire (2.70 MB at gzip level 6) |
+| First route ready, cold visit | 8.6 s | **7.6 s** (6.0 s of it downloading the graph) |
+| Graph decode, audit and indexing in the worker | ~170 ms on a laptop | about 1 s at 6× CPU (extrapolated; Chromium doesn't throttle workers) |
+| Planning another route | ~0.2 s | ~0.2 s |
+| Memory | 6.6 MB page heap, 7–8 MB worker heap, plus about 25 MB of typed arrays | same |
+
+The 42 sample plans take median 31 ms, max 99 ms on a laptop. **Still to do:** a test on a real low-end phone.
+
+### Security review
+
+Recorded in [SECURITY.md](SECURITY.md):
+
+- no secrets in files or history, and no personal data
+- no `innerHTML` or `eval` in our code
+- `npm audit` finds 0 vulnerabilities
+- all 26 runtime dependencies are permissively licensed, now shipped with their texts in `licenses.txt` (D-038)
+- CSP and base-path checks run on every build
+- the smoke test finds no third-party requests, cookies or storage
+
+### Accessibility
+
+- A contrast test reads the stylesheet's colours: all 7 text/background pairs meet WCAG AA.
+- The smoke test checks the accessibility tree in all six scenarios: every control and image is named, and the banner, main and contentinfo landmarks exist.
+- A keyboard-only flow is tested end to end.
+- An axe or Lighthouse audit still needs a tool we haven't approved.
+
+### Launch prep
+
+- **README rewritten:** what it is, screenshots, modes with real examples, safety rules, privacy, data licences and attribution, running it, adding a city.
+- **[ADDING_A_CITY.md](ADDING_A_CITY.md):** config, data build, stats checks, app changes, verification, size budget. The city is now one module in the app (D-039).
+- **Local preview under the real sub-path:** `npm run pages:local` serves `http://localhost:4173/better-directions/`. The site test checks every link resolves under the base path; it caught a root-absolute licences link this phase.
+- **GitHub Pages workflow:** `.github/workflows/pages.yml`, manual trigger only and not enabled (D-040).
+- **Site:** 44 MB in total. The largest file is the 9.4 MB graph, against GitHub's 1 GB site and 100 MB file limits.
+
+### Tests
+
+- Python: 181 tests (including real data).
+- TypeScript: 215 tests (including the property test at the CI count, the site checks and the contrast test).
+- Browser smoke test: 6 scenarios.
+
+### Self-review
+
+- **Safety:** the 10× run is clean, the audit finds 0 violations on the real graph, and the cap is frozen constants. Every route and drawing passes the final check.
+- **Privacy:** no third-party requests, cookies or storage (checked in a real browser).
+- **Fun:** famous routes are tested against their pitches, and the sample routes are recognisable per mode.
+- **Open:** a test on a real low-end phone; an automated accessibility audit (needs a tool); Q-009's later opening-hours parser; a city picker for more than one city.
+
+### Decisions
+
+D-036 to D-040.
+
+### What's next: needs you
+
+1. Push the repository to GitHub as `mohanenm/better-directions`.
+2. Enable Pages (Settings > Pages > Source: GitHub Actions).
+3. Run the "Deploy to GitHub Pages" workflow by hand.
+
+I haven't done any of these (Big item 6).
 
 ## Phase 6: GPS art (2026-11-24)
 

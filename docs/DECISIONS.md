@@ -304,3 +304,37 @@ These don't loosen any rule, so they didn't need approval. Each is in `safety/ca
 - **Choice:** a collapsible "GPS art (experimental)" panel with a shape, a length and "Draw it from my start". The map shows the walk and the dashed ideal shape; the card shows likeness, walk time and average error, with a wobble disclaimer. Directions and the share image work as usual, and links use `?art=heart&len=40&from=…`.
 - **Alternatives:** an eighth mode card. But the input is different (no destination), so it would have confused the mode picker.
 - **Reversible:** yes.
+
+## D-036 How performance on a "low-end phone" is measured
+
+- **Choice:** `npm run perf` drives a local Chromium browser over the DevTools protocol with 6× CPU slowdown (DevTools' "low-end mobile"), 4 Mbps / 150 ms network, a cold cache and a phone viewport. Throttling is applied to the planning worker as well as the page.
+- **Caveats:**
+  - Vite's preview server doesn't compress, so realistic numbers use a gzip-serving copy that behaves like Pages.
+  - Chromium doesn't apply CPU throttling inside workers, so worker CPU time is extrapolated (laptop × 6).
+  - Nothing replaces a real phone.
+- **Results** (gzip, slow 4G, 6× CPU): the first route on a cold visit is ready after 8.6 s with graph format v1, mostly the 3.4 MB download. Planning a second route takes about 0.2 s. JS heap is 6 MB in the page and 8 MB in the worker, plus about 25 MB of typed arrays (graph and router state).
+- **Reversible:** it's a script.
+
+## D-037 Graph format v2: edge lengths as u16 decimetres
+
+- **Choice:** `edge_length_dm` (u16, 0.1 m resolution, max 6,553.5 m; the longest Lyon edge is 1,974 m). Both decoders expand it to `edge_length_m` at load, so no other code changes. The format version is bumped to 2, and old decoders refuse new files.
+- **Why:** float32 lengths were 21% of the compressed graph and barely compressible. The gzipped graph goes from 3.09 MB to 2.70 MB.
+- **Reversible:** yes (version 3).
+
+## D-038 Third-party notices in the page
+
+- **Choice:** `npm run notices` writes `app/public/licenses.txt`: every runtime package (26) with its licence text, plus data and asset credits. It's linked from the footer with a relative link, so it works under the sub-path.
+- **Why:** BSD and MIT licences require their notices to travel with the code, and a bundled site strips them.
+- **Reversible:** yes.
+
+## D-039 One city module
+
+- **Choice:** `app/src/city.ts` holds the city id, display name and label language. Data paths, status text, GPS-art wording and map labels read from it. HTML text and famous routes stay city-specific, as covered in [ADDING_A_CITY.md](ADDING_A_CITY.md).
+- **Why:** it makes adding a second city a config change plus content, not a code hunt.
+- **Reversible:** yes.
+
+## D-040 Pages deploy workflow is manual-only and not enabled
+
+- **Choice:** `.github/workflows/pages.yml` runs only via `workflow_dispatch`. It runs typecheck, lint, build and the full test suite, then uploads `dist/` and deploys. Action SHAs are pinned; `pages: write` and `id-token: write` are granted only to the deploy job. GitHub Pages itself (Settings > Pages > Source: GitHub Actions) is left off.
+- **Why:** the brief says to stop before deploying. Enabling and running it is the project owner's call.
+- **Reversible:** add a `push` trigger to deploy on merges.
