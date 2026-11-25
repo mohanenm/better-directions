@@ -9,7 +9,7 @@ A walking router that takes the long way round on purpose, for Lyon, Washington 
 
 It's a static site with no server, accounts or tracking. Routes are planned on your phone, and each area is a separate download, fetched only when you pick it. "Nearest to me" picks the closest area on your device.
 
-![A "Through buildings" route from Saint-Jean up to Fourvière, with the normal route dashed](docs/images/route-through-buildings.jpg)
+![A Stairs route from the cathedral in Vieux Lyon up to Fourvière, with the normal route dashed](docs/images/route.jpg)
 
 ## Modes
 
@@ -28,11 +28,15 @@ Every route gets a name, and can be shared as a link or as an image drawn on you
 
 A crawl visits a few artworks, pubs or wine bars in a sensible order, looping back or ending somewhere else. Stops are numbered pins you can swap or skip. Pub and wine crawls keep the walks short, prefer lit streets, and flag places whose hours suggest they close before the evening. See [docs/CRAWLS.md](docs/CRAWLS.md) for what counts as a stop.
 
+<img src="docs/images/dc-crawl.jpg" alt="An art crawl from U Street station in DC: six murals and sculptures as numbered pins, 44 minutes" width="640">
+
 A workout is a 20, 30 or 45-minute loop from your start, collecting staircases, hills or both. It shows the staircases, steps and metres climbed, and notes any stretch tagged as unlit. It makes no claims about calories.
 
 There's also an experimental Draw a shape section that finds a walk drawing a heart, star, square or one-stroke letter with real streets, and scores the likeness. Spell a word does the same for a name of up to ten letters, with dotted walks between strokes. Grids work much better than Lyon's old town. See [docs/GPS_ART.md](docs/GPS_ART.md).
 
-<img src="docs/images/gps-art-heart.jpg" alt="A heart walked through Guillotière: 85% likeness, 46 minutes" width="480">
+<img src="docs/images/spell.jpg" alt="The letters DC walked on Capitol Hill's grid: 80% readable, 31 minutes" width="480"> <img src="docs/images/heart.jpg" alt="A heart walked through Guillotière in Lyon: 85% likeness, 46 minutes" width="480">
+
+<img src="docs/images/phone.jpg" alt="A Stairs route up Federal Hill in Baltimore on a phone, with the cost of fun" width="300"> <img src="docs/images/share.jpg" alt="The share image for the same route, drawn on the phone" width="300">
 
 ## Safety
 
