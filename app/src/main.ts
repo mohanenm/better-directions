@@ -11,8 +11,8 @@ import { attachCombo } from "./ui/combo";
 import { FAMOUS_ROUTES } from "./ui/famous";
 import { createMap, type RouteMap } from "./ui/map";
 import type { PinAction } from "./ui/map";
-import type { ArtResultMsg, FromWorker, Pin, PlanResult, ReadyInfo, ToWorker, TourResult } from "./ui/protocol";
-import { artCard, planCard, renderArt, renderResult, renderTour, tourCard } from "./ui/render";
+import type { ArtResultMsg, FromWorker, Pin, PlanResult, ReadyInfo, SpellResultMsg, ToWorker, TourResult } from "./ui/protocol";
+import { artCard, planCard, renderArt, renderResult, renderSpell, renderTour, spellCard, tourCard } from "./ui/render";
 import { renderShareImage, type ShareCard } from "./ui/share-image";
 import type { Place } from "./ui/search";
 import { DEFAULT_OPEN, MAX_LINK_STOPS, parseLink, SECTION_IDS, serializeLink, type LinkState, type SectionId } from "./ui/url";
@@ -26,7 +26,7 @@ const goButton = $<HTMLButtonElement>("#go");
 
 const state: LinkState = {
   from: null, to: null, fromName: null, toName: null, mode: "stairs", seed: 1, art: null, artMinutes: 40,
-  open: [...DEFAULT_OPEN], stops: [], workout: null, crawl: null,
+  open: [...DEFAULT_OPEN], stops: [], workout: null, crawl: null, spell: null, spellInLink: false,
 };
 /** Names for the stops the user picked (links carry only the points). */
 const stopNames: string[] = [];
@@ -56,8 +56,10 @@ worker.addEventListener("message", (event: MessageEvent<FromWorker>) => {
   else if (msg.type === "error") {
     goButton.disabled = false;
     setStatus(msg.message, true);
+    showSuggestion(msg.suggestion);
   } else if (msg.type === "art") onArt(msg.result);
   else if (msg.type === "tour") onTour(msg.result);
+  else if (msg.type === "spell") onSpell(msg.result);
   else onPlan(msg.result);
 });
 
@@ -75,7 +77,12 @@ function onReady(ready: ReadyInfo): void {
   renderStops();
   const canPlan = state.from && (state.to || state.art || state.crawl || state.workout);
   setStatus(canPlan ? "" : "Pick a start and an end: search, or tap the map.");
-  if (state.art && state.from) requestArt();
+  if (state.spell) {
+    $<HTMLInputElement>("#spell-word").value = state.spell;
+    $<HTMLInputElement>("#spell-in-link").checked = state.spellInLink;
+  }
+  if (state.spell && state.from) requestSpell();
+  else if (state.art && state.from) requestArt();
   else if (state.crawl && state.from) requestCrawl();
   else if (state.workout && state.from) requestWorkout();
   else if (state.from && state.to) requestPlan();
@@ -246,7 +253,18 @@ $<HTMLFormElement>("#planner").addEventListener("submit", (e) => {
 });
 
 function send(msg: ToWorker): void {
+  if (msg.type !== "spell") state.spell = null;
+  showSuggestion(undefined);
+  setShareable(true);
   worker.postMessage(msg);
+}
+
+/** Links for a spelled word that's kept off the link would be useless, so sharing is off. */
+function setShareable(on: boolean): void {
+  $<HTMLButtonElement>("#share").disabled = !on;
+  $(".share-note").textContent = on
+    ? "Links and images show your start and end points."
+    : "Tick \"Include the word in shared links\" to share a link. The image doesn't show the word.";
 }
 
 function requestPlan(): void {
@@ -418,6 +436,72 @@ function onArt(result: ArtResultMsg): void {
   clearShareImage();
   showResult();
   $("#announcer").textContent = `Drawing ready. ${lastCard.summary} Step-by-step directions follow the stats.`;
+}
+
+// --- Spell a word --------------------------------------------------------------------------------
+
+const spellInput = $<HTMLInputElement>("#spell-word");
+const suggestionButton = $<HTMLButtonElement>("#spell-suggestion");
+
+function showSuggestion(word: string | undefined): void {
+  suggestionButton.hidden = !word;
+  if (word) {
+    suggestionButton.textContent = `Spell ${word} instead`;
+    suggestionButton.dataset["word"] = word;
+  }
+}
+
+suggestionButton.addEventListener("click", () => {
+  spellInput.value = suggestionButton.dataset["word"] ?? "";
+  $<HTMLFormElement>("#spell-form").requestSubmit();
+});
+
+$<HTMLFormElement>("#spell-form").addEventListener("submit", (e) => {
+  e.preventDefault();
+  if (!needFrom("word")) return;
+  state.spell = spellInput.value;
+  state.spellInLink = $<HTMLInputElement>("#spell-in-link").checked;
+  requestSpell();
+});
+
+$<HTMLInputElement>("#spell-in-link").addEventListener("change", (e) => {
+  if (!state.spell) return;
+  state.spellInLink = (e.target as HTMLInputElement).checked;
+  writeLink();
+  setShareable(state.spellInLink);
+  if (lastSpell) lastCard = spellCard(lastSpell, state.spellInLink);
+});
+
+let lastSpell: SpellResultMsg | null = null;
+
+function requestSpell(): void {
+  if (!info || !state.from || !state.spell) return;
+  state.art = null;
+  state.crawl = null;
+  state.workout = null;
+  requestId++;
+  if (!state.open.includes("spell")) setOpen("spell", true);
+  setStatus("Laying out the letters…");
+  send({ type: "spell", id: requestId, start: state.from, fromName: state.fromName ?? "your start", word: state.spell });
+}
+
+function onSpell(result: SpellResultMsg): void {
+  goButton.disabled = false;
+  lastSpell = result;
+  state.spell = result.word;
+  spellInput.value = result.word;
+  lastCard = spellCard(result, state.spellInLink);
+  state.from = result.start;
+  routeMap?.setMarker("from", result.start);
+  routeMap?.setMarker("to", result.end);
+  writeLink();
+  setShareable(state.spellInLink);
+  routeMap?.setRoutes(result.template, result.strokeLines, result.penUpLines);
+  routeMap?.setPins([], () => []);
+  renderSpell(result, (at) => routeMap?.flyTo(at));
+  clearShareImage();
+  showResult();
+  $("#announcer").textContent = `Word ready. ${result.likeness}% readable, ${Math.max(1, Math.round(result.stats.timeS / 60))} minutes. Step-by-step directions follow the stats.`;
 }
 
 // --- Stops from park pins ------------------------------------------------------------------------

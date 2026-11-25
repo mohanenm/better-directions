@@ -4,6 +4,8 @@
  */
 import { cityData } from "./city";
 import { drawShape } from "./art/fit";
+import { initials, isSpellable, normaliseWord } from "./art/font";
+import { heightFor, spellWord } from "./art/word";
 import { SHAPES } from "./art/shapes";
 import { Graph, type LonLat } from "./graph/graph";
 import { describeRoute, directions } from "./modes/directions";
@@ -15,7 +17,7 @@ import { haversineM } from "./router/geometry";
 import { Router, type Route } from "./router/astar";
 import { NodeIndex } from "./router/snap";
 import { costOfFun } from "./modes/stats";
-import type { ArtRequestMsg, CrawlRequest, FromWorker, Pin, PlanRequest, ToWorker, WorkoutRequest } from "./ui/protocol";
+import type { ArtRequestMsg, CrawlRequest, FromWorker, Pin, PlanRequest, SpellRequest, ToWorker, WorkoutRequest } from "./ui/protocol";
 
 const SNAP_LIMIT_M = 300;
 
@@ -242,15 +244,73 @@ function crawl(req: CrawlRequest): void {
   });
 }
 
+class SpellError extends Error {
+  constructor(message: string, readonly suggestion?: string) {
+    super(message);
+  }
+}
+
+/** The longest prefix of initials (or letters) that fits an hour, as a suggestion. */
+function shorterWord(word: string): string | undefined {
+  for (let n = 4; n >= 2; n--) {
+    const s = initials(word, n);
+    if (isSpellable(s) && heightFor(s) !== null && s !== word) return s;
+  }
+  return undefined;
+}
+
+function spell(req: SpellRequest): void {
+  if (!state) throw new Error("Still loading the map data.");
+  const { g, router, fi, index } = state;
+  const t0 = performance.now();
+  const word = normaliseWord(req.word);
+  if (!isSpellable(word)) throw new SpellError("Use 2 to 10 letters or digits.");
+  const out = spellWord(router, fi, index, word, req.start as LonLat);
+  if (!out.ok) {
+    if (out.reason === "too-long") {
+      const s = shorterWord(word);
+      throw new SpellError(`That's too long to walk in an hour${s ? `. Try ${s}` : ""}.`, s);
+    }
+    throw new SpellError("Couldn't fit that word around here. Try another start, or fewer letters.", shorterWord(word));
+  }
+  const r = out.result;
+  post({
+    type: "spell",
+    id: req.id,
+    result: {
+      word,
+      start: g.nodeLonLat(r.route.nodes[0]!),
+      end: g.nodeLonLat(r.route.nodes.at(-1)!),
+      strokeLines: r.strokeLines,
+      penUpLines: r.penUpLines,
+      template: r.template,
+      likeness: r.likeness,
+      letters: r.letters.map((l) => ({ char: l.char, likeness: l.likeness })),
+      heightM: r.heightM,
+      stats: costOfFun(fi, r.route),
+      steps: describeRoute(fi, r.route, {
+        quips: "art",
+        seed: r.route.dirEdges.length,
+        fromName: req.fromName,
+        arriveText: "That's the last stroke.",
+        stops: r.letters.map((l, i) => ({ node: l.startNode, label: `Letter ${i + 1} (${l.char}) starts here` })),
+      }),
+      ms: Math.round(performance.now() - t0),
+    },
+  });
+}
+
 self.addEventListener("message", (event: MessageEvent<ToWorker>) => {
   try {
     const msg = event.data;
     if (msg.type === "art") art(msg);
     else if (msg.type === "workout") workout(msg);
     else if (msg.type === "crawl") crawl(msg);
+    else if (msg.type === "spell") spell(msg);
     else plan(msg);
   } catch (err) {
-    post({ type: "error", id: event.data.id, message: err instanceof Error ? err.message : String(err) });
+    const suggestion = err instanceof SpellError ? err.suggestion : undefined;
+    post({ type: "error", id: event.data.id, message: err instanceof Error ? err.message : String(err), ...(suggestion ? { suggestion } : {}) });
   }
 });
 

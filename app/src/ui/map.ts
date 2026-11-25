@@ -22,6 +22,10 @@ import type { Bbox } from "./url";
 
 setWorkerUrl(maplibreWorkerUrl);
 
+type Line = [number, number][];
+type Lines = Line | Line[];
+const asLines = (l: Lines): Line[] => (l.length && Array.isArray(l[0]![0]) ? (l as Line[]) : l.length ? [l as Line] : []);
+
 export interface PinAction {
   label: string;
   run: () => void;
@@ -29,7 +33,8 @@ export interface PinAction {
 
 export interface RouteMap {
   map: MapLibreMap;
-  setRoutes(normal: [number, number][], better: [number, number][]): void;
+  /** The normal (dashed) and better (solid) lines; each may be several lines. Pen-up walks are dotted. */
+  setRoutes(normal: Lines, better: Lines, penUp?: [number, number][][]): void;
   clearRoutes(): void;
   setMarker(end: "from" | "to", point: [number, number] | null): void;
   /** Pins with a popup each; `actions` lists the buttons to offer for a pin. */
@@ -76,18 +81,26 @@ export function createMap(container: HTMLElement, bbox: Bbox): RouteMap {
   let pinMarkers: Marker[] = [];
   let popup: Popup | null = null;
   // Routes that arrive before the style has loaded are drawn once it has.
-  let queued: { normal: [number, number][]; better: [number, number][] } | null = null;
+  let queued: { normal: Line[]; better: Line[]; penUp: Line[] } | null = null;
 
   map.on("load", () => {
     const empty = { type: "FeatureCollection" as const, features: [] };
     map.addSource("normal", { type: "geojson", data: empty });
     map.addSource("better", { type: "geojson", data: empty });
+    map.addSource("penup", { type: "geojson", data: empty });
     map.addLayer({
       id: "normal-line",
       type: "line",
       source: "normal",
       layout: { "line-cap": "round", "line-join": "round" },
       paint: { "line-color": colour("route-normal"), "line-width": 4, "line-dasharray": [1.5, 1.5], "line-opacity": 0.85 },
+    });
+    map.addLayer({
+      id: "penup-line",
+      type: "line",
+      source: "penup",
+      layout: { "line-cap": "round", "line-join": "round" },
+      paint: { "line-color": colour("route-better"), "line-width": 3, "line-dasharray": [0.2, 2], "line-opacity": 0.9 },
     });
     map.addLayer({
       id: "better-casing",
@@ -103,20 +116,22 @@ export function createMap(container: HTMLElement, bbox: Bbox): RouteMap {
       layout: { "line-cap": "round", "line-join": "round" },
       paint: { "line-color": colour("route-better"), "line-width": 5.5 },
     });
-    if (queued) draw(queued.normal, queued.better);
+    if (queued) draw(queued.normal, queued.better, queued.penUp);
     queued = null;
   });
 
-  const line = (coords: [number, number][]) => ({
+  const lines = (coords: Line[]) => ({
     type: "Feature" as const,
     properties: {},
-    geometry: { type: "LineString" as const, coordinates: coords },
+    geometry: { type: "MultiLineString" as const, coordinates: coords },
   });
 
-  function draw(normal: [number, number][], better: [number, number][]): void {
-    (map.getSource("normal") as GeoJSONSource).setData(line(normal));
-    (map.getSource("better") as GeoJSONSource).setData(line(better));
-    const all = [...normal, ...better];
+  function draw(normal: Line[], better: Line[], penUp: Line[]): void {
+    (map.getSource("normal") as GeoJSONSource).setData(lines(normal));
+    (map.getSource("better") as GeoJSONSource).setData(lines(better));
+    (map.getSource("penup") as GeoJSONSource).setData(lines(penUp));
+    const all = [...normal.flat(), ...better.flat(), ...penUp.flat()];
+    if (!all.length) return;
     const bounds = all.reduce(
       (b, p) => b.extend(p),
       new LngLatBounds(all[0]!, all[0]!),
@@ -126,15 +141,18 @@ export function createMap(container: HTMLElement, bbox: Bbox): RouteMap {
 
   return {
     map,
-    setRoutes(normal, better) {
-      if (map.isStyleLoaded() && map.getSource("better")) draw(normal, better);
-      else queued = { normal, better };
+    setRoutes(normal, better, penUp = []) {
+      const n = asLines(normal);
+      const b = asLines(better);
+      if (map.isStyleLoaded() && map.getSource("better")) draw(n, b, penUp);
+      else queued = { normal: n, better: b, penUp };
     },
     clearRoutes() {
       if (!map.getSource("better")) return;
       const empty = { type: "FeatureCollection" as const, features: [] };
       (map.getSource("normal") as GeoJSONSource).setData(empty);
       (map.getSource("better") as GeoJSONSource).setData(empty);
+      (map.getSource("penup") as GeoJSONSource).setData(empty);
     },
     setMarker(end, point) {
       markers[end]?.remove();

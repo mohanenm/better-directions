@@ -12,6 +12,7 @@ import { readFileSync } from "node:fs";
 import fc from "fast-check";
 import { describe, expect, it } from "vitest";
 import { drawShape } from "../src/art/fit";
+import { spellWord } from "../src/art/word";
 import { SHAPE_IDS } from "../src/art/shapes";
 import { decodeGraph } from "../src/graph/format";
 import { FeatureIndex } from "../src/modes/features";
@@ -189,6 +190,20 @@ describe("safety property: random routes on the real Lyon graph", () => {
         },
       ),
       { numRuns: Math.ceil(RUNS / 5), seed: 20261127 },
+    );
+  });
+
+  it("spelled words: every walk is safe, connected and at most an hour, for any word and start", () => {
+    const index = new NodeIndex(lyon);
+    const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789".split("");
+    fc.assert(
+      fc.property(fc.nat({ max: lyon.nodeCount - 1 }), fc.array(fc.constantFrom(...chars), { minLength: 2, maxLength: 5 }), (node, letters) => {
+        const out = spellWord(router, features, index, letters.join(""), lyon.nodeLonLat(node));
+        if (!out.ok) return; // too long or nowhere to fit is allowed
+        checkRoute(lyon, out.result.route.dirEdges, out.result.route.nodes);
+        expect(out.result.route.timeS).toBeLessThanOrEqual(LOOP_MAX_SECONDS + 1e-6);
+      }),
+      { numRuns: Math.ceil(RUNS / 10), seed: 20261131 },
     );
   });
 

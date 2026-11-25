@@ -34,6 +34,10 @@ const CASES = [
     query: "?from=4.83360,45.76750&fromName=Place%20des%20Terreaux&crawl=pub&count=4&len=45" },
   { name: "workout-stairs", width: 390, height: 844, mobile: true,
     query: "?from=4.82740,45.76060&fromName=Cath%C3%A9drale%20Saint-Jean&workout=stairs&len=30" },
+  { name: "spell-from-link", width: 1280, height: 800, mobile: false,
+    query: "?from=4.84500,45.75100&fromName=Guilloti%C3%A8re&spell=HI" },
+  { name: "spell-private", width: 390, height: 844, mobile: true, spellPrivate: "ADA",
+    query: "?from=4.84500,45.75100&fromName=Guilloti%C3%A8re&open=spell" },
   { name: "park-as-stop", width: 1280, height: 800, mobile: false, parkStop: true,
     query: "?from=4.85190,45.77030&to=4.83200,45.75780&fromName=T%C3%AAte%20d%27Or&toName=Place%20Bellecour&mode=trail" },
 ];
@@ -110,7 +114,7 @@ async function runCase(c) {
     await evaluate("document.querySelector('#famous-list button').click()");
   }
   const wantRoute = c.expectRoute !== false;
-  const READY = /^(Route|Drawing|Crawl|Loop) ready/;
+  const READY = /^(Route|Drawing|Crawl|Loop|Word) ready/;
   let status = "";
   const waitForReady = async () => {
     for (let i = 0; i < 120; i++) {
@@ -119,8 +123,19 @@ async function runCase(c) {
       if (wantRoute ? READY.test(status) : status.startsWith("Pick a start")) break;
     }
   };
+  if (c.spellPrivate) {
+    // Type a word without ticking "include the word": it must not reach the URL.
+    for (let i = 0; i < 60; i++) { await sleep(250); if ((await evaluate("document.getElementById('status').textContent")) === "") break; }
+    await evaluate(`document.getElementById('spell-word').value = '${c.spellPrivate}'; document.getElementById('spell-form').requestSubmit();`);
+  }
   await waitForReady();
   await sleep(1500); // let the map draw the route
+  if (c.spellPrivate) {
+    const leaked = await evaluate(`location.href.toUpperCase().includes('${c.spellPrivate}')`);
+    const shareOff = await evaluate("document.getElementById('share').disabled");
+    if (leaked) problems.push("spell: the word is in the URL without consent");
+    if (!shareOff) problems.push("spell: Share link should be off while the word is kept out of links");
+  }
   if (c.parkStop) {
     // Open a park pin's popup, add it as a stop, and check the route replans through it.
     await evaluate("document.getElementById('announcer').textContent = ''");
@@ -201,7 +216,7 @@ async function runCase(c) {
     checks.route = READY.test(status);
     checks.steps = (await evaluate("document.querySelectorAll('#steps li').length")) > 2;
     const summary = (await evaluate("document.getElementById('summary').textContent")) ?? "";
-    checks.summary = /Normal: \d+ min\. Better: \d+ min/.test(summary) || /likeness|-minute loop|min of walking/.test(summary);
+    checks.summary = /Normal: \d+ min\. Better: \d+ min/.test(summary) || /likeness|-minute loop|min of walking|readable/.test(summary);
     checks.seedRowHiddenUnlessChaos = await evaluate("(getComputedStyle(document.getElementById('seed-row')).display === 'none') === !location.search.includes('mode=chaos')");
   }
   // Accessibility tree: every interactive control and image needs a name; landmarks must exist.

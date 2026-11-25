@@ -3,6 +3,7 @@
  * Works on a static host with no server routing. Coordinates are rounded to 5 decimals (~1 m)
  * and must fall inside the city's bbox; anything invalid is ignored rather than trusted.
  */
+import { isSpellable, normaliseWord } from "../art/font";
 import { SHAPE_IDS, type ShapeId } from "../art/shapes";
 import { MODE_IDS, type ModeId } from "../modes/modes";
 import { CRAWL_MINUTES, CRAWL_THEMES, MAX_STOPS, MIN_STOPS, WORKOUT_FOCUSES, WORKOUT_MINUTES, type CrawlTheme, type WorkoutFocus } from "../modes/options";
@@ -31,10 +32,13 @@ export interface LinkState {
   workout: { focus: WorkoutFocus; minutes: number } | null;
   /** toEnd: finish at `to` rather than looping back to `from`. */
   crawl: { theme: CrawlTheme; count: number; minutes: number; toEnd: boolean } | null;
+  /** A word to spell from `from`. It's only written into links when spellInLink is true. */
+  spell: string | null;
+  spellInLink: boolean;
 }
 
 export const MAX_LINK_STOPS = 3;
-export const SECTION_IDS = ["plan", "crawl", "art", "workout", "famous", "about"] as const;
+export const SECTION_IDS = ["plan", "crawl", "art", "spell", "workout", "famous", "about"] as const;
 export type SectionId = (typeof SECTION_IDS)[number];
 export const DEFAULT_OPEN: SectionId[] = ["plan"];
 
@@ -91,7 +95,9 @@ export function parseLink(search: string, bbox: Bbox): LinkState {
         toEnd: q.get("end") === "1",
       }
     : null;
-  const fallbackOpen: SectionId[] = art ? ["art"] : crawl ? ["crawl"] : workout ? ["workout"] : DEFAULT_OPEN;
+  const word = normaliseWord(q.get("spell") ?? "");
+  const spell = isSpellable(word) ? word : null;
+  const fallbackOpen: SectionId[] = spell ? ["spell"] : art ? ["art"] : crawl ? ["crawl"] : workout ? ["workout"] : DEFAULT_OPEN;
   return {
     from: parsePoint(q.get("from"), bbox),
     to: parsePoint(q.get("to"), bbox),
@@ -103,8 +109,10 @@ export function parseLink(search: string, bbox: Bbox): LinkState {
     artMinutes: (ART_LENGTHS as readonly number[]).includes(Number(q.get("len"))) ? Number(q.get("len")) : 40,
     open: parseOpen(q.get("open"), fallbackOpen),
     stops: (q.get("via") ?? "").split(";").map((v) => parsePoint(v, bbox)).filter((p): p is [number, number] => p !== null).slice(0, MAX_LINK_STOPS),
-    workout: art ? null : workout,
-    crawl: art || workout ? null : crawl,
+    workout: art || spell ? null : workout,
+    crawl: art || spell || workout ? null : crawl,
+    spell,
+    spellInLink: spell !== null,
   };
 }
 
@@ -112,6 +120,14 @@ const fmt = (p: [number, number]) => `${p[0].toFixed(5)},${p[1].toFixed(5)}`;
 
 export function serializeLink(state: LinkState): string {
   const q = new URLSearchParams();
+  if (state.spell) {
+    // The word stays on the device unless the user asked to put it in the link.
+    if (state.from) q.set("from", fmt(state.from));
+    if (state.fromName) q.set("fromName", state.fromName);
+    if (state.spellInLink) q.set("spell", state.spell);
+    serializeOpen(q, state.open, state.spellInLink ? ["spell"] : DEFAULT_OPEN);
+    return `?${q.toString()}`;
+  }
   if (state.art) {
     if (state.from) q.set("from", fmt(state.from));
     if (state.fromName) q.set("fromName", state.fromName);

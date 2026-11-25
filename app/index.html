@@ -130,6 +130,27 @@
             </div>
           </section>
 
+          <section class="section" data-section="spell">
+            <h2 class="section-head">
+              <button type="button" id="spell-head" aria-expanded="false" aria-controls="spell-body">
+                <span class="section-title">Spell a word</span>
+                <span class="section-summary">A walk whose trace spells a name. Grids work best.</span>
+              </button>
+            </h2>
+            <div id="spell-body" class="section-body" role="region" aria-labelledby="spell-head" hidden>
+              <form id="spell-form" class="tool-form" novalidate>
+                <p class="help">Starts from your From point. 2 to 10 letters or digits, within an hour's walk. The word stays on your device.</p>
+                <label for="spell-word">Word or name</label>
+                <input id="spell-word" type="text" maxlength="24" autocomplete="off" autocapitalize="characters" spellcheck="false">
+                <label class="check"><input type="checkbox" id="spell-in-link"> Include the word in shared links</label>
+                <div class="row">
+                  <button type="submit" class="secondary">Spell it</button>
+                  <button type="button" class="link-button" id="spell-suggestion" hidden></button>
+                </div>
+              </form>
+            </div>
+          </section>
+
           <section class="section" data-section="workout">
             <h2 class="section-head">
               <button type="button" id="workout-head" aria-expanded="false" aria-controls="workout-body">

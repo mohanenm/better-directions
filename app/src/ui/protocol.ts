@@ -51,7 +51,30 @@ export interface CrawlRequest {
   skip: number[];
 }
 
-export type ToWorker = PlanRequest | ArtRequestMsg | WorkoutRequest | CrawlRequest;
+export interface SpellRequest {
+  type: "spell";
+  id: number;
+  start: [number, number];
+  fromName: string;
+  word: string;
+}
+
+export interface SpellResultMsg {
+  word: string;
+  start: [number, number];
+  end: [number, number];
+  strokeLines: [number, number][][];
+  penUpLines: [number, number][][];
+  template: [number, number][][];
+  likeness: number;
+  letters: { char: string; likeness: number }[];
+  heightM: number;
+  stats: CostOfFun;
+  steps: Step[];
+  ms: number;
+}
+
+export type ToWorker = PlanRequest | ArtRequestMsg | WorkoutRequest | CrawlRequest | SpellRequest;
 
 /** A pin on the map: a park near the route, or a numbered crawl stop. */
 export interface Pin {
@@ -130,5 +153,6 @@ export type FromWorker =
   | { type: "plan"; id: number; result: PlanResult }
   | { type: "art"; id: number; result: ArtResultMsg }
   | { type: "tour"; id: number; result: TourResult }
-  | { type: "error"; id: number; message: string }
+  | { type: "spell"; id: number; result: SpellResultMsg }
+  | { type: "error"; id: number; message: string; suggestion?: string }
   | { type: "fatal"; message: string };

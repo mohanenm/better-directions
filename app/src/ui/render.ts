@@ -2,7 +2,7 @@
 import { CITY } from "../city";
 import type { CostOfFun } from "../modes/stats";
 import type { Step } from "../modes/directions";
-import type { ArtResultMsg, PlanResult, TourResult } from "./protocol";
+import type { ArtResultMsg, PlanResult, SpellResultMsg, TourResult } from "./protocol";
 import type { ShareCard } from "./share-image";
 
 const el = <K extends keyof HTMLElementTagNameMap>(tag: K, text?: string, className?: string) => {
@@ -127,4 +127,39 @@ function renderSteps(steps: Step[], onStep: (at: [number, number]) => void): voi
       return li;
     }),
   );
+}
+
+/** What a spelled walk is called when the word itself isn't to be shown or shared. */
+export const HIDDEN_WORD_NAME = "A word, walked";
+
+export function spellSummary(r: SpellResultMsg): string {
+  return `${r.likeness}% readable, ${(r.stats.lengthM / 1000).toFixed(1)} km, ${Math.max(1, Math.round(r.stats.timeS / 60))} min.`;
+}
+
+function spellStats(r: SpellResultMsg): [string, string][] {
+  const hardest = [...r.letters].sort((a, b) => a.likeness - b.likeness)[0];
+  const items: [string, string][] = [
+    ["Readable", `${r.likeness}%`],
+    ["Walk", `${Math.max(1, Math.round(r.stats.timeS / 60))} min · ${(r.stats.lengthM / 1000).toFixed(1)} km`],
+    ["Letter height", `${r.heightM} m`],
+  ];
+  if (hardest && r.letters.length > 1) items.push(["Hardest letter", `${hardest.char}, ${hardest.likeness}%`]);
+  return items;
+}
+
+export function renderSpell(r: SpellResultMsg, onStep: (at: [number, number]) => void): void {
+  const notes = ["Solid lines are the letters; dotted lines are walks between strokes. The dashed outline is the ideal lettering."];
+  if (r.likeness < 60) notes.push("Streets here don't spell well. A neighbourhood with a regular grid will read better.");
+  renderCard(r.word, spellSummary(r), spellStats(r), r.stats, notes, r.steps, ["Letters", "Ideal outline"], onStep);
+}
+
+export function spellCard(r: SpellResultMsg, showWord: boolean): ShareCard {
+  return {
+    name: showWord ? r.word : HIDDEN_WORD_NAME,
+    summary: spellSummary(r),
+    chips: spellStats(r).slice(0, 3),
+    from: r.start,
+    to: r.end,
+    legend: ["Letters", "Ideal outline"],
+  };
 }
