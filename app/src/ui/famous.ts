@@ -228,6 +228,77 @@ const SILVER_SPRING: readonly FamousRoute[] = [
   },
 ];
 
+const CHICAGO: readonly FamousRoute[] = [
+  {
+    kind: "plan",
+    title: "Down to the Riverwalk",
+    pitch: "Along the river from the Merchandise Mart to Michigan Avenue, by every staircase between the bridges and the Riverwalk.",
+    mode: "stairs", seed: 1,
+    from: [-87.6355, 41.8885], fromName: "Merchandise Mart",
+    to: [-87.6245, 41.8887], toName: "DuSable Bridge",
+  },
+  {
+    kind: "plan",
+    title: "Under the Loop",
+    pitch: "Millennium Station to Daley Plaza through the Loop's buildings, with a stretch of the Pedway.",
+    mode: "buildings", seed: 1,
+    from: [-87.6245, 41.8846], fromName: "Millennium Station",
+    to: [-87.6301, 41.8840], toName: "Daley Plaza",
+  },
+  {
+    kind: "plan",
+    title: "Grant Park to the Museums",
+    pitch: "Cloud Gate to the Field Museum through as many parks as fit.",
+    mode: "parks", seed: 1,
+    from: [-87.6233, 41.8827], fromName: "Cloud Gate",
+    to: [-87.6170, 41.8663], toName: "Field Museum",
+  },
+  {
+    kind: "plan",
+    title: "Rogers Park Beaches",
+    pitch: "Loyola to Howard by the string of little lakefront parks and beaches.",
+    mode: "parks", seed: 1,
+    from: [-87.6612, 42.0010], fromName: "Loyola station",
+    to: [-87.6729, 42.0190], toName: "Howard station",
+  },
+  {
+    kind: "plan",
+    title: "Andersonville Sweets",
+    pitch: "Berwyn station to Clark and Bryn Mawr, past Andersonville's cafés.",
+    mode: "snacks", seed: 1,
+    from: [-87.6588, 41.9779], fromName: "Berwyn station",
+    to: [-87.6681, 41.9835], toName: "Clark and Bryn Mawr",
+  },
+  {
+    kind: "workout",
+    title: "Riverwalk Stair Laps",
+    pitch: "A short loop up and down the staircases between Wacker Drive and the Riverwalk.",
+    focus: "stairs", minutes: 30,
+    from: [-87.6278, 41.8873], fromName: "Riverwalk at State Street",
+  },
+  {
+    kind: "crawl",
+    title: "Loop Public Art",
+    pitch: "Picasso, Chagall, Calder and friends: a loop through the Loop's public art from Daley Plaza.",
+    theme: "art", count: 6, minutes: 45,
+    from: [-87.6301, 41.8840], fromName: "Daley Plaza",
+  },
+  {
+    kind: "crawl",
+    title: "Andersonville Pubs",
+    pitch: "A short evening loop through Andersonville's pubs and bars.",
+    theme: "pub", count: 4, minutes: 30,
+    from: [-87.6683, 41.9760], fromName: "Clark and Foster",
+  },
+  {
+    kind: "crawl",
+    title: "Ravenswood Breweries and Bars",
+    pitch: "From the Damen Brown Line stop through Ravenswood's taprooms and bars.",
+    theme: "pub", count: 4, minutes: 45,
+    from: [-87.6785, 41.9662], fromName: "Damen station (Brown Line)",
+  },
+];
+
 /** Famous routes for each area id (areas without any show an empty list). */
 export const FAMOUS: Readonly<Record<string, readonly FamousRoute[]>> = {
   lyon: LYON,
@@ -236,6 +307,7 @@ export const FAMOUS: Readonly<Record<string, readonly FamousRoute[]>> = {
   "silver-spring": SILVER_SPRING,
   richmond: RICHMOND,
   baltimore: BALTIMORE,
+  chicago: CHICAGO,
 };
 
 /** Lyon's list, kept under its old name for tests and benches. */
