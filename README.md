@@ -19,9 +19,16 @@ It's a static site with no server, accounts or tracking. Routes are planned on y
 - **Parks**: collects parks. Terreaux to Croix-Rousse passes eight.
 - **Snacks**: bakeries, pâtisseries, chocolatiers, ice cream and cafés. Bellecour to Terreaux: 4 bakeries and 10 other stops for 4 extra minutes.
 - **Left turns only**: left or straight on, never right if it can help it. Saint-Jean to Fourvière: 33 lefts, no rights.
+- **Most inconvenient**: zig-zags, needless ups and downs, nothing straight, but never more busy-road crossings than the normal route. Bellecour to the Terreaux: 220 turns, and 158 places where it could have gone straight.
 - **Random**: a detour picked by a seed, so the same link gives the same route. The scenic route. Very scenic.
 
-Every route gets a name, and can be shared as a link or as an image drawn on your phone. The Famous routes section has eight to try.
+Every route gets a name, and can be shared as a link or as an image drawn on your phone. Parks near the route show as pins; tap one to add it as a stop. The Famous routes section has a few to try.
+
+## Crawls and workouts
+
+A crawl visits a few artworks, pubs or wine bars in a sensible order, looping back or ending somewhere else. Stops are numbered pins you can swap or skip. Pub and wine crawls keep the walks short, prefer lit streets, and flag places whose hours suggest they close before the evening. See [docs/CRAWLS.md](docs/CRAWLS.md) for what counts as a stop.
+
+A workout is a 20, 30 or 45-minute loop from your start, collecting staircases, hills or both. It shows the staircases, steps and metres climbed, and notes any stretch tagged as unlit. It makes no claims about calories.
 
 There's also an experimental Draw a shape section that finds a walk drawing a heart, star, square or one-stroke letter with real streets, and scores the likeness. See [docs/GPS_ART.md](docs/GPS_ART.md).
 
@@ -35,7 +42,7 @@ These rules are hard-coded, and no mode or setting can change them:
 - "Through a building" means a mapped passage (`tunnel=building_passage`, `covered=yes`, `highway=corridor` or `indoor=corridor`) and only where it's plausibly public: through a shop, mall or station, or with public access tags, a street name, or a confirmation against the city's list. Passages and corridors through flats, offices, campuses and hospitals are left out.
 - Streets that run under a building without a mapped tunnel are kept, but the directions say so.
 - Passages, corridors and parks that may close are flagged, with their hours where mapped. Late at night there's an extra warning.
-- A better route takes at most four times the normal walking time, and never more than an hour unless the normal walk is longer. GPS art is limited to an hour.
+- A better route takes at most four times the normal walking time, and never more than an hour unless the normal walk is longer. Routes through stops you pick are measured against the normal route through the same stops. Shapes, crawls and workouts are limited to an hour.
 
 The rules run when the graph is built, again when the page loads, during the search, and on every finished route. The Python build and the TypeScript router pass the same cases in [safety/cases.json](safety/cases.json). A property test plans random routes in every mode and checks each one independently; before the first release it ran 36,600 of them with no violations. Details are in [docs/SECURITY.md](docs/SECURITY.md).
 

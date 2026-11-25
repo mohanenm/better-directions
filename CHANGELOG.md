@@ -2,6 +2,14 @@
 
 ## 2.0.0 (unreleased)
 
+### Added
+
+- Most inconvenient mode: many turns, needless ups and downs, no straight lines, and never more busy-road crossings than the normal route.
+- Crawls: art, pub and wine crawls through a chosen number of stops, looping back or ending at your To point. Stops are numbered pins you can swap or skip.
+- Workouts: 20, 30 or 45-minute loops collecting staircases, hills or both, preferring lit streets for longer loops.
+- Park pins: parks along or near a route, with their hours. Tap one to add it as a stop; up to three stops, in order.
+- Famous routes for the new mode, a crawl and a workout.
+
 ### Changed
 
 - The side panel is now a set of collapsible sections (Plan a route, Draw a shape, Famous routes, About and privacy), each with a one-line summary. Open sections are kept in shared links.
