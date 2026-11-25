@@ -4,6 +4,7 @@
 
 ### Added
 
+- New areas: Washington DC, Arlington and Alexandria, Silver Spring and Bethesda, Richmond and Baltimore, each loaded only when picked, with an area picker and "nearest to me". Famous routes for each.
 - Most inconvenient mode: many turns, needless ups and downs, no straight lines, and never more busy-road crossings than the normal route.
 - Crawls: art, pub and wine crawls through a chosen number of stops, looping back or ending at your To point. Stops are numbered pins you can swap or skip.
 - Workouts: 20, 30 or 45-minute loops collecting staircases, hills or both, preferring lit streets for longer loops.
@@ -13,6 +14,8 @@
 
 ### Changed
 
+- Stricter safety: no paths on military land; inside private or no-access grounds only explicitly public paths; no walking down busy roads whose sidewalks are mapped separately or that have none. Cemeteries are flagged as places that may close.
+- Directions only call it a turn at a real junction, matching the turn counts.
 - The side panel is now a set of collapsible sections (Plan a route, Draw a shape, Famous routes, About and privacy), each with a one-line summary. Open sections are kept in shared links.
 - Modes are listed with a description each, and have shorter names: Through buildings, Trails, Stairs, Parks, Snacks, Left turns only and Random. Links using the old mode ids still work.
 - Copy, route names and directions are drier and plainer. The safety notice is unchanged.

@@ -1,6 +1,6 @@
 # Architecture
 
-Better Directions is a static site. A Python pipeline turns an OpenStreetMap extract into a compact walking graph and a set of map tiles; the browser downloads both and plans every route locally, in a Web Worker. There is no server and no API.
+Better Directions is a static site. A Python pipeline turns an OpenStreetMap extract into a compact walking graph and a set of map tiles for each area; the browser downloads the chosen area's files and plans every route locally, in a Web Worker. There is no server and no API. Areas are listed in `app/src/city.ts` and picked with `?area=`; switching area reloads the page, and the worker is named after the area so it loads the right graph.
 
 ```
 OSM extract ──► pipeline (Python) ──► graph.bin + tiles + places.json ──► static site
@@ -34,7 +34,7 @@ The file keeps the raw tags the safety rules need, so the browser can re-run the
 
 The rules are hard-coded in two places, `pipeline/bdgraph/safety.py` and `app/src/safety/rules.ts`, and both must return exactly the results in `safety/cases.json`. No mode or setting can switch them off. Where a tag is ambiguous, the stricter reading wins.
 
-Some checks need geometry rather than tags. The build drops a path that crosses a railway or a fast road at grade without a shared node, and a path that lies inside a building without being a mapped passage (sampled every 4 m, ignoring points within 0.75 m of a wall so pavements drawn on facades survive). A mapped passage or corridor only counts if the building is public-facing (a shop, mall or station), or the way has public access tags, a street name, or is listed as confirmed in the city config. Many passages run through flats, offices, universities and hospitals. Roads that run under a building with no tunnel tag are kept, flagged and disclosed in the directions.
+Some checks need geometry rather than tags. The build drops a path that crosses a railway or a fast road at grade without a shared node; any path on military land; any path inside an area tagged `access=private` or `no` unless the path itself is explicitly public; and a path that lies inside a building without being a mapped passage (sampled every 4 m, ignoring points within 0.75 m of a wall so pavements drawn on facades survive). A mapped passage or corridor only counts if the building is public-facing (a shop, mall or station), or the way has public access tags, a street name, or is listed as confirmed in the city config. Many passages run through flats, offices, universities and hospitals. Roads that run under a building with no tunnel tag are kept, flagged and disclosed in the directions. On busy roads whose sidewalks are mapped separately (common in the US), or that have none, the router uses the sidewalk or nothing.
 
 In the browser the rules run three more times: a load-time audit disables any edge, node or direction that breaks a rule; the search only uses what the audit allowed; and every finished route goes through `assertRouteSafe`, which re-checks it from raw tags, along with connectivity and the detour cap. The property test adds its own independent check on top.
 
