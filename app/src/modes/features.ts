@@ -4,6 +4,7 @@
  */
 import type { CrawlKind, SnackKind } from "../graph/format";
 import type { Graph } from "../graph/graph";
+import type { CrawlTheme } from "./options";
 
 const UNPAVED = new Set([
   "unpaved", "dirt", "earth", "ground", "gravel", "fine_gravel", "compacted", "grass", "mud",
@@ -70,7 +71,7 @@ export interface TrailStretch {
 
 export const SNACK_KINDS: ReadonlySet<string> = new Set(["bakery", "pastry", "chocolate", "ice_cream", "cafe"]);
 
-export type CrawlTheme = "art" | "pub" | "wine";
+export type { CrawlTheme } from "./options";
 export const CRAWL_THEME_OF: Readonly<Record<CrawlKind, CrawlTheme>> = {
   artwork: "art", gallery: "art", museum: "art",
   pub: "pub", bar: "pub", brewery: "pub",

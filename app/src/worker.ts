@@ -8,11 +8,14 @@ import { SHAPES } from "./art/shapes";
 import { Graph, type LonLat } from "./graph/graph";
 import { describeRoute, directions } from "./modes/directions";
 import { FeatureIndex } from "./modes/features";
-import { planMode } from "./modes/plan-mode";
+import { planCrawl } from "./modes/crawl";
+import { planModeVia } from "./modes/plan-mode";
+import { planWorkout, WORKOUT_FOCUSES, WORKOUT_MINUTES } from "./modes/workout";
+import { haversineM } from "./router/geometry";
 import { Router, type Route } from "./router/astar";
 import { NodeIndex } from "./router/snap";
 import { costOfFun } from "./modes/stats";
-import type { ArtRequestMsg, FromWorker, PlanRequest } from "./ui/protocol";
+import type { ArtRequestMsg, CrawlRequest, FromWorker, Pin, PlanRequest, ToWorker, WorkoutRequest } from "./ui/protocol";
 
 const SNAP_LIMIT_M = 300;
 
@@ -54,16 +57,45 @@ function line(g: Graph, route: Route): [number, number][] {
   return pts;
 }
 
+const PARK_PIN_RADIUS_M = 300;
+const MAX_STOPS = 3;
+
+/** Parks the route visits (numbered in order) and others within PARK_PIN_RADIUS_M of it. */
+function parkPins(route: Route): Pin[] {
+  const { g, fi } = state!;
+  const order: number[] = [];
+  for (const d of route.dirEdges) {
+    const park = g.s.edge_park[d >>> 1]!;
+    if (park && !order.includes(park)) order.push(park);
+  }
+  const samples = route.nodes.filter((_, i) => i % 4 === 0).map((n) => g.nodeLonLat(n));
+  const pins: Pin[] = [];
+  for (const park of fi.parks) {
+    const at: [number, number] = [fi.midLon[park.dirEdge >>> 1]!, fi.midLat[park.dirEdge >>> 1]!];
+    const visited = order.indexOf(park.area) + 1;
+    if (!visited && !samples.some((p) => haversineM(p, at) <= PARK_PIN_RADIUS_M)) continue;
+    const hours = g.area(park.area)?.opening_hours ?? "";
+    pins.push({ kind: "park", at, name: park.name, number: visited, detail: hours ? `May close outside ${hours}.` : "" });
+  }
+  return pins.sort((a, b) => (a.number || 99) - (b.number || 99) || a.name.localeCompare(b.name));
+}
+
+function snap(point: [number, number], what: string): number {
+  const n = state!.index.nearest(point as LonLat, SNAP_LIMIT_M);
+  if (n === null) throw new Error(`The ${what} is too far from any walkable path. Try somewhere closer to a street.`);
+  return n;
+}
+
 function plan(req: PlanRequest): void {
   if (!state) throw new Error("Still loading the map data.");
-  const { g, router, fi, index } = state;
+  const { g, router, fi } = state;
   const t0 = performance.now();
-  const start = index.nearest(req.from as LonLat, SNAP_LIMIT_M);
-  const goal = index.nearest(req.to as LonLat, SNAP_LIMIT_M);
-  if (start === null) throw new Error("The start is too far from any walkable path. Try somewhere closer to a street.");
-  if (goal === null) throw new Error("The end is too far from any walkable path. Try somewhere closer to a street.");
-  if (start === goal) throw new Error("Start and end are the same spot. Pick somewhere further away.");
-  const p = planMode(router, fi, start, goal, req.mode, req.seed);
+  const start = snap(req.from, "start");
+  const goal = snap(req.to, "end");
+  const stops = req.stops.slice(0, MAX_STOPS).map((p, i) => snap(p, `stop ${i + 1}`));
+  const points = [start, ...stops, goal].filter((n, i, all) => i === 0 || n !== all[i - 1]);
+  if (points.length < 2) throw new Error("Start and end are the same spot. Pick somewhere further away.");
+  const p = planModeVia(router, fi, points, req.mode, req.seed);
   if (!p) throw new Error("No walking route found between those points.");
   post({
     type: "plan",
@@ -82,6 +114,7 @@ function plan(req: PlanRequest): void {
       name: p.name,
       steps: directions(fi, p, req.fromName, req.toName),
       strategy: p.strategy,
+      pins: parkPins(p.better),
       ms: Math.round(performance.now() - t0),
     },
   });
@@ -121,10 +154,101 @@ function art(req: ArtRequestMsg): void {
   });
 }
 
-self.addEventListener("message", (event: MessageEvent<PlanRequest | ArtRequestMsg>) => {
+function workout(req: WorkoutRequest): void {
+  if (!state) throw new Error("Still loading the map data.");
+  const { g, router, fi } = state;
+  const t0 = performance.now();
+  if (!WORKOUT_FOCUSES.includes(req.focus) || !(WORKOUT_MINUTES as readonly number[]).includes(req.minutes)) throw new Error("Unknown workout.");
+  const start = snap(req.start, "start");
+  const w = planWorkout(router, fi, start, req.minutes, req.focus);
+  if (!w) throw new Error("Couldn't make a loop from here. Try another start.");
+  const s = w.stats;
+  const statItems: [string, string][] = [
+    ["Walk", `${Math.max(1, Math.round(s.timeS / 60))} min · ${(s.lengthM / 1000).toFixed(1)} km`],
+    ["Staircases", String(s.staircases)],
+    ["Steps up", s.stepsUp ? String(s.stepsUp) : "0"],
+    ["Climb", `${Math.round(s.climbM)} m`],
+  ];
+  post({
+    type: "tour",
+    id: req.id,
+    result: {
+      kind: "workout",
+      start: g.nodeLonLat(start),
+      end: g.nodeLonLat(start),
+      line: line(g, w.route),
+      name: w.name,
+      summary: w.summary,
+      stats: s,
+      statItems,
+      notes: w.notes,
+      pins: [],
+      steps: describeRoute(fi, w.route, { quips: "workout", seed: start, fromName: req.fromName, arriveText: "Back where you started." }),
+      ms: Math.round(performance.now() - t0),
+    },
+  });
+}
+
+const CRAWL_KIND_LABEL: Record<string, string> = {
+  artwork: "Artwork", gallery: "Gallery", museum: "Museum", pub: "Pub", bar: "Bar", brewery: "Brewery",
+  wine_bar: "Wine bar", winery: "Winery", wine_shop: "Wine shop",
+};
+
+function crawl(req: CrawlRequest): void {
+  if (!state) throw new Error("Still loading the map data.");
+  const { g, router, fi } = state;
+  const t0 = performance.now();
+  const start = snap(req.start, "start");
+  const end = req.end ? snap(req.end, "end") : null;
+  const c = planCrawl(router, fi, { theme: req.theme, stops: req.stops, minutes: req.minutes, start, end, skip: req.skip });
+  if (!c) throw new Error("Not enough stops of that kind within reach. Try a longer walk or another start.");
+  const s = c.stats;
+  const statItems: [string, string][] = [
+    ["Stops", String(c.stops.length)],
+    ["Walk", `${Math.max(1, Math.round(s.timeS / 60))} min · ${(s.lengthM / 1000).toFixed(1)} km`],
+    ["Longest walk between stops", `${Math.round(c.longestLegM / 10) * 10} m`],
+  ];
+  const pins: Pin[] = c.stops.map((stop, i) => ({
+    kind: "stop",
+    at: [fi.midLon[stop.edge]!, fi.midLat[stop.edge]!],
+    name: stop.name,
+    number: i + 1,
+    detail: [CRAWL_KIND_LABEL[stop.kind], c.stopNotes[i] || (stop.openingHours ? `Open ${stop.openingHours}.` : "")].filter(Boolean).join(". "),
+    stopIndex: stop.index,
+  }));
+  post({
+    type: "tour",
+    id: req.id,
+    result: {
+      kind: "crawl",
+      start: g.nodeLonLat(start),
+      end: g.nodeLonLat(end ?? start),
+      line: line(g, c.route),
+      name: c.name,
+      summary: c.summary,
+      stats: s,
+      statItems,
+      notes: c.notes,
+      pins,
+      steps: describeRoute(fi, c.route, {
+        quips: "crawl",
+        seed: start,
+        fromName: req.fromName,
+        arriveText: end === null ? "Back where you started." : `You're at ${req.toName}.`,
+        stops: c.stops.map((stop, i) => ({ node: g.tail(stop.dirEdge), label: `Stop ${i + 1}: ${stop.name}` })),
+      }),
+      ms: Math.round(performance.now() - t0),
+    },
+  });
+}
+
+self.addEventListener("message", (event: MessageEvent<ToWorker>) => {
   try {
-    if (event.data.type === "art") art(event.data);
-    else plan(event.data);
+    const msg = event.data;
+    if (msg.type === "art") art(msg);
+    else if (msg.type === "workout") workout(msg);
+    else if (msg.type === "crawl") crawl(msg);
+    else plan(msg);
   } catch (err) {
     post({ type: "error", id: event.data.id, message: err instanceof Error ? err.message : String(err) });
   }

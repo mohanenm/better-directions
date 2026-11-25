@@ -16,7 +16,7 @@ import { minutes } from "./stats";
 
 export type StepKind =
   | "start" | "walk" | "stairs-up" | "stairs-down" | "stairs" | "passage" | "corridor"
-  | "under-building" | "trail" | "arrive";
+  | "under-building" | "trail" | "stop" | "arrive";
 
 export interface Step {
   kind: StepKind;
@@ -56,7 +56,15 @@ const GENERIC_NAMES: Record<string, string> = {
   platform: "the platform",
 };
 
-const QUIPS: Record<ModeId | "normal" | "art", { start: string[]; arrive: string[] }> = {
+const QUIPS: Record<ModeId | "normal" | "art" | "workout" | "crawl", { start: string[]; arrive: string[] }> = {
+  workout: {
+    start: ["Warm up first. Nobody else will remind you.", "Pace yourself; the stairs aren't going anywhere."],
+    arrive: ["Done. Stretch, if you're the stretching type.", "That's the loop. Same time next week?"],
+  },
+  crawl: {
+    start: ["Stops are in route order, nothing more.", "Take your time at each stop."],
+    arrive: ["That's the lot.", "End of the crawl."],
+  },
   art: {
     start: ["Record the walk, or nobody will believe you.", "The drawing only exists if your GPS is on."],
     arrive: ["Done. The shape is in your GPS track, more or less.", "Finished. Squint at the trace."],
@@ -214,11 +222,13 @@ export function directions(fi: FeatureIndex, plan: ModePlan, fromName: string, t
 }
 
 export interface DescribeOptions {
-  quips: ModeId | "art";
+  quips: ModeId | "art" | "workout" | "crawl";
   seed: number;
   fromName: string;
   /** First sentence of the arrival step (a quip follows). */
   arriveText: string;
+  /** Stops to call out, in route order, when the route reaches their node. */
+  stops?: { node: number; label: string }[];
 }
 
 /** Step-by-step directions for any route. */
@@ -238,6 +248,12 @@ export function describeRoute(fi: FeatureIndex, route: Route, opts: DescribeOpti
   });
 
   const groups = groupRoute(fi, route.dirEdges);
+  const pendingStops = [...(opts.stops ?? [])];
+  // A stop right at the start is reached before the first step.
+  while (pendingStops[0] && pendingStops[0].node === route.nodes[0]) {
+    const first = pendingStops.shift()!;
+    steps.push({ kind: "stop", text: `${first.label}.`, distanceM: 0, at: g.nodeLonLat(first.node), notes: [] });
+  }
   let prevPark = 0;
   const seenSnacks = new Set<number>();
   groups.forEach((grp, i) => {
@@ -303,6 +319,13 @@ export function describeRoute(fi: FeatureIndex, route: Route, opts: DescribeOpti
     const closure = closureNote(fi, grp);
     if (closure) notes.push(closure);
     steps.push({ kind, text, distanceM: grp.lengthM, at, notes });
+    for (const d of grp.dirEdges) {
+      const next = pendingStops[0];
+      if (next && g.head(d) === next.node) {
+        steps.push({ kind: "stop", text: `${next.label}.`, distanceM: 0, at: g.nodeLonLat(next.node), notes: [] });
+        pendingStops.shift();
+      }
+    }
   });
 
   const endAt = g.nodeLonLat(route.nodes.at(-1)!);

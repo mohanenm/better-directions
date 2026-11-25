@@ -8,15 +8,12 @@ import type { CostModel, Route, Router } from "../router/astar";
 import { haversineM } from "../router/geometry";
 import { assertRouteSafe } from "../router/verify";
 import { LOOP_MAX_SECONDS } from "../safety/limits";
-import type { CrawlStop, CrawlTheme, FeatureIndex } from "./features";
+import type { CrawlStop, FeatureIndex } from "./features";
+import { MAX_STOPS, MIN_STOPS, type CrawlTheme } from "./options";
 import { joinRoutes } from "./plan-mode";
 import { costOfFun, type CostOfFun } from "./stats";
 
-export const CRAWL_THEMES: readonly CrawlTheme[] = ["art", "pub", "wine"];
-export const CRAWL_MINUTES = [30, 45, 60] as const;
-export const MIN_STOPS = 3;
-/** Drinking crawls are capped lower than art crawls. */
-export const MAX_STOPS: Readonly<Record<CrawlTheme, number>> = { art: 8, pub: 6, wine: 6 };
+export { CRAWL_MINUTES, CRAWL_THEMES, MAX_STOPS, MIN_STOPS } from "./options";
 /** Keep evening walks between bars short. */
 const MAX_DRINK_GAP_M = 600;
 const DETOUR = 1.3;

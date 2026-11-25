@@ -12,9 +12,8 @@ import { MODES, type Collectible, type Mode } from "./modes";
 import { chaosWaypointRoute } from "./plan-mode";
 import { costOfFun, type CostOfFun } from "./stats";
 
-export type WorkoutFocus = "stairs" | "hills" | "mixed";
-export const WORKOUT_FOCUSES: readonly WorkoutFocus[] = ["stairs", "hills", "mixed"];
-export const WORKOUT_MINUTES = [20, 30, 45] as const;
+import type { WorkoutFocus } from "./options";
+export { WORKOUT_FOCUSES, WORKOUT_MINUTES, type WorkoutFocus } from "./options";
 /** Loops at least this long prefer lit streets. */
 const LIT_FROM_MINUTES = 30;
 /** A hill worth a detour climbs at least this much along one way. */
