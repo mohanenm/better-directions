@@ -80,7 +80,7 @@ After that, a new route takes about a quarter of a second. The page and planner 
 
 - Opening hours are shown but not checked against the clock, so a route can send you towards a park that has already shut. The late-night warning is the only hint.
 - It hasn't been tested on a real low-end phone, only emulated.
-- Copenhagen and Malmö have no elevation data yet, so climbs and steps up are unknown there; staircases are still counted. Both cities are flat.
+- Copenhagen and Malmö have no elevation data yet, so climbs, steps up and hill workouts aren't available there; staircases are still counted. The page says so under the area picker, on every result and in the footer.
 - Kastellet in Copenhagen is tagged as military land in OpenStreetMap, so routes never enter it, although it's open to the public by day.
 - Wine bars are rarely tagged as such in OpenStreetMap, so wine crawls are thin, especially in the US.
 - Traboules in Lyon are private buildings opened to the public by agreement with the city. The list of agreed ones changes, and the app relies on OpenStreetMap tags and names rather than that list.

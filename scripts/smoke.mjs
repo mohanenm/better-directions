@@ -44,6 +44,8 @@ const CASES = [
     query: "" },
   { name: "dark-switch", width: 1280, height: 800, mobile: false, theme: true,
     query: "?area=chicago&from=-87.64030,41.87890&to=-87.62330,41.88270&fromName=Union%20Station&toName=Cloud%20Gate&mode=stairs" },
+  { name: "no-elevation", width: 390, height: 844, mobile: true, noTerrain: true,
+    query: "?area=copenhagen&from=12.56830,55.67610&to=12.58780,55.69260&fromName=R%C3%A5dhuspladsen&toName=%C3%98sterport&mode=parks" },
   { name: "park-as-stop", width: 1280, height: 800, mobile: false, parkStop: true,
     query: "?from=4.85190,45.77030&to=4.83200,45.75780&fromName=T%C3%AAte%20d%27Or&toName=Place%20Bellecour&mode=trail" },
 ];
@@ -188,6 +190,15 @@ async function runCase(c) {
     if (!ready || seen.darkShare < 0.5) problems.push(`theme: the map didn't turn dark (${JSON.stringify(seen)})`);
     if (seen.routeShare < 0.002) problems.push(`theme: no route drawn after the switch (${JSON.stringify(seen)})`);
     console.log(`  dark map ${Math.round(seen.darkShare * 100)}% dark pixels, route ${(seen.routeShare * 100).toFixed(1)}% of the map`);
+  }
+  if (c.noTerrain) {
+    // An area without elevation data says so: under the area picker, in the result and the footer.
+    const seen = JSON.parse(await evaluate(`JSON.stringify({
+      areaNote: !document.getElementById('area-note').hidden && document.getElementById('area-note').textContent.includes('no elevation data'),
+      resultNote: document.getElementById('notes').textContent.includes('no elevation data'),
+      footer: document.querySelector('.attribution').textContent.includes('No elevation data'),
+      hillsOff: document.querySelector('input[name="workout-focus"][value="hills"]').disabled })`));
+    for (const [k, ok] of Object.entries(seen)) if (!ok) problems.push(`no elevation: ${k} doesn't say so`);
   }
   if (c.crawl) {
     const pins = await evaluate("document.querySelectorAll('.pin.stop').length");

@@ -36,6 +36,7 @@
           <span class="select-pill"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s-7-6.2-7-12a7 7 0 0 1 14 0c0 5.8-7 12-7 12z"/><circle cx="12" cy="9" r="2.5"/></svg><select id="area"></select></span>
           <button type="button" class="chip" id="nearest-area">Nearest to me</button>
         </div>
+        <p class="help area-note" id="area-note" hidden></p>
         <div class="sections">
           <section class="section" data-section="plan">
             <h2 class="section-head">
@@ -177,8 +178,8 @@
                 <fieldset class="choice">
                   <legend>Focus</legend>
                   <label><input type="radio" name="workout-focus" value="stairs" checked> Stairs: as many staircases as fit</label>
-                  <label><input type="radio" name="workout-focus" value="hills"> Hills: as much climbing as fits</label>
-                  <label><input type="radio" name="workout-focus" value="mixed"> Mixed</label>
+                  <label><input type="radio" name="workout-focus" value="hills"> Hills: as much climbing as fits<span class="needs-terrain" hidden> (needs elevation data)</span></label>
+                  <label><input type="radio" name="workout-focus" value="mixed"> Mixed<span class="needs-terrain" hidden> (needs elevation data)</span></label>
                 </fieldset>
                 <fieldset class="choice segmented">
                   <legend>Length</legend>

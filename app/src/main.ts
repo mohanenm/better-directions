@@ -12,7 +12,7 @@ import { FAMOUS } from "./ui/famous";
 import { createMap, type RouteMap } from "./ui/map";
 import type { PinAction } from "./ui/map";
 import type { ArtResultMsg, FromWorker, Pin, PlanResult, ReadyInfo, SpellResultMsg, ToWorker, TourResult } from "./ui/protocol";
-import { artCard, planCard, renderArt, renderResult, renderSpell, renderTour, spellCard, tourCard } from "./ui/render";
+import { artCard, planCard, renderArt, renderResult, renderSpell, renderTour, setAreaNotes, spellCard, tourCard } from "./ui/render";
 import { renderShareImage, type ShareCard } from "./ui/share-image";
 import { initThemeToggle } from "./ui/theme";
 import type { Place } from "./ui/search";
@@ -68,8 +68,15 @@ function onReady(ready: ReadyInfo): void {
   info = ready;
   document.documentElement.dataset["loadTimings"] = JSON.stringify(ready.timings);
   if (ready.dataAsOf) $("#data-date").textContent = `, data as of ${ready.dataAsOf.slice(0, 10)}`;
-  $("#terrain-credit").textContent = ready.terrainAttribution;
-  $("#terrain-wrap").hidden = !ready.terrainAttribution;
+  // An area without elevation data says so wherever climbs would appear.
+  const noTerrain = !ready.terrainAttribution;
+  $("#terrain-credit").textContent = noTerrain ? "No elevation data for this area yet" : ready.terrainAttribution;
+  $("#terrain-wrap").hidden = false;
+  $("#area-note").textContent = `There's no elevation data for ${CITY.name} yet, so climbs, steps up and hill workouts aren't available. Staircases are still counted.`;
+  $("#area-note").hidden = !noTerrain;
+  setAreaNotes(noTerrain ? [`There's no elevation data for ${CITY.name} yet, so climbs and steps up aren't known.`] : []);
+  for (const input of document.querySelectorAll<HTMLInputElement>('input[name="workout-focus"]:not([value="stairs"])')) input.disabled = noTerrain;
+  for (const span of document.querySelectorAll<HTMLElement>(".needs-terrain")) span.hidden = !noTerrain;
   Object.assign(state, parseLink(window.location.search, ready.bbox));
   applyOpen();
   routeMap = createMap($("#map"), ready.bbox);

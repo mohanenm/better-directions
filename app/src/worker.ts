@@ -161,6 +161,9 @@ function workout(req: WorkoutRequest): void {
   const { g, router, fi } = state;
   const t0 = performance.now();
   if (!WORKOUT_FOCUSES.includes(req.focus) || !(WORKOUT_MINUTES as readonly number[]).includes(req.minutes)) throw new Error("Unknown workout.");
+  // Without elevation data, hills can't be found and climbs can't be counted.
+  const hasTerrain = Boolean(g.meta.terrain.attribution);
+  if (!hasTerrain && req.focus !== "stairs") throw new Error("There's no elevation data for this area yet, so hill and mixed workouts aren't available. Try Stairs.");
   const start = snap(req.start, "start");
   const w = planWorkout(router, fi, start, req.minutes, req.focus);
   if (!w) throw new Error("Couldn't make a loop from here. Try another start.");
@@ -168,8 +171,7 @@ function workout(req: WorkoutRequest): void {
   const statItems: [string, string][] = [
     ["Walk", `${Math.max(1, Math.round(s.timeS / 60))} min · ${(s.lengthM / 1000).toFixed(1)} km`],
     ["Staircases", String(s.staircases)],
-    ["Steps up", s.stepsUp ? String(s.stepsUp) : "0"],
-    ["Climb", `${Math.round(s.climbM)} m`],
+    ...(hasTerrain ? ([["Steps up", String(s.stepsUp)], ["Climb", `${Math.round(s.climbM)} m`]] as [string, string][]) : []),
   ];
   post({
     type: "tour",

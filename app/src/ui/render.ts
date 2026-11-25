@@ -44,6 +44,12 @@ export function isLate(now = new Date()): boolean {
 
 const get = (id: string) => document.getElementById(id)!;
 
+/** Notes about the area itself (such as missing elevation data), shown with every result. */
+let areaNotes: string[] = [];
+export function setAreaNotes(notes: string[]): void {
+  areaNotes = notes;
+}
+
 function renderCard(name: string, summary: string, stats: [string, string][], b: CostOfFun, extraNotes: string[], steps: Step[], legend: [string, string], onStep: (at: [number, number]) => void): void {
   get("route-name").textContent = name;
   get("summary").textContent = summary;
@@ -66,6 +72,7 @@ function renderCard(name: string, summary: string, stats: [string, string][], b:
   for (const c of b.mayClose) {
     notes.push(`${c.name} may be closed outside opening hours${c.openingHours ? ` (${c.openingHours})` : ""}.`);
   }
+  notes.push(...areaNotes);
   get("notes").replaceChildren(...notes.map((t) => el("li", t)));
   get("late-hint").hidden = !(isLate() && b.mayClose.length > 0);
   renderSteps(steps, onStep);
