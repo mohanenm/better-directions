@@ -31,7 +31,7 @@ describe("cost of fun on the mini-town", () => {
     expect(s.mayClose.length).toBe(1);
   });
 
-  it("summarises like the brief", () => {
+  it("summarises in one line", () => {
     const r = router.route(at(200, 50), at(300, 50), NORMAL)!;
     const s = costOfFun(fi, r);
     const normal = { ...s, timeS: 360 };
