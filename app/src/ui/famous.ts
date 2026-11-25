@@ -396,6 +396,50 @@ const MALMO: readonly FamousRoute[] = [
   },
 ];
 
+const NEWBERG: readonly FamousRoute[] = [
+  {
+    kind: "plan",
+    title: "Hoover Park to Spring Meadow",
+    pitch: "From downtown across Newberg through four of its parks.",
+    mode: "parks", seed: 1,
+    from: [-122.9718, 45.3006], fromName: "Downtown Newberg",
+    to: [-122.9375, 45.3108], toName: "Spring Meadow Park",
+  },
+  {
+    kind: "plan",
+    title: "George Fox by Stairs",
+    pitch: "Downtown up to George Fox University by the campus staircases.",
+    mode: "stairs", seed: 1,
+    from: [-122.9718, 45.3006], fromName: "Downtown Newberg",
+    to: [-122.9660, 45.3085], toName: "George Fox University",
+  },
+  {
+    kind: "workout",
+    title: "North Newberg Hills",
+    pitch: "A short loop up the slopes around George Fox.",
+    focus: "hills", minutes: 30,
+    from: [-122.9675, 45.3075], fromName: "George Fox University",
+  },
+];
+
+const DUNDEE: readonly FamousRoute[] = [
+  {
+    kind: "crawl",
+    title: "Dundee Tasting Rooms",
+    pitch: "A short loop through three of the tasting rooms and wine shops in town.",
+    theme: "wine", count: 3, minutes: 45,
+    from: [-123.0103, 45.2779], fromName: "Downtown Dundee",
+  },
+  {
+    kind: "workout",
+    title: "Into the Dundee Hills",
+    pitch: "A loop up the first slopes of the Dundee Hills and back.",
+    focus: "hills", minutes: 45,
+    from: [-123.0103, 45.2779], fromName: "Downtown Dundee",
+  },
+];
+
+
 /** Famous routes for each area id (areas without any show an empty list). */
 export const FAMOUS: Readonly<Record<string, readonly FamousRoute[]>> = {
   lyon: LYON,
@@ -405,6 +449,8 @@ export const FAMOUS: Readonly<Record<string, readonly FamousRoute[]>> = {
   richmond: RICHMOND,
   baltimore: BALTIMORE,
   chicago: CHICAGO,
+  newberg: NEWBERG,
+  dundee: DUNDEE,
   copenhagen: COPENHAGEN,
   malmo: MALMO,
 };
