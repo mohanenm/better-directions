@@ -1,19 +1,19 @@
 @import "maplibre-gl/dist/maplibre-gl.css";
 
 :root {
-  --ink: #16131c;
-  --ink-soft: #4b4656;
+  --ink: #0f172a;
+  --ink-soft: #475569;
   --paper: #ffffff;
-  --wash: #f6f3fa;
-  --line: #ddd6e8;
-  --accent: #7e22ce;
+  --wash: #f1f5f9;
+  --line: #dbe3ec;
+  --accent: #3b34c9;
   --accent-ink: #ffffff;
-  --field: #8b8299; /* input borders: 3:1 on paper */
-  --route-better: #a21caf;
-  --route-normal: #5b6472;
+  --field: #7d8a9c; /* input borders: 3:1 on paper */
+  --route-better: #4f46e5;
+  --route-normal: #64748b;
   --route-casing: #ffffff;
-  --marker-from: #15803d;
-  --marker-to: #16131c;
+  --marker-from: #047857;
+  --marker-to: #0f172a;
   --warn-bg: #fff7e6;
   --warn-ink: #6b3d00;
   --radius: 12px;
