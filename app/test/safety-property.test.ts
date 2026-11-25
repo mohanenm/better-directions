@@ -16,14 +16,17 @@ import { SHAPE_IDS } from "../src/art/shapes";
 import { decodeGraph } from "../src/graph/format";
 import { FeatureIndex } from "../src/modes/features";
 import { MODE_IDS } from "../src/modes/modes";
-import { planMode } from "../src/modes/plan-mode";
+import { planCrawl } from "../src/modes/crawl";
+import { CRAWL_MINUTES, CRAWL_THEMES, WORKOUT_FOCUSES, WORKOUT_MINUTES } from "../src/modes/options";
+import { planMode, planModeVia } from "../src/modes/plan-mode";
+import { planWorkout } from "../src/modes/workout";
 import { Graph } from "../src/graph/graph";
 import { NORMAL, Router, type CostModel } from "../src/router/astar";
 import { haversineM, turnAngleDeg } from "../src/router/geometry";
 import { plan } from "../src/router/planner";
 import { hashUnit } from "../src/router/rng";
 import { NodeIndex } from "../src/router/snap";
-import { detourCapSeconds, GPS_ART_MAX_SECONDS } from "../src/safety/limits";
+import { detourCapSeconds, GPS_ART_MAX_SECONDS, LOOP_MAX_SECONDS } from "../src/safety/limits";
 import { footDirections, nodeExclusion, passageExclusion, PUBLIC_AREA_KINDS, wayExclusion } from "../src/safety/rules";
 
 const RUNS = Number(process.env["PROPERTY_RUNS"] ?? 300);
@@ -72,6 +75,27 @@ function checkRoute(g: Graph, dirEdges: number[], nodes: number[]): void {
     expect(from).toBe(nodes[i]);
     expect(to).toBe(nodes[i + 1]);
   });
+}
+
+/** Busy-road crossings, counted from raw tags (independently of stats.ts). */
+const BUSY = new Set(["primary", "primary_link", "secondary", "secondary_link", "tertiary", "tertiary_link", "trunk", "trunk_link"]);
+const busyNodeCache = new WeakMap<Graph, Uint8Array>();
+function busyCrossings(g: Graph, dirEdges: number[]): number {
+  const busyEdge = (e: number) => BUSY.has(g.edgeTags(e)["highway"] ?? "");
+  let busyNode = busyNodeCache.get(g);
+  if (!busyNode) {
+    busyNode = new Uint8Array(g.nodeCount);
+    for (let e = 0; e < g.edgeCount; e++) {
+      if (g.allowedDirs[e] && busyEdge(e)) busyNode[g.s.edge_from[e]!] = busyNode[g.s.edge_to[e]!] = 1;
+    }
+    busyNodeCache.set(g, busyNode);
+  }
+  let count = 0;
+  for (let i = 1; i < dirEdges.length; i++) {
+    const node = g.tail(dirEdges[i]!);
+    if (busyNode[node] && !busyEdge(dirEdges[i - 1]! >>> 1) && !busyEdge(dirEdges[i]! >>> 1)) count++;
+  }
+  return count;
 }
 
 const models: CostModel[] = [
@@ -140,6 +164,10 @@ describe("safety property: random routes on the real Lyon graph", () => {
           checkRoute(lyon, p!.normal.dirEdges, p!.normal.nodes);
           checkRoute(lyon, p!.better.dirEdges, p!.better.nodes);
           expect(p!.better.timeS).toBeLessThanOrEqual(detourCapSeconds(p!.normal.timeS) + 1e-6);
+          if (mode === "inconvenient") {
+            // Inconvenient, not riskier.
+            expect(busyCrossings(lyon, p!.better.dirEdges)).toBeLessThanOrEqual(busyCrossings(lyon, p!.normal.dirEdges));
+          }
         }),
         { numRuns: RUNS, seed: 20261126 },
       );
@@ -161,6 +189,57 @@ describe("safety property: random routes on the real Lyon graph", () => {
         },
       ),
       { numRuns: Math.ceil(RUNS / 5), seed: 20261127 },
+    );
+  });
+
+  it("stops: routes through user-picked stops are safe and within the cap of the normal route through them", () => {
+    fc.assert(
+      fc.property(pair(lyon), fc.array(fc.nat({ max: lyon.nodeCount - 1 }), { minLength: 1, maxLength: 3 }), fc.constantFrom(...MODE_IDS), ([a, b], stops, mode) => {
+        const near = stops.filter((n) => haversineM(lyon.nodeLonLat(n), lyon.nodeLonLat(a)) <= MAX_PAIR_DISTANCE_M);
+        const points = [a, ...near, b].filter((n, i, all) => i === 0 || n !== all[i - 1]);
+        if (points.length < 2) return;
+        const p = planModeVia(router, features, points, mode, 7);
+        expect(p).not.toBeNull();
+        checkRoute(lyon, p!.better.dirEdges, p!.better.nodes);
+        for (const n of points) expect(p!.better.nodes).toContain(n);
+        expect(p!.better.timeS).toBeLessThanOrEqual(detourCapSeconds(p!.normal.timeS) + 1e-6);
+      }),
+      { numRuns: Math.ceil(RUNS / 5), seed: 20261128 },
+    );
+  });
+
+  it("workouts: every loop is safe, returns to its start and fits its time", () => {
+    fc.assert(
+      fc.property(fc.nat({ max: lyon.nodeCount - 1 }), fc.constantFrom(...WORKOUT_FOCUSES), fc.constantFrom(...WORKOUT_MINUTES), (node, focus, minutes) => {
+        const w = planWorkout(router, features, node, minutes, focus);
+        if (!w) return; // a dead end with nowhere to loop is allowed to fail
+        checkRoute(lyon, w.route.dirEdges, w.route.nodes);
+        expect(w.route.nodes.at(-1)).toBe(node);
+        expect(w.route.timeS).toBeLessThanOrEqual(Math.min(minutes * 60, LOOP_MAX_SECONDS) + 1e-6);
+      }),
+      { numRuns: Math.ceil(RUNS / 5), seed: 20261129 },
+    );
+  });
+
+  it("crawls: every crawl is safe, passes its stops, fits its time and caps drinking stops", () => {
+    fc.assert(
+      fc.property(
+        fc.nat({ max: lyon.nodeCount - 1 }),
+        fc.option(fc.nat({ max: lyon.nodeCount - 1 }), { nil: null }),
+        fc.constantFrom(...CRAWL_THEMES),
+        fc.integer({ min: 1, max: 12 }),
+        fc.constantFrom(...CRAWL_MINUTES),
+        (start, end, theme, stops, minutes) => {
+          const c = planCrawl(router, features, { theme, stops, minutes, start, end });
+          if (!c) return; // not enough stops nearby is allowed
+          checkRoute(lyon, c.route.dirEdges, c.route.nodes);
+          expect(c.route.timeS).toBeLessThanOrEqual(Math.min(minutes * 60, LOOP_MAX_SECONDS) + 1e-6);
+          expect(c.route.nodes.at(-1)).toBe(end ?? start);
+          for (const s of c.stops) expect(c.route.nodes).toContain(lyon.tail(s.dirEdge));
+          expect(c.stops.length).toBeLessThanOrEqual(theme === "art" ? 8 : 6);
+        },
+      ),
+      { numRuns: Math.ceil(RUNS / 5), seed: 20261130 },
     );
   });
 
