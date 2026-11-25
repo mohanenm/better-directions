@@ -14,7 +14,7 @@ const ratio = (a: string, b: string) => {
   return (hi! + 0.05) / (lo! + 0.05);
 };
 
-describe("colour contrast (WCAG AA, 4.5:1 for text)", () => {
+describe("colour contrast (WCAG AA: 4.5:1 for text, 3:1 for controls and route lines)", () => {
   const pairs: [string, string, string][] = [
     ["body text", "ink", "paper"],
     ["secondary text", "ink-soft", "paper"],
@@ -28,5 +28,16 @@ describe("colour contrast (WCAG AA, 4.5:1 for text)", () => {
     expect(vars[fg!], fg).toBeDefined();
     expect(vars[bg!], bg).toBeDefined();
     expect(ratio(vars[fg!]!, vars[bg!]!)).toBeGreaterThanOrEqual(4.5);
+  });
+  const nonText: [string, string, string][] = [
+    ["input borders", "field", "paper"],
+    ["better route", "route-better", "paper"],
+    ["normal route", "route-normal", "paper"],
+    ["start marker", "marker-from", "paper"],
+    ["end marker", "marker-to", "paper"],
+  ];
+  it.each(nonText)("%s", (_, fg, bg) => {
+    expect(vars[fg!], fg).toBeDefined();
+    expect(ratio(vars[fg!]!, vars[bg!]!)).toBeGreaterThanOrEqual(3);
   });
 });

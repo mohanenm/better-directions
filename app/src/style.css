@@ -6,10 +6,14 @@
   --paper: #ffffff;
   --wash: #f6f3fa;
   --line: #ddd6e8;
-  --accent: #7e22ce; /* 6.5:1 on white */
+  --accent: #7e22ce;
   --accent-ink: #ffffff;
-  --better: #a21caf;
-  --normal: #5b6472;
+  --field: #8b8299; /* input borders: 3:1 on paper */
+  --route-better: #a21caf;
+  --route-normal: #5b6472;
+  --route-casing: #ffffff;
+  --marker-from: #15803d;
+  --marker-to: #16131c;
   --warn-bg: #fff7e6;
   --warn-ink: #6b3d00;
   --radius: 12px;
@@ -74,7 +78,7 @@ a { color: var(--accent); }
 .endpoint label, .modes legend { font-weight: 650; display: block; margin-bottom: 0.25rem; }
 .combo { position: relative; }
 .combo input {
-  width: 100%; font: inherit; padding: 0.65rem 0.75rem; border: 1px solid var(--line);
+  width: 100%; font: inherit; padding: 0.65rem 0.75rem; border: 1px solid var(--field);
   border-radius: 10px; background: var(--paper); color: var(--ink);
 }
 .options {
@@ -92,17 +96,24 @@ a { color: var(--accent); }
 }
 
 .modes { border: 0; margin: 0; padding: 0; }
-.mode-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; }
+/* Modes as a list: name and one line each, so every mode is visible without opening anything. */
+.mode-list { display: grid; border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
 .mode-option { position: relative; }
+.mode-option + .mode-option { border-top: 1px solid var(--line); }
 .mode-option input { position: absolute; opacity: 0; inset: 0; margin: 0; cursor: pointer; }
 .mode-option label {
-  display: block; height: 100%; padding: 0.55rem 0.65rem; border: 1px solid var(--line);
-  border-radius: 10px; cursor: pointer; background: var(--paper);
+  display: grid; grid-template-columns: 1.1rem 1fr; column-gap: 0.6rem; align-items: baseline;
+  padding: 0.5rem 0.7rem; cursor: pointer; background: var(--paper);
 }
-.mode-option label strong { display: block; font-size: 0.95rem; }
-.mode-option label span { display: block; font-size: 0.78rem; color: var(--ink-soft); }
-.mode-option input:checked + label { border-color: var(--accent); background: var(--wash); box-shadow: inset 0 0 0 1px var(--accent); }
-.mode-option input:focus-visible + label { outline: 3px solid var(--accent); outline-offset: 2px; }
+.mode-option label::before {
+  content: ""; width: 0.8rem; height: 0.8rem; border-radius: 50%; border: 2px solid var(--ink-soft);
+  grid-row: 1 / span 2; align-self: center; box-sizing: border-box;
+}
+.mode-option label strong { font-size: 0.95rem; }
+.mode-option label span { grid-column: 2; font-size: 0.8rem; color: var(--ink-soft); }
+.mode-option input:checked + label { background: var(--wash); }
+.mode-option input:checked + label::before { border: 0.25rem solid var(--accent); }
+.mode-option input:focus-visible + label { outline: 3px solid var(--accent); outline-offset: -3px; }
 
 .seed-row { display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; }
 button.go, button.secondary {
@@ -115,26 +126,43 @@ button.secondary { background: var(--paper); color: var(--accent); border: 1px s
 .status { min-height: 1.5rem; margin: 0.75rem 0; color: var(--ink-soft); }
 .status.error { color: #9f1239; font-weight: 600; }
 
+/* --- Panel sections --- */
+.sections { display: grid; gap: 0.6rem; }
+.section { border: 1px solid var(--line); border-radius: var(--radius); background: var(--paper); }
+.section-head { margin: 0; font-size: inherit; }
+.section-head button {
+  display: grid; grid-template-columns: 1fr auto; column-gap: 0.75rem; width: 100%;
+  padding: 0.65rem 0.8rem; border: 0; border-radius: var(--radius); background: none;
+  font: inherit; color: inherit; text-align: left; cursor: pointer;
+}
+.section-head button::after {
+  content: ""; grid-column: 2; grid-row: 1 / span 2; align-self: center; width: 0.55rem; height: 0.55rem;
+  border-right: 2px solid var(--ink-soft); border-bottom: 2px solid var(--ink-soft); transform: rotate(45deg) translate(-2px, -2px);
+}
+.section-head button[aria-expanded="true"]::after { transform: rotate(-135deg) translate(-2px, -2px); }
+.section-title { font-weight: 700; font-size: 1.02rem; }
+.section-summary { grid-column: 1; font-size: 0.82rem; font-weight: 400; color: var(--ink-soft); }
+.section-body { padding: 0.1rem 0.8rem 0.9rem; }
+.help { margin: 0; font-size: 0.85rem; color: var(--ink-soft); }
+.about p { margin: 0 0 0.6rem; font-size: 0.9rem; }
+
 /* --- GPS art --- */
-.art { margin-top: 1rem; border: 1px solid var(--line); border-radius: var(--radius); padding: 0.5rem 0.75rem; }
-.art summary { cursor: pointer; font-weight: 650; }
-.art-form { display: grid; gap: 0.5rem; margin-top: 0.5rem; }
-.art-help { margin: 0; font-size: 0.85rem; color: var(--ink-soft); }
-.art-form select { font: inherit; padding: 0.5rem; border-radius: 8px; border: 1px solid var(--line); }
+.art-form { display: grid; gap: 0.5rem; }
+.art-form select { font: inherit; padding: 0.5rem; border-radius: 8px; border: 1px solid var(--field); }
 .art-length { border: 0; padding: 0; margin: 0; display: grid; gap: 0.2rem; }
 .art-length legend { font-weight: 650; margin-bottom: 0.2rem; }
 .art-length label { display: flex; align-items: center; gap: 0.5rem; min-height: 2rem; cursor: pointer; }
 .art-length input { width: 1.15rem; height: 1.15rem; margin: 0; accent-color: var(--accent); }
 
 /* --- Result --- */
-.result { border-top: 1px solid var(--line); padding-top: 0.75rem; }
+.result { border-top: 1px solid var(--line); padding-top: 0.75rem; scroll-margin-top: 0.5rem; }
 .result:focus { outline: none; }
 .result h2.route-name { margin: 0 0 0.15rem; font-size: 1.35rem; color: var(--accent); letter-spacing: -0.01em; }
 .summary { font-size: 1.1rem; font-weight: 600; margin: 0.25rem 0 0.5rem; }
 .legend { display: flex; align-items: center; gap: 0.4rem; font-size: 0.85rem; color: var(--ink-soft); margin-bottom: 0.5rem; }
 .swatch { display: inline-block; width: 1.6rem; height: 0.35rem; border-radius: 3px; }
-.swatch.better { background: var(--better); margin-left: 0.6rem; }
-.swatch.normal { background: repeating-linear-gradient(90deg, var(--normal) 0 6px, transparent 6px 10px); }
+.swatch.better { background: var(--route-better); margin-left: 0.6rem; }
+.swatch.normal { background: repeating-linear-gradient(90deg, var(--route-normal) 0 6px, transparent 6px 10px); }
 .stats { display: grid; grid-template-columns: repeat(auto-fill, minmax(8.5rem, 1fr)); gap: 0.5rem; margin: 0.5rem 0; }
 .stats div { background: var(--wash); border-radius: 10px; padding: 0.45rem 0.6rem; }
 .stats dt { font-size: 0.75rem; color: var(--ink-soft); }
@@ -154,16 +182,14 @@ button.secondary { background: var(--paper); color: var(--accent); border: 1px s
 .share-image figcaption { display: flex; gap: 0.75rem; align-items: center; margin-top: 0.5rem; }
 .button-link { display: inline-block; padding: 0.35rem 0.25rem; color: var(--accent); font-weight: 650; }
 
-.famous { border-top: 1px solid var(--line); margin-top: 1.25rem; padding-top: 0.75rem; }
-.famous h2 { font-size: 1.05rem; margin: 0 0 0.5rem; }
-.famous ul { list-style: none; padding: 0; margin: 0; display: grid; gap: 0.5rem; }
-.famous button {
+.famous-list { list-style: none; padding: 0; margin: 0; display: grid; gap: 0.5rem; }
+.famous-list button {
   width: 100%; text-align: left; font: inherit; color: var(--ink); background: var(--wash);
   border: 1px solid var(--line); border-radius: 10px; padding: 0.6rem 0.75rem; cursor: pointer;
 }
-.famous button strong { display: block; color: var(--accent); }
-.famous button span { display: block; font-size: 0.85rem; color: var(--ink-soft); }
-.famous button small { display: block; font-size: 0.75rem; color: var(--ink-soft); margin-top: 0.2rem; }
+.famous-list button strong { display: block; color: var(--accent); }
+.famous-list button span { display: block; font-size: 0.85rem; color: var(--ink-soft); }
+.famous-list button small { display: block; font-size: 0.75rem; color: var(--ink-soft); margin-top: 0.2rem; }
 
 /* --- Map markers --- */
 .marker {
@@ -171,8 +197,8 @@ button.secondary { background: var(--paper); color: var(--accent); border: 1px s
   border: 3px solid #fff; box-shadow: 0 2px 6px rgb(0 0 0 / 0.4);
 }
 .marker span { color: #fff; font-weight: 800; font-size: 0.95rem; line-height: 1; }
-.marker.from { background: #15803d; }
-.marker.to { background: var(--ink); }
+.marker.from { background: var(--marker-from); }
+.marker.to { background: var(--marker-to); }
 
 /* --- Attribution: always visible --- */
 .attribution {

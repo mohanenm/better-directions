@@ -97,6 +97,10 @@ async function runCase(c) {
   }
   if (c.famous) {
     for (let i = 0; i < 60; i++) { await sleep(250); if ((await evaluate("document.getElementById('status').textContent")).startsWith("Pick a start")) break; }
+    // Open the section from its header, check the link remembers it, then pick a route.
+    await evaluate("document.getElementById('famous-head').click()");
+    const opened = await evaluate("document.getElementById('famous-head').getAttribute('aria-expanded') === 'true' && !document.getElementById('famous-body').hidden && new URLSearchParams(location.search).get('open') === 'plan,famous'");
+    if (!opened) problems.push("sections: opening Famous routes didn't update aria-expanded, the panel or the link");
     await evaluate("document.querySelector('#famous-list button').click()");
   }
   const wantRoute = c.expectRoute !== false;

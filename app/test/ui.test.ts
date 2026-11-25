@@ -5,8 +5,8 @@ import { parseLink, serializeLink } from "../src/ui/url";
 const BBOX = { west: 4.77, south: 45.7, east: 4.93, north: 45.81 };
 
 describe("shareable links", () => {
-  it("round-trips start, end, mode and seed", () => {
-    const state = { from: [4.832, 45.7578] as [number, number], to: [4.8336, 45.7675] as [number, number], fromName: "Place Bellecour", toName: "Place des Terreaux", mode: "chaos" as const, seed: 42, art: null, artMinutes: 40 };
+  it("round-trips start, end, mode, seed and open sections", () => {
+    const state = { from: [4.832, 45.7578] as [number, number], to: [4.8336, 45.7675] as [number, number], fromName: "Place Bellecour", toName: "Place des Terreaux", mode: "chaos" as const, seed: 42, art: null, artMinutes: 40, open: ["plan", "famous"] as ("plan" | "famous")[] };
     const parsed = parseLink(serializeLink(state), BBOX);
     expect(parsed).toEqual(state);
   });
@@ -20,8 +20,16 @@ describe("shareable links", () => {
     expect(parsed.fromName).toBe("hi");
   });
 
-  it("only includes the seed for scenic chaos", () => {
-    expect(serializeLink({ from: null, to: null, fromName: null, toName: null, mode: "parks", seed: 9, art: null, artMinutes: 40 })).toBe("?mode=parks");
+  it("only includes the seed for random routes", () => {
+    expect(serializeLink({ from: null, to: null, fromName: null, toName: null, mode: "parks", seed: 9, art: null, artMinutes: 40, open: ["plan"] })).toBe("?mode=parks");
+  });
+});
+
+describe("open sections in links", () => {
+  it("defaults to the route planner and drops unknown sections", () => {
+    expect(parseLink("", BBOX).open).toEqual(["plan"]);
+    expect(parseLink("?open=about,nonsense,art", BBOX).open).toEqual(["art", "about"]);
+    expect(parseLink("?open=", BBOX).open).toEqual([]);
   });
 });
 
@@ -45,7 +53,7 @@ describe("place search", () => {
 
 describe("GPS art links", () => {
   it("round-trip shape and length, and ignore unknown shapes and lengths", () => {
-    const link = serializeLink({ from: [4.832, 45.7578], to: [4.84, 45.76], fromName: "Place Bellecour", toName: null, mode: "stairs", seed: 1, art: "heart", artMinutes: 55 });
+    const link = serializeLink({ from: [4.832, 45.7578], to: [4.84, 45.76], fromName: "Place Bellecour", toName: null, mode: "stairs", seed: 1, art: "heart", artMinutes: 55, open: ["art"] });
     expect(link).toBe("?from=4.83200%2C45.75780&fromName=Place+Bellecour&art=heart&len=55");
     const parsed = parseLink(link, BBOX);
     expect(parsed.art).toBe("heart");

@@ -6,12 +6,12 @@
     <meta name="referrer" content="no-referrer">
     <meta name="color-scheme" content="light">
     <title>Better Directions: the long way round, on purpose</title>
-    <meta name="description" content="A deliberately silly walking router for Lyon: up every staircase, through every traboule, across every park. For fun.">
+    <meta name="description" content="A walking router for Lyon that takes the long way round on purpose: up the staircases, through the traboules, across the parks. For fun.">
     <link rel="icon" href="/favicon.svg" type="image/svg+xml">
     <script type="module" src="/src/main.ts"></script>
   </head>
   <body>
-    <a class="skip-link" href="#planner">Skip to the route planner</a>
+    <a class="skip-link" href="#from-input">Skip to the route planner</a>
 
     <header class="banner">
       <h1>Better <span>Directions</span></h1>
@@ -21,62 +21,105 @@
     <main class="layout">
       <div id="map" class="map" role="region" aria-label="Map of Lyon. Choose places with the search fields, or tap the map. Arrow keys pan, plus and minus zoom." tabindex="0"></div>
 
-      <section id="panel" class="panel" aria-labelledby="planner-title">
-        <h2 id="planner-title" class="visually-hidden">Plan a better route</h2>
+      <section id="panel" class="panel" aria-label="Route planner">
+        <div class="sections">
+          <section class="section" data-section="plan">
+            <h2 class="section-head">
+              <button type="button" id="plan-head" aria-expanded="true" aria-controls="plan-body">
+                <span class="section-title">Plan a route</span>
+                <span class="section-summary">Two places and a mode. The long way, on purpose.</span>
+              </button>
+            </h2>
+            <div id="plan-body" class="section-body" role="region" aria-labelledby="plan-head">
+              <form id="planner" class="planner" novalidate>
+                <div class="endpoint" data-end="from">
+                  <label for="from-input">From</label>
+                  <div class="combo">
+                    <input id="from-input" type="text" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="from-list" autocomplete="off" placeholder="Search Lyon, or tap the map" spellcheck="false">
+                    <ul id="from-list" class="options" role="listbox" aria-label="Matching places" hidden></ul>
+                  </div>
+                  <div class="endpoint-actions">
+                    <button type="button" class="link-button" data-action="locate">Use my location</button>
+                    <button type="button" class="link-button" data-action="centre">Use map centre</button>
+                  </div>
+                </div>
 
-        <form id="planner" class="planner" novalidate>
-          <div class="endpoint" data-end="from">
-            <label for="from-input">From</label>
-            <div class="combo">
-              <input id="from-input" type="text" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="from-list" autocomplete="off" placeholder="Search Lyon places, or tap the map" spellcheck="false">
-              <ul id="from-list" class="options" role="listbox" aria-label="Matching places" hidden></ul>
+                <div class="endpoint" data-end="to">
+                  <label for="to-input">To</label>
+                  <div class="combo">
+                    <input id="to-input" type="text" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="to-list" autocomplete="off" placeholder="Search Lyon, or tap the map" spellcheck="false">
+                    <ul id="to-list" class="options" role="listbox" aria-label="Matching places" hidden></ul>
+                  </div>
+                  <div class="endpoint-actions">
+                    <button type="button" class="link-button" data-action="centre">Use map centre</button>
+                    <button type="button" class="link-button" data-action="swap">Swap start and end</button>
+                  </div>
+                </div>
+
+                <fieldset class="modes">
+                  <legend>Mode</legend>
+                  <div class="mode-list" id="mode-list"></div>
+                </fieldset>
+
+                <div class="seed-row" id="seed-row" hidden>
+                  <span>Seed <output id="seed-value" for="shuffle">1</output></span>
+                  <button type="button" id="shuffle" class="secondary">New seed</button>
+                </div>
+
+                <button type="submit" class="go" id="go">Find a better route</button>
+              </form>
             </div>
-            <div class="endpoint-actions">
-              <button type="button" class="link-button" data-action="locate">Use my location</button>
-              <button type="button" class="link-button" data-action="centre">Use map centre</button>
+          </section>
+
+          <section class="section" data-section="art">
+            <h2 class="section-head">
+              <button type="button" id="art-head" aria-expanded="false" aria-controls="art-body">
+                <span class="section-title">Draw a shape</span>
+                <span class="section-summary">Walk a heart, a star or a letter. Experimental.</span>
+              </button>
+            </h2>
+            <div id="art-body" class="section-body" role="region" aria-labelledby="art-head" hidden>
+              <form id="art-form" class="art-form" novalidate>
+                <p class="help">Starts from your From point and loops back, or ends where the letter ends.</p>
+                <label for="art-shape">Shape</label>
+                <select id="art-shape"></select>
+                <fieldset class="art-length">
+                  <legend>Walk length</legend>
+                  <label><input type="radio" name="art-len" value="25"> Short, about 25 min</label>
+                  <label><input type="radio" name="art-len" value="40" checked> Medium, about 40 min</label>
+                  <label><input type="radio" name="art-len" value="55"> Long, about 55 min</label>
+                </fieldset>
+                <button type="submit" class="secondary">Draw it</button>
+              </form>
             </div>
-          </div>
+          </section>
 
-          <div class="endpoint" data-end="to">
-            <label for="to-input">To</label>
-            <div class="combo">
-              <input id="to-input" type="text" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="to-list" autocomplete="off" placeholder="Search Lyon places, or tap the map" spellcheck="false">
-              <ul id="to-list" class="options" role="listbox" aria-label="Matching places" hidden></ul>
+          <section class="section" data-section="famous">
+            <h2 class="section-head">
+              <button type="button" id="famous-head" aria-expanded="false" aria-controls="famous-body">
+                <span class="section-title">Famous routes</span>
+                <span class="section-summary">Eight good ones to start with.</span>
+              </button>
+            </h2>
+            <div id="famous-body" class="section-body" role="region" aria-labelledby="famous-head" hidden>
+              <ul id="famous-list" class="famous-list"></ul>
             </div>
-            <div class="endpoint-actions">
-              <button type="button" class="link-button" data-action="centre">Use map centre</button>
-              <button type="button" class="link-button" data-action="swap">Swap start and end</button>
+          </section>
+
+          <section class="section" data-section="about">
+            <h2 class="section-head">
+              <button type="button" id="about-head" aria-expanded="false" aria-controls="about-body">
+                <span class="section-title">About and privacy</span>
+                <span class="section-summary">What this is, and what it doesn't collect.</span>
+              </button>
+            </h2>
+            <div id="about-body" class="section-body about" role="region" aria-labelledby="about-head" hidden>
+              <p>Better Directions finds a deliberately longer walk between two places, and shows the normal route next to it so you know what the detour costs.</p>
+              <p>It only uses paths that are open to walkers in OpenStreetMap. It never routes along railways, motorways, construction or anything marked private, and it only goes through buildings by mapped public passages. It can still be wrong: the map may be out of date, and gates and doors close. Follow signs, and skip anything that looks closed or unsafe.</p>
+              <p>Everything runs on your device. There are no cookies, no tracking and no accounts, and the page talks to no one but this site. Your location is used only when you tap "Use my location", and it stays on your device. Shared links and images include your start and end points.</p>
             </div>
-          </div>
-
-          <fieldset class="modes">
-            <legend>How should it be better?</legend>
-            <div class="mode-grid" id="mode-grid"></div>
-          </fieldset>
-
-          <div class="seed-row" id="seed-row" hidden>
-            <span>Chaos seed <output id="seed-value" for="shuffle">1</output></span>
-            <button type="button" id="shuffle" class="secondary">Roll a new adventure</button>
-          </div>
-
-          <button type="submit" class="go" id="go">Find the better route</button>
-        </form>
-
-        <details class="art" id="art">
-          <summary>GPS art (experimental): draw a shape with your walk</summary>
-          <form id="art-form" class="art-form" novalidate>
-            <p class="art-help">Starts from your <em>From</em> point and loops back, or ends where the letter ends.</p>
-            <label for="art-shape">Shape</label>
-            <select id="art-shape"></select>
-            <fieldset class="art-length">
-              <legend>Walk length</legend>
-              <label><input type="radio" name="art-len" value="25"> Short, about 25 min</label>
-              <label><input type="radio" name="art-len" value="40" checked> Medium, about 40 min</label>
-              <label><input type="radio" name="art-len" value="55"> Long, about 55 min</label>
-            </fieldset>
-            <button type="submit" class="secondary">Draw it from my start</button>
-          </form>
-        </details>
+          </section>
+        </div>
 
         <div id="status" class="status" role="status" aria-live="polite"></div>
         <div id="announcer" class="visually-hidden" aria-live="polite"></div>
@@ -85,11 +128,11 @@
           <h2 id="result-title" class="route-name"><span class="visually-hidden">Your route: </span><span id="route-name"></span></h2>
           <p class="summary" id="summary"></p>
           <div class="legend" aria-hidden="true">
-            <span class="swatch normal"></span> <span id="legend-normal">Normal route</span>
             <span class="swatch better"></span> <span id="legend-better">Better route</span>
+            <span class="swatch normal"></span> <span id="legend-normal">Normal route</span>
           </div>
           <dl class="stats" id="stats"></dl>
-          <p class="late-hint" id="late-hint" hidden>It's late. Some parks and passages on this route may already be locked: check the notes below.</p>
+          <p class="late-hint" id="late-hint" hidden>It's late. Some parks and passages on this route may already be locked; check the notes below.</p>
           <ul class="notes" id="notes" aria-label="Things to know"></ul>
           <div class="share-row">
             <button type="button" id="share" class="secondary">Share link</button>
@@ -97,7 +140,7 @@
             <span class="share-note">Links and images show your start and end points.</span>
           </div>
           <figure class="share-image" id="share-image" hidden>
-            <img id="share-preview" alt="Share image: the route on a map with its name and cost of fun." width="1080" height="1350">
+            <img id="share-preview" alt="Share image: the route on a map with its name and what the detour costs." width="1080" height="1350">
             <figcaption>
               <button type="button" id="share-image-share" class="secondary">Share image</button>
               <a id="share-image-download" class="button-link" download="better-directions.png" href="#">Download</a>
@@ -105,10 +148,6 @@
           </figure>
           <h3>Step by step</h3>
           <ol class="steps" id="steps"></ol>
-        </section>
-        <section class="famous" aria-labelledby="famous-title">
-          <h2 id="famous-title">Famous better routes</h2>
-          <ul id="famous-list"></ul>
         </section>
       </section>
     </main>
@@ -120,7 +159,7 @@
         · <span id="terrain-credit">Elevation: IGN RGE ALTI®</span>
         · <a href="licenses.txt">Licences</a>
       </p>
-      <p>Private by design: no cookies, no tracking, and your route is planned on your device. Nothing leaves your phone.</p>
+      <p>No cookies, no tracking. Routes are planned on your device.</p>
     </footer>
   </body>
 </html>

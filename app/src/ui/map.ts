@@ -15,12 +15,10 @@ import {
   type MapMouseEvent,
 } from "maplibre-gl";
 import maplibreWorkerUrl from "maplibre-gl/dist/maplibre-gl-worker.mjs?url";
+import { colour } from "./colours";
 import type { Bbox } from "./url";
 
 setWorkerUrl(maplibreWorkerUrl);
-
-const ROUTE_BETTER = "#a21caf";
-const ROUTE_NORMAL = "#5b6472";
 
 export interface RouteMap {
   map: MapLibreMap;
@@ -78,21 +76,21 @@ export function createMap(container: HTMLElement, bbox: Bbox): RouteMap {
       type: "line",
       source: "normal",
       layout: { "line-cap": "round", "line-join": "round" },
-      paint: { "line-color": ROUTE_NORMAL, "line-width": 4, "line-dasharray": [1.5, 1.5], "line-opacity": 0.85 },
+      paint: { "line-color": colour("route-normal"), "line-width": 4, "line-dasharray": [1.5, 1.5], "line-opacity": 0.85 },
     });
     map.addLayer({
       id: "better-casing",
       type: "line",
       source: "better",
       layout: { "line-cap": "round", "line-join": "round" },
-      paint: { "line-color": "#ffffff", "line-width": 9 },
+      paint: { "line-color": colour("route-casing"), "line-width": 9 },
     });
     map.addLayer({
       id: "better-line",
       type: "line",
       source: "better",
       layout: { "line-cap": "round", "line-join": "round" },
-      paint: { "line-color": ROUTE_BETTER, "line-width": 5.5 },
+      paint: { "line-color": colour("route-better"), "line-width": 5.5 },
     });
     if (queued) draw(queued.normal, queued.better);
     queued = null;

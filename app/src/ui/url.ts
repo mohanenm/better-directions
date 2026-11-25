@@ -1,5 +1,5 @@
 /**
- * Shareable state in the query string: ?from=lon,lat&to=lon,lat&mode=stairs&seed=7
+ * Shareable state in the query string: ?from=lon,lat&to=lon,lat&mode=stairs&seed=7&open=plan,art
  * Works on a static host with no server routing. Coordinates are rounded to 5 decimals (~1 m)
  * and must fall inside the city's bbox; anything invalid is ignored rather than trusted.
  */
@@ -23,6 +23,23 @@ export interface LinkState {
   /** GPS art: the shape to draw from `from`, and the walk length in minutes. */
   art: ShapeId | null;
   artMinutes: number;
+  /** Panel sections that are open. */
+  open: SectionId[];
+}
+
+export const SECTION_IDS = ["plan", "art", "famous", "about"] as const;
+export type SectionId = (typeof SECTION_IDS)[number];
+export const DEFAULT_OPEN: SectionId[] = ["plan"];
+
+function parseOpen(value: string | null, fallback: SectionId[]): SectionId[] {
+  if (value === null) return [...fallback];
+  const ids = value.split(",").filter((v): v is SectionId => (SECTION_IDS as readonly string[]).includes(v));
+  return SECTION_IDS.filter((id) => ids.includes(id));
+}
+
+function serializeOpen(q: URLSearchParams, open: SectionId[], fallback: SectionId[]): void {
+  const sorted = SECTION_IDS.filter((id) => open.includes(id));
+  if (sorted.join(",") !== fallback.join(",")) q.set("open", sorted.join(","));
 }
 
 export const ART_LENGTHS = [25, 40, 55] as const;
@@ -51,6 +68,7 @@ export function parseLink(search: string, bbox: Bbox): LinkState {
   const q = new URLSearchParams(search);
   const mode = q.get("mode");
   const seed = Number(q.get("seed"));
+  const art = (SHAPE_IDS as string[]).includes(q.get("art") ?? "") ? (q.get("art") as ShapeId) : null;
   return {
     from: parsePoint(q.get("from"), bbox),
     to: parsePoint(q.get("to"), bbox),
@@ -58,8 +76,9 @@ export function parseLink(search: string, bbox: Bbox): LinkState {
     toName: parseName(q.get("toName")),
     mode: (MODE_IDS as string[]).includes(mode ?? "") ? (mode as ModeId) : DEFAULT_MODE,
     seed: Number.isInteger(seed) && seed > 0 && seed < 2 ** 31 ? seed : 1,
-    art: (SHAPE_IDS as string[]).includes(q.get("art") ?? "") ? (q.get("art") as ShapeId) : null,
+    art,
     artMinutes: (ART_LENGTHS as readonly number[]).includes(Number(q.get("len"))) ? Number(q.get("len")) : 40,
+    open: parseOpen(q.get("open"), art ? ["art"] : DEFAULT_OPEN),
   };
 }
 
@@ -72,6 +91,7 @@ export function serializeLink(state: LinkState): string {
     if (state.fromName) q.set("fromName", state.fromName);
     q.set("art", state.art);
     q.set("len", String(state.artMinutes));
+    serializeOpen(q, state.open, ["art"]);
     return `?${q.toString()}`;
   }
   if (state.from) q.set("from", fmt(state.from));
@@ -80,5 +100,6 @@ export function serializeLink(state: LinkState): string {
   if (state.toName) q.set("toName", state.toName);
   q.set("mode", state.mode);
   if (state.mode === "chaos") q.set("seed", String(state.seed));
+  serializeOpen(q, state.open, DEFAULT_OPEN);
   return `?${q.toString()}`;
 }

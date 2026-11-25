@@ -13,7 +13,7 @@ import type { ArtResultMsg, FromWorker, PlanResult, ReadyInfo } from "./ui/proto
 import { artCard, planCard, renderArt, renderResult } from "./ui/render";
 import { renderShareImage, type ShareCard } from "./ui/share-image";
 import type { Place } from "./ui/search";
-import { parseLink, serializeLink, type LinkState } from "./ui/url";
+import { DEFAULT_OPEN, parseLink, SECTION_IDS, serializeLink, type LinkState, type SectionId } from "./ui/url";
 
 type End = "from" | "to";
 
@@ -22,7 +22,7 @@ const statusEl = $("#status");
 const resultEl = $("#result");
 const goButton = $<HTMLButtonElement>("#go");
 
-const state: LinkState = { from: null, to: null, fromName: null, toName: null, mode: "stairs", seed: 1, art: null, artMinutes: 40 };
+const state: LinkState = { from: null, to: null, fromName: null, toName: null, mode: "stairs", seed: 1, art: null, artMinutes: 40, open: [...DEFAULT_OPEN] };
 let places: Place[] = [];
 let routeMap: RouteMap | null = null;
 let info: ReadyInfo | null = null;
@@ -57,13 +57,45 @@ function onReady(ready: ReadyInfo): void {
   if (ready.dataAsOf) $("#data-date").textContent = `, data as of ${ready.dataAsOf.slice(0, 10)}`;
   if (ready.terrainAttribution) $("#terrain-credit").textContent = ready.terrainAttribution;
   Object.assign(state, parseLink(window.location.search, ready.bbox));
+  applyOpen();
   routeMap = createMap($("#map"), ready.bbox);
   routeMap.onTap(onMapTap);
   syncInputs();
-  setStatus(state.from && (state.to || state.art) ? "" : "Pick a start and an end: search above, or tap the map.");
+  setStatus(state.from && (state.to || state.art) ? "" : "Pick a start and an end: search, or tap the map.");
   if (state.art && state.from) requestArt();
   else if (state.from && state.to) requestPlan();
 }
+
+// --- Panel sections ------------------------------------------------------------------------------
+
+const sectionHead = (id: SectionId) => $<HTMLButtonElement>(`#${id}-head`);
+const sectionBody = (id: SectionId) => $(`#${id}-body`);
+
+function applyOpen(): void {
+  for (const id of SECTION_IDS) {
+    const open = state.open.includes(id);
+    sectionHead(id).setAttribute("aria-expanded", String(open));
+    sectionBody(id).hidden = !open;
+  }
+}
+
+function setOpen(id: SectionId, open: boolean): void {
+  state.open = SECTION_IDS.filter((s) => (s === id ? open : state.open.includes(s)));
+  applyOpen();
+  writeLink();
+}
+
+for (const id of SECTION_IDS) {
+  sectionHead(id).addEventListener("click", () => setOpen(id, !state.open.includes(id)));
+}
+
+// Links can open sections before the map has loaded.
+state.open = parseLink(window.location.search, { west: -180, south: -90, east: 180, north: 90 }).open;
+applyOpen();
+
+$(".skip-link").addEventListener("click", () => {
+  if (!state.open.includes("plan")) setOpen("plan", true);
+});
 
 // --- Choosing start and end ----------------------------------------------------------------------
 
@@ -148,7 +180,7 @@ function locate(end: End): void {
 
 // --- Modes ---------------------------------------------------------------------------------------
 
-const grid = $("#mode-grid");
+const modeList = $("#mode-list");
 for (const id of MODE_IDS) {
   const m = MODES[id];
   const wrap = document.createElement("div");
@@ -167,7 +199,7 @@ for (const id of MODE_IDS) {
   span.textContent = m.tagline;
   label.append(strong, span);
   wrap.append(radio, label);
-  grid.append(wrap);
+  modeList.append(wrap);
   radio.addEventListener("change", () => {
     state.mode = id as ModeId;
     state.art = null;
@@ -207,7 +239,7 @@ function requestPlan(): void {
   }
   requestId++;
   goButton.disabled = true;
-  setStatus(`Finding the ${MODES[state.mode].name.toLowerCase()} route…`);
+  setStatus(`Planning a ${MODES[state.mode].name.toLowerCase()} route…`);
   worker.postMessage({
     type: "plan",
     id: requestId,
@@ -232,10 +264,21 @@ function onPlan(result: PlanResult): void {
   routeMap?.setRoutes(result.normal, result.better);
   renderResult(result, (at) => routeMap?.flyTo(at));
   clearShareImage();
-  resultEl.hidden = false;
-  setStatus("");
+  showResult();
   // Screen readers hear the result; sighted users see it in the card.
   $("#announcer").textContent = `Route ready. ${result.summary} Step-by-step directions follow the stats.`;
+}
+
+/** Shows the result card, scrolling the panel to it if it's out of sight. */
+function showResult(): void {
+  resultEl.hidden = false;
+  setStatus("");
+  const panel = $("#panel").getBoundingClientRect();
+  const card = resultEl.getBoundingClientRect();
+  if (card.top > panel.bottom - 80 || card.bottom < panel.top) {
+    const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    resultEl.scrollIntoView({ block: "start", behavior: reduced ? "auto" : "smooth" });
+  }
 }
 
 // --- Sharing -------------------------------------------------------------------------------------
@@ -315,7 +358,8 @@ artShape.replaceChildren(
 $<HTMLFormElement>("#art-form").addEventListener("submit", (e) => {
   e.preventDefault();
   if (!state.from) {
-    setStatus("Pick a From point first: the drawing starts there.", true);
+    setStatus("Pick a From point first; the drawing starts there.", true);
+    if (!state.open.includes("plan")) setOpen("plan", true);
     input("from").focus();
     return;
   }
@@ -330,7 +374,7 @@ function requestArt(): void {
   artShape.value = state.art;
   const len = document.querySelector<HTMLInputElement>(`input[name="art-len"][value="${state.artMinutes}"]`);
   if (len) len.checked = true;
-  $<HTMLDetailsElement>("#art").open = true;
+  if (!state.open.includes("art")) setOpen("art", true);
   setStatus(`Drawing a ${SHAPES[state.art].label.toLowerCase()} with ${CITY.name}'s streets…`);
   worker.postMessage({ type: "art", id: requestId, start: state.from, fromName: state.fromName ?? "your start", shape: state.art, minutes: state.artMinutes });
 }
@@ -346,12 +390,11 @@ function onArt(result: ArtResultMsg): void {
   routeMap?.setRoutes(result.template, result.line);
   renderArt(result, (at) => routeMap?.flyTo(at));
   clearShareImage();
-  resultEl.hidden = false;
-  setStatus("");
+  showResult();
   $("#announcer").textContent = `Drawing ready. ${lastCard.summary} Step-by-step directions follow the stats.`;
 }
 
-// --- Famous better routes --------------------------------------------------------------------------
+// --- Famous routes -------------------------------------------------------------------------------
 
 $("#famous-list").replaceChildren(
   ...FAMOUS_ROUTES.map((f) => {
@@ -372,7 +415,6 @@ $("#famous-list").replaceChildren(
       setEnd("to", f.to, f.toName);
       syncInputs();
       requestPlan();
-      $("#planner").scrollIntoView({ block: "start", behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
     });
     li.append(button);
     return li;
