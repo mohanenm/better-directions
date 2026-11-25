@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 /**
- * Serves dist/ under /better-directions/ with gzip, as GitHub Pages does, for `npm run perf`.
- * Vite's preview server doesn't compress, which roughly triples the graph download.
+ * Serves dist/ under /better-directions/ as GitHub Pages does, for `npm run smoke` and `npm run perf`:
+ * gzip, and a 404 for a missing file. Vite's preview server doesn't compress, which roughly
+ * triples the graph download, and answers missing files with the page, which hides them.
  *
  *   npm run pages:gz &      # http://localhost:4174/better-directions/
  */

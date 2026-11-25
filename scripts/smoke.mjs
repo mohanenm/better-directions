@@ -5,7 +5,7 @@
  * waits for a route, saves screenshots, and fails on any CSP violation, script error or
  * request to another host.
  *
- *   npm run build && npm run preview &   # serves http://localhost:4173/better-directions/
+ *   npm run pages:gz &   # serves http://localhost:4174/better-directions/ like Pages: gzip, and real 404s
  *   BROWSER="/Applications/Brave Browser.app/Contents/MacOS/Brave Browser" node scripts/smoke.mjs [outdir]
  */
 import { spawn } from "node:child_process";
@@ -14,7 +14,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 
 const BROWSER = process.env.BROWSER ?? "/Applications/Brave Browser.app/Contents/MacOS/Brave Browser";
-const ORIGIN = process.env.ORIGIN ?? "http://localhost:4173";
+const ORIGIN = process.env.ORIGIN ?? "http://localhost:4174";
 const BASE = "/better-directions/";
 const OUT = process.argv[2] ?? mkdtempSync(join(tmpdir(), "bd-smoke-"));
 const PORT = 9333;

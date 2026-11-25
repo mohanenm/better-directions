@@ -92,9 +92,8 @@ You need Python 3.12 and Node 22 or newer. The committed Lyon data is enough to 
 ```sh
 npm ci
 npm run check          # typecheck, lint and all tests, including the safety property test
-npm run pages:local    # build and serve at http://localhost:4173/better-directions/
-npm run smoke          # browser checks against that preview (needs a local Chromium-based browser)
-npm run pages:gz &     # the same build served with gzip, like Pages, at port 4174
+npm run pages:gz &     # build and serve at http://localhost:4174/better-directions/, like Pages (gzip, real 404s)
+npm run smoke          # browser checks against it (needs a local Chromium-based browser)
 npm run perf           # low-end phone emulation against it
 npm run samples        # sample routes per mode, written to docs/SAMPLE_ROUTES.md
 ```

@@ -65,10 +65,9 @@ The area list, the picker and the links (`?area=<id>`) pick the area up automati
 .venv/bin/python -m pytest          # pipeline tests, including real-data checks against the new extract
 npm run check                       # typecheck, lint and all tests, including the safety property test
 npm run samples                     # read docs/SAMPLE_ROUTES.md: is every mode recognisable?
-npm run pages:local &               # the real build at http://localhost:4173/better-directions/
-npm run smoke                       # browser checks
-npm run pages:gz &                  # the same build served with gzip, like Pages
-npm run perf                        # low-end phone emulation against it
+npm run pages:gz &                  # the real build at http://localhost:4174/better-directions/, served like Pages
+npm run smoke                       # browser checks, including no missing files
+npm run perf                        # low-end phone emulation
 ```
 
 The pipeline's real-data tests (`pipeline/tests/test_real_data.py`) and the property test read Lyon's paths; switch them to the new city.

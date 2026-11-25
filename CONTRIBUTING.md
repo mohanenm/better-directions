@@ -6,7 +6,7 @@ Issues and pull requests are welcome. Please open an issue first for anything bi
 
 - `npm run check` passes (typecheck, lint, all tests including the safety property test).
 - If you touched the pipeline, `.venv/bin/python -m pytest` and `ruff check pipeline` pass too.
-- If you touched the page, `npm run pages:local` and `npm run smoke` pass.
+- If you touched the page, `npm run smoke` passes against `npm run pages:gz`.
 - Commits are small and do one thing.
 
 ## Safety rules
