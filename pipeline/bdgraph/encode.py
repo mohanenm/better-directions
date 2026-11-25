@@ -16,7 +16,7 @@ from bdgraph import safety
 from bdgraph.build import WAY_KEYS, Graph, edge_climb, edge_may_close, edge_steps
 
 MAGIC = b"BDG1"
-VERSION = 1
+VERSION = 2  # 2: edge lengths stored as u16 decimetres (was f32 metres)
 COORD_SCALE = 1_000_000  # microdegrees, ~0.1 m
 
 # Edge flag bits
@@ -118,7 +118,7 @@ def encode_graph(graph: Graph) -> bytes:
 
     # Edges
     e_from, e_to, e_way = array("I"), array("I"), array("I")
-    e_len, e_flags, e_steps = array("f"), array("B"), array("H")
+    e_len, e_flags, e_steps = array("H"), array("B"), array("H")
     e_park, e_venue, e_building = array("H"), array("H"), array("H")
     e_climb, e_descent = array("H"), array("H")
     e_geom = array("I", [0])
@@ -138,7 +138,10 @@ def encode_graph(graph: Graph) -> bytes:
         e_from.append(node_index[e.nodes[0]])
         e_to.append(node_index[e.nodes[-1]])
         e_way.append(way_index[e.way])
-        e_len.append(e.length)
+        length_dm = round(e.length * 10)
+        if length_dm > U16_MAX:
+            raise ValueError(f"edge longer than {U16_MAX / 10} m; split it in the build")
+        e_len.append(length_dm)
         e_flags.append(flags)
         e_steps.append(min(steps, U16_MAX))
         climb = edge_climb(e, w, graph)
@@ -176,7 +179,7 @@ def encode_graph(graph: Graph) -> bytes:
         ("edge_from", "u32", e_from),
         ("edge_to", "u32", e_to),
         ("edge_way", "u32", e_way),
-        ("edge_length_m", "f32", e_len),
+        ("edge_length_dm", "u16", e_len),
         ("edge_flags", "u8", e_flags),
         ("edge_steps", "u16", e_steps),
         ("edge_park", "u16", e_park),

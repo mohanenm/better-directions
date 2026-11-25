@@ -69,6 +69,10 @@ def decode_graph(blob: bytes) -> DecodedGraph:
         pos += size
     if pos != len(blob):
         raise ValueError(f"trailing bytes: read {pos} of {len(blob)}")
+    if meta["version"] != 2:
+        raise ValueError(f"unsupported graph version {meta['version']}")
+    # Lengths are stored as decimetres; expose metres like the browser decoder does.
+    sections["edge_length_m"] = array("f", (dm / 10 for dm in sections["edge_length_dm"]))
     return DecodedGraph(meta, sections)
 
 

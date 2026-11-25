@@ -61,7 +61,9 @@ export interface GraphSections {
   edge_from: Uint32Array;
   edge_to: Uint32Array;
   edge_way: Uint32Array;
+  /** Stored as u16 decimetres (`edge_length_dm`); expanded to metres at load. */
   edge_length_m: Float32Array;
+  edge_length_dm: Uint16Array;
   edge_flags: Uint8Array;
   edge_steps: Uint16Array;
   edge_park: Uint16Array;
@@ -83,7 +85,7 @@ export interface DecodedGraph {
 }
 
 const MAGIC = "BDG1";
-const SUPPORTED_VERSION = 1;
+const SUPPORTED_VERSION = 2;
 
 const ARRAYS = {
   i32: Int32Array,
@@ -122,12 +124,16 @@ export function decodeGraph(buffer: ArrayBuffer): DecodedGraph {
   for (const name of REQUIRED_SECTIONS) {
     if (!(name in sections)) throw new GraphFormatError(`missing section ${name}`);
   }
+  const dm = sections["edge_length_dm"] as Uint16Array;
+  const metres = new Float32Array(dm.length);
+  for (let i = 0; i < dm.length; i++) metres[i] = dm[i]! / 10;
+  sections["edge_length_m"] = metres;
   return { meta, s: sections as unknown as GraphSections };
 }
 
 const REQUIRED_SECTIONS: (keyof GraphSections)[] = [
   "node_lat", "node_lon", "node_tagset", "node_ctx", "edge_from", "edge_to", "edge_way",
-  "edge_length_m", "edge_flags", "edge_steps", "edge_park", "edge_venue", "edge_building",
+  "edge_length_dm", "edge_flags", "edge_steps", "edge_park", "edge_venue", "edge_building",
   "edge_climb_dm", "edge_descent_dm", "edge_geom_offset", "geom", "way_osm_id", "way_tagset",
   "way_name", "way_opening_hours",
 ];

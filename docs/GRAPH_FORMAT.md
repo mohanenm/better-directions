@@ -1,4 +1,4 @@
-# Graph format (`graph.bin`, version 1)
+# Graph format (`graph.bin`, version 2)
 
 One file per city, written by `pipeline/bdgraph/encode.py` and read by the browser (and by `pipeline/bdgraph/decode.py` in tests). Keep this page, the encoder and both decoders in step.
 
@@ -9,7 +9,7 @@ All numbers are little-endian.
 | Offset | Size | Content |
 |---|---|---|
 | 0 | 4 | Magic `BDG1` |
-| 4 | 4 | `u32` version (1) |
+| 4 | 4 | `u32` version (2; version 1 stored edge lengths as `f32` metres) |
 | 8 | 4 | `u32` meta length *L* (includes padding) |
 | 12 | *L* | Meta JSON, UTF-8, space-padded so the sections start on an 8-byte boundary |
 | … | … | Sections, in the order listed in `meta.sections`. Each section starts on an 8-byte boundary (zero padding). |
@@ -20,7 +20,7 @@ Each section is a typed array: `{ "name", "type", "count" }`, where type is one 
 
 | Key | Meaning |
 |---|---|
-| `format`, `version` | `"better-directions-graph"`, `1` |
+| `format`, `version` | `"better-directions-graph"`, `2` |
 | `city` | `id`, `name`, `bbox` (`west south east north`) |
 | `attribution`, `licence`, `source.data_as_of` | Shown in the app: "© OpenStreetMap contributors", ODbL, the OSM data date |
 | `terrain` | `provider`, `licence`, `attribution` of the elevation source (empty if none). The attribution must be shown in the app. |
@@ -42,7 +42,7 @@ Each section is a typed array: `{ "name", "type", "count" }`, where type is one 
 | `node_ctx` | u8 | node | Bit 0: on a railway track. Bit 1: on an excluded motorway/trunk. Bit 2: on a wall, fence or hedge. The router re-runs the node safety rule with these. |
 | `edge_from`, `edge_to` | u32 | edge | Node indices. Geometry runs from → to, in the OSM way's direction. |
 | `edge_way` | u32 | edge | Way index |
-| `edge_length_m` | f32 | edge | Metres along the geometry |
+| `edge_length_dm` | u16 | edge | Decimetres along the geometry (max 6,553.5 m). Decoders expose it as `edge_length_m`. |
 | `edge_flags` | u8 | edge | Bit 0: walkable forward. Bit 1: walkable backward. Bit 2: step count estimated. Bit 3: may be closed (corridors, passages through buildings, covered ways in malls or stations, anything with `opening_hours`, paths in parks with `opening_hours`). Bit 4: passes through a building via a mapped passage. Bit 5: a road running under a building with no tunnel tag (kept, but the app must disclose it). |
 | `edge_steps` | u16 | edge | Steps on this edge (staircases only). From `step_count`, split across edges by length, or estimated at 0.3 m per step. |
 | `edge_park`, `edge_venue`, `edge_building` | u16 | edge | Index into `areas` (0 = none). `edge_building` is set for passages through a building (bit 4) and roads under one (bit 5). |
