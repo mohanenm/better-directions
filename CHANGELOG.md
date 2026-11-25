@@ -4,7 +4,7 @@
 
 ### Added
 
-- New areas: Washington DC, Arlington and Alexandria, Silver Spring and Bethesda, Richmond, Baltimore and Chicago (from Chinatown and Pilsen up to Rogers Park), each loaded only when picked, with an area picker and "nearest to me". Famous routes for each.
+- New areas: Washington DC, Arlington and Alexandria, Silver Spring and Bethesda, Richmond, Baltimore, Chicago (from Chinatown and Pilsen up to Rogers Park), Copenhagen (with Amager) and Malmö (with Limhamn), each loaded only when picked, with an area picker and "nearest to me". Famous routes for each.
 - Elevation for the US areas from the USGS 3D Elevation Program, so climbs and steps up are known there too.
 - Most inconvenient mode: many turns, needless ups and downs, no straight lines, and never more busy-road crossings than the normal route.
 - Crawls: art, pub and wine crawls through a chosen number of stops, looping back or ending at your To point. Stops are numbered pins you can swap or skip.
