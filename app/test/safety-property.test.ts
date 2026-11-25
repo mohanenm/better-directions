@@ -3,10 +3,10 @@
  * must never produce a route that uses an excluded way or node, walks a way the wrong way, is
  * disconnected, or breaks the detour cap.
  *
- * Runs per model: PROPERTY_RUNS (default 300), over four synthetic cost models and all six real
- * modes (with random seeds): 3,000 pairs by default. Phase 7 reruns this with a much higher count.
- * The oracle below re-implements the checks in the test rather than calling verify.ts, so a bug
- * in the router's own checks can't hide a bug in the router.
+ * Runs per case: PROPERTY_RUNS (default 300), over four synthetic cost models, every mode with
+ * random seeds, GPS art and a tampered graph. Raise PROPERTY_RUNS before a release.
+ * The oracle below checks routes itself rather than calling verify.ts, so a bug in the router's
+ * own checks can't hide a bug in the router.
  */
 import { readFileSync } from "node:fs";
 import fc from "fast-check";
@@ -24,7 +24,7 @@ import { plan } from "../src/router/planner";
 import { hashUnit } from "../src/router/rng";
 import { NodeIndex } from "../src/router/snap";
 import { detourCapSeconds, GPS_ART_MAX_SECONDS } from "../src/safety/limits";
-import { footDirections, nodeExclusion, wayExclusion } from "../src/safety/rules";
+import { footDirections, nodeExclusion, passageExclusion, PUBLIC_AREA_KINDS, wayExclusion } from "../src/safety/rules";
 
 const RUNS = Number(process.env["PROPERTY_RUNS"] ?? 300);
 const MAX_PAIR_DISTANCE_M = 5000; // city walks; longer pairs only cost CI time
@@ -58,6 +58,15 @@ function checkRoute(g: Graph, dirEdges: number[], nodes: number[]): void {
     expect(wayExclusion(tags), `edge ${e} ${JSON.stringify(tags)}`).toBeNull();
     const [fwd, bwd] = footDirections(tags);
     expect(forward ? fwd : bwd, `edge ${e} direction`).toBe(true);
+    if (g.s.edge_flags[e]! & g.meta.flags.edge.through_building) {
+      const w = g.s.edge_way[e]!;
+      const venue = g.area(g.s.edge_venue[e]!);
+      const reason = passageExclusion(tags, g.meta.strings[g.s.way_name[w]!] ?? "", g.area(g.s.edge_building[e]!), {
+        inPublicVenue: venue !== null && PUBLIC_AREA_KINDS.has(venue.kind),
+        confirmed: (g.meta.confirmed_passages ?? []).includes(g.s.way_osm_id[w]!),
+      });
+      expect(reason, `edge ${e} passage`).toBeNull();
+    }
     const from = forward ? g.s.edge_from[e]! : g.s.edge_to[e]!;
     const to = forward ? g.s.edge_to[e]! : g.s.edge_from[e]!;
     expect(from).toBe(nodes[i]);
@@ -156,9 +165,13 @@ describe("safety property: random routes on the real Lyon graph", () => {
   });
 
   it("a tampered graph: routes never use edges or nodes the audit disabled", () => {
-    // Mark ~1 in 15 way tagsets private and ~1 in 50 nodes locked, then route at random.
+    // Mark ~1 in 15 way tagsets private, ~1 in 50 nodes locked and every other building on a
+    // passage as flats, then route at random.
     const decoded = decodeGraph(readLyon());
     decoded.meta.tagsets = decoded.meta.tagsets.map((t, i) => (hashUnit(7, i) < 1 / 15 ? { ...t, access: "private" } : t));
+    decoded.meta.areas = decoded.meta.areas.map((a, i) =>
+      a && a.kind !== "park" && hashUnit(9, i) < 1 / 2 ? { ...a, kind: "building", building: "apartments" } : a,
+    );
     decoded.meta.node_tagsets.push({ barrier: "gate", locked: "yes" });
     const locked = decoded.meta.node_tagsets.length - 1;
     for (let n = 0; n < decoded.meta.counts.nodes; n++) {
