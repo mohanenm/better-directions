@@ -63,4 +63,4 @@ The pipeline's real-data tests (`pipeline/tests/test_real_data.py`) and the prop
 
 ## 6. Size budget
 
-Lyon's graph is 9.7 MB (3.1 MB gzipped), its tiles 27 MB, and the whole site 45 MB. GitHub Pages allows 1 GB per site and 100 GB per month of soft bandwidth. Each extra city of Lyon's size adds about 40 MB, so a handful of cities fit comfortably.
+Lyon's graph is 9.4 MB (2.7 MB gzipped), its tiles 27 MB, and the whole built site 39 MB. GitHub Pages allows 1 GB per site and 100 GB per month of soft bandwidth. Each extra city of Lyon's size adds about 35 MB, so a handful of cities fit comfortably.

@@ -65,7 +65,7 @@ Recorded in [SECURITY.md](SECURITY.md):
 - **[ADDING_A_CITY.md](ADDING_A_CITY.md):** config, data build, stats checks, app changes, verification, size budget. The city is now one module in the app (D-039).
 - **Local preview under the real sub-path:** `npm run pages:local` serves `http://localhost:4173/better-directions/`. The site test checks every link resolves under the base path; it caught a root-absolute licences link this phase.
 - **GitHub Pages workflow:** `.github/workflows/pages.yml`, manual trigger only and not enabled (D-040).
-- **Site:** 44 MB in total. The largest file is the 9.4 MB graph, against GitHub's 1 GB site and 100 MB file limits.
+- **Site:** 39 MB in total. The largest file is the 9.4 MB graph, against GitHub's 1 GB site and 100 MB file limits.
 
 ### Tests
 
