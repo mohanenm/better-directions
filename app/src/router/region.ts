@@ -82,6 +82,17 @@ export function loopRegion(start: LonLat, capSeconds: number, closed: boolean): 
   };
 }
 
+/**
+ * The least time the rest of a walk can take: straight lines from `points[from]` through to the
+ * last point, at the bound speed. A leg capped at "what's left minus this" can't wander past the
+ * region, and anything it would have found beyond that cap couldn't have been finished in time.
+ */
+export function restSeconds(points: LonLat[], from: number): number {
+  let m = 0;
+  for (let i = from; i < points.length - 1; i++) m += haversineM(points[i]!, points[i + 1]!);
+  return m / REACH_SPEED_MS;
+}
+
 /** Whether every node of a path (directed edges) lies in the region; true with no region. */
 export function pathInRegion(region: Region | null, nodeLonLat: (n: number) => LonLat, nodes: number[]): boolean {
   return !region || nodes.every((n) => region.contains(nodeLonLat(n)));

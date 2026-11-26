@@ -7,7 +7,7 @@
 import type { CostModel, Route, Router } from "../router/astar";
 import { haversineM } from "../router/geometry";
 import { assertRouteSafe } from "../router/verify";
-import { loopRegion, tripRegion } from "../router/region";
+import { loopRegion, restSeconds, tripRegion } from "../router/region";
 import { loopCapSeconds } from "../safety/limits";
 import type { CrawlStop, FeatureIndex } from "./features";
 import { MAX_STOPS, MIN_STOPS, type CrawlTheme } from "./options";
@@ -162,7 +162,7 @@ export function planCrawl(router: Router, fi: FeatureIndex, opts: CrawlOptions):
   // Only stops the cap can reach at all (see router/region.ts), then a rough distance budget.
   const region = opts.end ? tripRegion([start, end], capSeconds) : loopRegion(start, capSeconds, true);
   const pool = fi.crawlStops.filter((s) => {
-    if (s.theme !== opts.theme || skip.has(s.index)) return false;
+    if (s.theme !== opts.theme || skip.has(s.index) || s.dirEdge < 0) return false;
     if (!region.contains(g.nodeLonLat(g.tail(s.dirEdge))) || !region.contains(g.nodeLonLat(g.head(s.dirEdge)))) return false;
     const p = at(fi, s);
     return haversineM(start, p) + haversineM(p, end) <= budgetM;
@@ -223,9 +223,12 @@ export function planCrawl(router: Router, fi: FeatureIndex, opts: CrawlOptions):
 
 function routeLegs(router: Router, model: CostModel, points: number[], capSeconds: number): Route[] | null {
   const legs: Route[] = [];
+  const at = points.map((n) => router.g.nodeLonLat(n));
   let spent = 0;
   for (let i = 0; i < points.length - 1; i++) {
-    const leg = points[i] === points[i + 1] ? { dirEdges: [], nodes: [points[i]!], timeS: 0, lengthM: 0, cost: 0 } : router.route(points[i]!, points[i + 1]!, model, { maxTimeS: capSeconds - spent });
+    // Leave room for the legs after this one (see restSeconds).
+    const maxTimeS = capSeconds - spent - restSeconds(at, i + 1);
+    const leg = points[i] === points[i + 1] ? { dirEdges: [], nodes: [points[i]!], timeS: 0, lengthM: 0, cost: 0 } : router.route(points[i]!, points[i + 1]!, model, { maxTimeS });
     if (!leg) return null;
     spent += leg.timeS;
     if (spent > capSeconds) return null;
