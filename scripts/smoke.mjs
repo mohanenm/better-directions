@@ -46,6 +46,12 @@ const CASES = [
     query: "?area=chicago&from=-87.64030,41.87890&to=-87.62330,41.88270&fromName=Union%20Station&toName=Cloud%20Gate&mode=stairs" },
   { name: "no-elevation", width: 390, height: 844, mobile: true, noTerrain: true,
     query: "?area=copenhagen&from=12.56830,55.67610&to=12.58780,55.69260&fromName=R%C3%A5dhuspladsen&toName=%C3%98sterport&mode=parks" },
+  { name: "rapid-modes", width: 1280, height: 800, mobile: false, rapidModes: true,
+    query: "?from=4.83200,45.75780&to=4.83360,45.76750&fromName=Place%20Bellecour&toName=Place%20des%20Terreaux&mode=stairs" },
+  { name: "error-visible", width: 390, height: 844, mobile: true, expectRoute: false, expectError: true,
+    query: "?from=4.83200,45.75780&to=4.83200,45.75780&mode=stairs&open=plan,crawl,art,spell,workout,famous,about" },
+  { name: "too-long", width: 1280, height: 800, mobile: false, tooLong: true,
+    query: "?area=arlington&from=-77.04670,38.82970&to=-77.09540,38.88680&fromName=Potomac%20Yard&toName=Clarendon&mode=stairs" },
   { name: "park-as-stop", width: 1280, height: 800, mobile: false, parkStop: true,
     query: "?from=4.85190,45.77030&to=4.83200,45.75780&fromName=T%C3%AAte%20d%27Or&toName=Place%20Bellecour&mode=trail" },
 ];
@@ -130,7 +136,7 @@ async function runCase(c) {
     for (let i = 0; i < 120; i++) {
       await sleep(250);
       status = (await evaluate("(document.getElementById('announcer')?.textContent || document.getElementById('status')?.textContent) ?? ''")) ?? "";
-      if (wantRoute ? READY.test(status) : status.startsWith("Pick a start")) break;
+      if (c.expectError ? await evaluate("document.getElementById('status').classList.contains('error')") : wantRoute ? READY.test(status) : status.startsWith("Pick a start")) break;
     }
   };
   if (c.spellPrivate) {
@@ -190,6 +196,29 @@ async function runCase(c) {
     if (!ready || seen.darkShare < 0.5) problems.push(`theme: the map didn't turn dark (${JSON.stringify(seen)})`);
     if (seen.routeShare < 0.002) problems.push(`theme: no route drawn after the switch (${JSON.stringify(seen)})`);
     console.log(`  dark map ${Math.round(seen.darkShare * 100)}% dark pixels, route ${(seen.routeShare * 100).toFixed(1)}% of the map`);
+  }
+  if (c.rapidModes) {
+    // Switch modes quickly: the line on the map must end up as the last result's line.
+    await evaluate("document.getElementById('announcer').textContent = ''");
+    for (const m of ["parks", "trail", "snacks", "no-right"]) { await evaluate(`document.getElementById('mode-${m}').click()`); await sleep(60); }
+    await waitForReady();
+    await sleep(2500);
+    const keys = JSON.parse(await evaluate("JSON.stringify([document.getElementById('map').dataset.routeKey, document.getElementById('result').dataset.routeKey, new URLSearchParams(location.search).get('mode')])"));
+    if (!keys[0] || keys[0] !== keys[1]) problems.push(`rapid modes: the map shows ${keys[0]} but the result is ${keys[1]}`);
+    if (keys[2] !== "no-right") problems.push(`rapid modes: link mode is ${keys[2]}, not the last one clicked`);
+  }
+  if (c.expectError) {
+    // The error must be on screen, not below the sections or under the sheet.
+    const seen = JSON.parse(await evaluate(`JSON.stringify((() => {
+      const s = document.getElementById('status'); const b = s.getBoundingClientRect();
+      const at = document.elementFromPoint(b.left + b.width / 2, b.top + b.height / 2);
+      return { error: s.classList.contains('error'), text: s.textContent, onScreen: b.top >= 0 && b.bottom <= innerHeight && b.height > 0, uncovered: !!at && s.contains(at) };
+    })())`));
+    if (!seen.error || !seen.onScreen || !seen.uncovered) problems.push(`error not visible: ${JSON.stringify(seen)}`);
+  }
+  if (c.tooLong) {
+    const seen = JSON.parse(await evaluate("JSON.stringify({ title: document.getElementById('route-name').textContent, notes: document.getElementById('notes').textContent })"));
+    if (seen.title !== "Just the Normal Route" || !/capped at an hour/.test(seen.notes)) problems.push(`too long: not explained (${JSON.stringify(seen)})`);
   }
   if (c.noTerrain) {
     // An area without elevation data says so: under the area picker, in the result and the footer.
