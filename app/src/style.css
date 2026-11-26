@@ -410,7 +410,8 @@ button.secondary:disabled { background: var(--wash); color: var(--ink-soft); cur
 .mode-chips { display: flex; gap: 0.35rem; overflow-x: auto; padding: 0.15rem 0 0.5rem; margin-bottom: 0.25rem; scrollbar-width: none; }
 .mode-chips .chip[aria-pressed="true"] { border-color: var(--accent); background: var(--accent-tint); color: var(--accent); }
 .result h2.route-name { margin: 0.2rem 0 0.1rem; font-size: 1.35rem; line-height: 1.2; color: var(--ink); letter-spacing: -0.02em; }
-.callout { margin: 0.35rem 0; padding: 0.55rem 0.75rem; border-radius: var(--radius-sm); background: var(--accent-tint); color: var(--ink); font-size: 0.9rem; }
+.callout { display: grid; gap: 0.5rem; justify-items: start; margin: 0.35rem 0; padding: 0.55rem 0.75rem; border-radius: var(--radius-sm); background: var(--accent-tint); color: var(--ink); font-size: 0.9rem; }
+.callout p { margin: 0; }
 .summary { font-size: 0.95rem; color: var(--ink); margin: 0.2rem 0 0.4rem; }
 .legend { display: flex; align-items: center; flex-wrap: wrap; gap: 0.4rem; font-size: 0.8rem; color: var(--ink-soft); margin-bottom: 0.5rem; }
 .swatch { display: inline-block; width: 1.6rem; height: 0.35rem; border-radius: 3px; }
@@ -452,6 +453,9 @@ button.secondary:disabled { background: var(--wash); color: var(--ink-soft); cur
 .dialog-head h2 { margin: 0; font-size: 1.15rem; }
 .dialog .share-row { display: flex; gap: 0.5rem; flex-wrap: wrap; }
 .share-note { font-size: 0.8rem; color: var(--ink-soft); margin: 0.5rem 0 0; }
+.share-status { font-size: 0.85rem; margin: 0.4rem 0 0; }
+.share-status:empty { display: none; }
+.share-url { width: 100%; margin-top: 0.4rem; font: inherit; font-size: 0.85rem; padding: 0.5rem 0.6rem; border: 1px solid var(--field); border-radius: var(--radius-sm); background: var(--paper); color: var(--ink); }
 .share-image { margin: 0.75rem 0 0; }
 .share-image img { display: block; width: auto; max-width: 100%; max-height: 55dvh; margin: 0 auto; border-radius: var(--radius-sm); border: 1px solid var(--line); }
 .share-image figcaption { display: flex; gap: 0.75rem; align-items: center; margin-top: 0.5rem; }
@@ -474,16 +478,15 @@ button.secondary:disabled { background: var(--wash); color: var(--ink-soft); cur
   font-size: 0.7rem; line-height: 1.35; color: var(--ink-soft); background: var(--paper); border-top: 1px solid var(--line);
 }
 .attribution p { margin: 0.05rem 0; }
-/* On phones the footer is the credits on one line (it scrolls sideways if it must); "no cookies,
-   no tracking" is in About and privacy. */
+/* On phones the footer is the credits, wrapped so every one stays visible (attribution is required);
+   "no cookies, no tracking" is in About and privacy. */
 .attribution p + p { display: none; }
-.attribution p:first-child { white-space: nowrap; overflow-x: auto; scrollbar-width: none; }
 @media (min-width: 900px), (min-width: 600px) and (max-height: 500px) {
   .attribution {
     max-width: min(46rem, 100%); padding: 0.3rem 0.75rem; border: 0; border-top-left-radius: var(--radius-sm);
     background: var(--surface); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
   }
-  .attribution p, .attribution p + p { display: inline; white-space: normal; }
+  .attribution p, .attribution p + p { display: inline; }
   .attribution p + p::before { content: " · "; }
 }
 

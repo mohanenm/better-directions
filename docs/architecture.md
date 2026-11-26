@@ -49,7 +49,7 @@ Some checks need geometry rather than tags. The build drops a path that crosses 
 
 In the browser the rules run three more times: a load-time audit disables any edge, node or direction that breaks a rule; the search only uses what the audit allowed; and every finished route goes through `assertRouteSafe`, which re-checks it from raw tags, along with connectivity and the detour cap. The property test adds its own independent check on top.
 
-The detour cap is `max(normal, min(4 × normal, 60 min))`, or 90 minutes instead of 60 when the walker ticks "Longer walk" (`long=1` in links). Loops, which have no normal route, are capped by the length chosen: up to 60 minutes, or 90 for the 1 h 30 crawls and workouts. Shapes may take up to an hour, or an hour and a half for the 75-minute option. Spelled words stay within an hour. Nothing exceeds 90 minutes unless the normal route itself does.
+The detour cap is `max(normal, min(4 × normal, 60 min))`. When the walker asks for a longer walk (`long=1` in links), it's `max(min(4 × normal, 120 min), min(normal + 30 min, 4 × normal))`: up to two hours, and always room for half an hour more than the normal walk, within the 4× rule (`safety/limits.ts`). Loops, which have no normal route, are capped by the length chosen: up to two hours for crawls and workouts. Shapes may take up to an hour, or an hour and a half for the 75-minute option; spelled words stay within an hour.
 
 ## Router
 

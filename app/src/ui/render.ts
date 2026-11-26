@@ -4,7 +4,7 @@
  * amber box, and plain information (how to read the map, why the route is what it is).
  */
 import { CITY } from "../city";
-import { DETOUR } from "../safety/limits";
+import { detourCapSeconds } from "../safety/limits";
 import { MAX_LINK_STOPS } from "./url";
 import type { CostOfFun } from "../modes/stats";
 import type { Step } from "../modes/directions";
@@ -62,7 +62,7 @@ export function setAreaNotes(notes: string[]): void {
 
 function renderCard(name: string, summary: string, stats: [string, string][], b: CostOfFun, info: string[], warnings: string[], steps: Step[], legend: [string, string], onStep: (at: [number, number]) => void): void {
   get("route-name").textContent = name;
-  get("same-note").hidden = true;
+  get("same-box").hidden = true;
   get("summary").textContent = summary;
   get("legend-better").textContent = legend[0];
   get("legend-normal").textContent = legend[1];
@@ -90,15 +90,29 @@ function renderCard(name: string, summary: string, stats: [string, string][], b:
   renderSteps(steps, onStep);
 }
 
+/** "45 minutes" or "2 h 15". */
+const duration = (minutes: number) => (minutes < 60 ? `${minutes} minutes` : `${Math.floor(minutes / 60)} h ${String(minutes % 60).padStart(2, "0")}`);
+
+/**
+ * How long the walk could take as a longer walk, when that's worth offering: the walker hasn't
+ * asked for one, and the route is the normal one because the hour left no room. Else null.
+ */
+export function longerWalkOffer(r: PlanResult): string | null {
+  if (r.long || (r.sameAsNormal !== "too-long" && r.sameAsNormal !== "no-detour")) return null;
+  const longCap = detourCapSeconds(r.normalStats.timeS, true);
+  return longCap - r.capMinutes * 60 >= 5 * 60 ? duration(Math.floor(longCap / 60)) : null;
+}
+
 /** Why the better route is (nearly) the normal one, or null when it isn't. */
 export function sameRouteNote(r: PlanResult): string | null {
   const minutes = Math.max(1, Math.round(r.normalStats.timeS / 60));
   const stops = r.strategy === "via-stops";
+  const longer = longerWalkOffer(r);
+  const offerLonger = longer ? ` As a longer walk it could take up to ${longer}.` : "";
   switch (r.sameAsNormal) {
     case "too-long": {
-      const cap = r.long ? "an hour and a half" : "an hour";
-      // Offer the longer walk when it would actually leave room for a detour.
-      const offer = !r.long && minutes < DETOUR.longMaxSeconds / 60 - 5 ? ` Tick "Longer walk" to allow up to 1 h 30, or ${stops ? "drop a stop" : "pick places closer together"}.` : ` ${stops ? "Drop a stop, or pick" : "Pick"} places closer together, or plan a loop from your start.`;
+      const cap = r.long ? "two hours" : "an hour";
+      const offer = offerLonger || ` ${stops ? "Drop a stop, or pick" : "Pick"} places closer together, or plan a loop from your start.`;
       return `This walk${stops ? " with its stops" : ""} already takes ${minutes} minutes and detours are capped at ${cap}, so every mode gives the normal route.${offer}`;
     }
     case "already":
@@ -106,7 +120,7 @@ export function sameRouteNote(r: PlanResult): string | null {
     case "nothing-here":
       return `There are no ${r.missingFeature} within reach here, so the better route is the normal one. Try another mode.`;
     case "no-detour":
-      return `No detour in this mode fits within ${r.capMinutes} minutes here, so the better route is the normal one. Try another mode or a different pair of places.`;
+      return `No detour in this mode fits within ${r.capMinutes} minutes here, so the better route is the normal one.${offerLonger || " Try another mode or a different pair of places."}`;
     default:
       return null;
   }
@@ -136,9 +150,11 @@ export function renderResult(r: PlanResult, onStep: (at: [number, number]) => vo
   ];
   const finish = finishNote(r.betterStats.timeS);
   renderCard(planTitle(r), r.summary, statItems(r), r.betterStats, info, finish ? [finish] : [], r.steps, ["Better route", "Normal route"], onStep);
-  // Why it's just the normal route goes straight under the name, where it can't be missed.
+  // Why it's just the normal route goes straight under the name, where it can't be missed, with a
+  // button for a longer walk when that would leave room.
   get("same-note").textContent = same ?? "";
-  get("same-note").hidden = !same;
+  get("same-box").hidden = !same;
+  get("allow-long").hidden = !longerWalkOffer(r);
 }
 
 export function renderTour(r: TourResult, onStep: (at: [number, number]) => void): void {

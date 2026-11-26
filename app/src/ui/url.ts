@@ -22,7 +22,7 @@ export interface LinkState {
   toName: string | null;
   mode: ModeId;
   seed: number;
-  /** A longer walk (detours up to 90 minutes), chosen with the planner's checkbox. */
+  /** A longer walk (detours up to two hours), chosen in the planner or offered on a result. */
   long: boolean;
   /** GPS art: the shape to draw from `from`, and the walk length in minutes. */
   art: ShapeId | null;
@@ -51,8 +51,10 @@ function parseKind(q: URLSearchParams, implied: Kind | null): Kind {
   if (implied) return implied;
   const kind = q.get("kind");
   if ((KINDS as readonly string[]).includes(kind ?? "")) return kind as Kind;
-  const legacy = (q.get("open") ?? "").split(",").map((v) => LEGACY_SECTIONS[v]).find((k) => k);
-  return legacy ?? "route";
+  // Own keys only: a link's "constructor" or "__proto__" must not reach the object's prototype.
+  const legacy = (q.get("open") ?? "").split(",").find((v) => Object.hasOwn(LEGACY_SECTIONS, v));
+  if (legacy) return LEGACY_SECTIONS[legacy]!;
+  return "route";
 }
 
 /** Writes the kind only when the rest of the link doesn't already say it. */

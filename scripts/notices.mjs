@@ -9,10 +9,25 @@ function walk(name) {
   const dir = join("node_modules", name);
   if (!existsSync(join(dir, "package.json"))) return;
   const pj = JSON.parse(readFileSync(join(dir, "package.json"), "utf8"));
-  const file = readdirSync(dir).find((f) => /^(licen[cs]e|copying)/i.test(f));
-  seen.set(name, { version: pj.version, license: pj.license ?? "see text", text: file ? readFileSync(join(dir, file), "utf8").trim() : "" });
+  seen.set(name, { version: pj.version, license: pj.license ?? "see text", text: licenceText(name, dir) });
   for (const dep of Object.keys(pj.dependencies ?? {})) walk(dep);
 }
+/**
+ * The package's licence file; else a copy kept in scripts/licence-texts/ (from the package's
+ * upstream repository, for packages published without one); else the "License" section of its
+ * README. A licence that requires its notice to ship must not be left out, so none found fails.
+ */
+function licenceText(name, dir) {
+  const file = readdirSync(dir).find((f) => /^(licen[cs]e|copying)/i.test(f));
+  if (file) return readFileSync(join(dir, file), "utf8").trim();
+  const kept = join("scripts", "licence-texts", `${name.replace("/", "__")}.md`);
+  if (existsSync(kept)) return readFileSync(kept, "utf8").trim();
+  const readme = readdirSync(dir).find((f) => /^readme/i.test(f));
+  const section = readme && readFileSync(join(dir, readme), "utf8").match(/^#+\s*Licen[cs]e\b[^\n]*\n([\s\S]*?)(?=^#+\s|$(?![\s\S]))/im);
+  if (section && /copyright/i.test(section[1])) return section[0].trim();
+  throw new Error(`No licence text for ${name}: add one to scripts/licence-texts/`);
+}
+
 const root = JSON.parse(readFileSync("package.json", "utf8"));
 for (const dep of Object.keys(root.dependencies)) walk(dep);
 
@@ -31,7 +46,7 @@ const parts = [
   "",
 ];
 for (const [name, { version, license, text }] of [...seen].sort(([a], [b]) => a.localeCompare(b))) {
-  parts.push("=".repeat(72), `${name} ${version} (${license})`, "=".repeat(72), text || "(no licence file in the package; licence field above)", "");
+  parts.push("=".repeat(72), `${name} ${version} (${license})`, "=".repeat(72), text, "");
 }
 writeFileSync("app/public/licenses.txt", parts.join("\n"));
 console.log(`Wrote app/public/licenses.txt (${seen.size} packages)`);

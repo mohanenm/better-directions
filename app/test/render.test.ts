@@ -1,7 +1,7 @@
 /** Wording shown with results: finish times for long walks, and why a route is just the normal one. */
 import { describe, expect, it } from "vitest";
 import type { PlanResult } from "../src/ui/protocol";
-import { finishNote, sameRouteNote } from "../src/ui/render";
+import { finishNote, longerWalkOffer, sameRouteNote } from "../src/ui/render";
 
 const stats = (timeS: number) => ({ timeS }) as PlanResult["normalStats"];
 const result = (normalS: number, long: boolean): PlanResult =>
@@ -18,13 +18,18 @@ describe("finish time", () => {
 });
 
 describe("too long for a detour", () => {
-  it("offers the longer walk when it would leave room", () => {
-    expect(sameRouteNote(result(70 * 60, false))).toMatch(/Longer walk/);
+  it("offers a longer walk, saying how long it could be", () => {
+    expect(longerWalkOffer(result(70 * 60, false))).toBe("2 h 00");
+    expect(sameRouteNote(result(70 * 60, false))).toMatch(/As a longer walk it could take up to 2 h 00/);
   });
-  it("doesn't offer it when the walk is already near the longer cap, or chosen", () => {
-    expect(sameRouteNote(result(100 * 60, false))).not.toMatch(/Longer walk/);
+  it("still offers it for a walk already over two hours: it may add half an hour", () => {
+    expect(longerWalkOffer(result(108 * 60, false))).toBe("2 h 18");
+    expect(longerWalkOffer(result(150 * 60, false))).toBe("3 h 00");
+  });
+  it("doesn't offer it once chosen", () => {
+    expect(longerWalkOffer(result(95 * 60, true))).toBeNull();
     const long = sameRouteNote(result(95 * 60, true))!;
-    expect(long).toMatch(/an hour and a half/);
-    expect(long).not.toMatch(/Longer walk/);
+    expect(long).toMatch(/two hours/);
+    expect(long).not.toMatch(/longer walk/);
   });
 });

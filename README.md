@@ -30,7 +30,7 @@ A crawl visits a few artworks, pubs or wine bars in a sensible order, looping ba
 
 <img src="docs/images/dc-crawl.jpg" alt="An art crawl from U Street station in DC, in dark mode: six murals and sculptures as numbered pins, 44 minutes" width="640">
 
-A workout is a loop from your start of 20 minutes to an hour, or an hour and a half, collecting staircases, hills or both. It shows the staircases, steps and metres climbed, and notes any stretch tagged as unlit. It makes no claims about calories.
+A workout is a loop from your start of 20 minutes to two hours, collecting staircases, hills or both. It shows the staircases, steps and metres climbed, and notes any stretch tagged as unlit. It makes no claims about calories.
 
 There's also an experimental Draw option that finds a walk drawing a heart, star, square or one-stroke letter with real streets, and scores the likeness. Spell a word does the same for a word or initials of up to six letters, with dotted walks between strokes. Grids work much better than Lyon's old town. See [docs/GPS_ART.md](docs/GPS_ART.md).
 
@@ -46,7 +46,7 @@ These rules are hard-coded, and no mode or setting can change them:
 - "Through a building" means a mapped passage (`tunnel=building_passage`, `covered=yes`, `highway=corridor` or `indoor=corridor`) and only where it's plausibly public: through a shop, mall or station, or with public access tags, a street name, or a confirmation against the city's list. Passages and corridors through flats, offices, campuses and hospitals are left out.
 - Streets that run under a building without a mapped tunnel are kept, but the directions say so.
 - Passages, corridors and parks that may close are flagged, with their hours where mapped. Late at night there's an extra warning.
-- A better route takes at most four times the normal walking time, and never more than an hour unless the normal walk is longer, or an hour and a half if you tick "Longer walk". Routes through stops you pick are measured against the normal route through the same stops. Shapes, crawls and workouts are limited to the length you pick: up to an hour, or the 1 h 15 and 1 h 30 options. Nothing goes past an hour and a half unless the normal walk itself is longer, and walks over an hour say roughly when you'd finish.
+- A better route takes at most four times the normal walking time, and never more than an hour unless the normal walk is longer. Tick "Longer walk" (or tap "Allow a longer walk" on a route that's too long for the hour) and it may take up to two hours, and may always add up to half an hour to the normal walk, so a walk that's already long still gets a detour. Routes through stops you pick are measured against the normal route through the same stops. Crawls and workouts are limited to the length you pick, up to two hours; shapes to an hour, or an hour and a half for the 1 h 15 option. Walks over an hour say roughly when you'd finish, and warn if that's late.
 
 The rules run when the graph is built, again when the page loads, during the search, and on every finished route. The Python build and the TypeScript router pass the same cases in [safety/cases.json](safety/cases.json). A property test plans random routes, loops, crawls and drawings in every area and checks each one independently; before this release it ran about 83,000 of them. Details are in [docs/SECURITY.md](docs/SECURITY.md).
 

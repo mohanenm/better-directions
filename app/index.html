@@ -80,7 +80,7 @@
               <button type="button" class="chip" data-action="locate" data-end="from"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="7"/><circle cx="12" cy="12" r="2.5"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg>Start at my location</button>
             </div>
 
-            <div class="stops" id="stops" data-kind="route" hidden>
+            <div class="stops" id="stops" hidden>
               <span class="stops-title">Stops on the way</span>
               <ol id="stop-list"></ol>
             </div>
@@ -109,6 +109,7 @@
               <label><input type="radio" name="crawl-len" value="45" checked> 45 min</label>
               <label><input type="radio" name="crawl-len" value="60"> 1 h</label>
               <label><input type="radio" name="crawl-len" value="90"> 1 h 30</label>
+              <label><input type="radio" name="crawl-len" value="120"> 2 h</label>
             </fieldset>
             <label class="check"><input type="checkbox" id="crawl-end"> Finish somewhere else instead of looping back</label>
             <button type="submit">Plan the crawl</button>
@@ -129,6 +130,7 @@
               <label><input type="radio" name="workout-len" value="45"> 45 min</label>
               <label><input type="radio" name="workout-len" value="60"> 1 h</label>
               <label><input type="radio" name="workout-len" value="90"> 1 h 30</label>
+              <label><input type="radio" name="workout-len" value="120"> 2 h</label>
             </fieldset>
             <button type="submit">Plan the loop</button>
           </form>
@@ -166,7 +168,7 @@
           <details class="more" id="more">
             <summary>More options</summary>
             <div class="more-body">
-              <label class="check" data-kind="route"><input type="checkbox" id="long-walk"> Longer walk: allow up to 1 h 30</label>
+              <label class="check" data-kind="route"><input type="checkbox" id="long-walk"> Longer walk: allow up to 2 h</label>
               <div class="seed-row" id="seed-row" hidden>
                 <span>Seed <output id="seed-value" for="shuffle">1</output></span>
                 <button type="button" id="shuffle" class="secondary">New seed</button>
@@ -193,7 +195,10 @@
           </div>
           <div class="mode-chips" id="mode-chips" role="group" aria-label="Try another mode" hidden></div>
           <h2 id="result-title" class="route-name"><span class="visually-hidden">Your route: </span><span id="route-name"></span></h2>
-          <p class="callout" id="same-note" hidden></p>
+          <div class="callout" id="same-box" hidden>
+            <p id="same-note"></p>
+            <button type="button" class="secondary" id="allow-long" hidden>Allow a longer walk</button>
+          </div>
           <p class="summary" id="summary"></p>
           <div class="legend" aria-hidden="true">
             <span class="swatch better"></span> <span id="legend-better">Better route</span>
@@ -223,6 +228,8 @@
         <button type="button" id="make-image" class="secondary">Make a share image</button>
       </div>
       <p class="share-note">Links and images show your start and end points.</p>
+      <p class="share-status" id="share-status" role="status" aria-live="polite"></p>
+      <input class="share-url" id="share-url" type="text" readonly aria-label="Link to this walk" hidden>
       <figure class="share-image" id="share-image" hidden>
         <img id="share-preview" alt="Share image: the route on a map with its name and what the detour costs." width="1080" height="1350">
         <figcaption>

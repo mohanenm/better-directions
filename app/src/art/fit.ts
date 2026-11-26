@@ -48,9 +48,11 @@ export const clampArtMinutes = (minutes: number): number => Math.max(15, Math.mi
 
 /**
  * A shape may take up to an hour whatever length was chosen (the length sizes the shape; streets
- * add detours), and up to an hour and a half for the long, over-an-hour option.
+ * add detours), and up to an hour and a half for the long, over-an-hour option. Shapes don't
+ * follow the longer-walk limit: a bigger drawing isn't a better one.
  */
-export const artCapSeconds = (minutes: number): number => (clampArtMinutes(minutes) > 60 ? DETOUR.longMaxSeconds : DETOUR.maxSeconds);
+const LONG_SHAPE_MAX_SECONDS = 90 * 60;
+export const artCapSeconds = (minutes: number): number => (clampArtMinutes(minutes) > 60 ? LONG_SHAPE_MAX_SECONDS : DETOUR.maxSeconds);
 
 export function sizeForMinutes(shape: ShapeId, minutes: number): number {
   const pts = SHAPES[shape].points;

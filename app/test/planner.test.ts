@@ -16,14 +16,17 @@ describe("detour cap", () => {
     expect(Object.isFrozen(DETOUR)).toBe(true);
   });
 
-  it("is at most 90 minutes for a longer walk, and never more", () => {
+  it("is at most two hours for a longer walk, but always leaves half an hour of room", () => {
     expect(detourCapSeconds(300, true)).toBe(1200); // the 4x rule still applies
-    expect(detourCapSeconds(1800, true)).toBe(5400);
-    expect(detourCapSeconds(5000, true)).toBe(5400);
-    expect(detourCapSeconds(6000, true)).toBe(6000); // only a longer normal route goes past it
+    expect(detourCapSeconds(1800, true)).toBe(7200);
+    expect(detourCapSeconds(5000, true)).toBe(7200);
+    expect(detourCapSeconds(6900, true)).toBe(8700); // 1 h 55 may add half an hour
+    expect(detourCapSeconds(6480, true)).toBe(8280); // 1 h 48 to 2 h 18
+    expect(detourCapSeconds(500, true)).toBe(2000); // the 4x rule still wins for short walks
+    expect(detourCapSeconds(9000, true)).toBe(10800); // 2 h 30 to 3 h
     expect(loopCapSeconds(45)).toBe(2700);
-    expect(loopCapSeconds(90)).toBe(5400);
-    expect(loopCapSeconds(240)).toBe(5400);
+    expect(loopCapSeconds(120)).toBe(7200);
+    expect(loopCapSeconds(240)).toBe(7200);
   });
 
   it("a mode that loves detours stays within the cap", () => {

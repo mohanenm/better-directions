@@ -1,6 +1,6 @@
 /**
  * Page controller. Everything runs on the device: the planner in a Web Worker, place search over
- * a local list, and location only when the user taps "My location" or "Nearest to me".
+ * a local list, and location only when the user taps "Start at my location" or "Nearest to me".
  */
 import { AREAS, CITY, cityData, DEFAULT_AREA, nearestArea } from "./city";
 import "./style.css";
@@ -238,6 +238,7 @@ function applyKind(): void {
   if (tab === "draw") $<HTMLInputElement>(`input[name="draw"][value="${state.kind}"]`).checked = true;
   for (const el of document.querySelectorAll<HTMLElement>("[data-kind]")) el.hidden = el.dataset["kind"] !== tab;
   for (const el of document.querySelectorAll<HTMLElement>("[data-draw]")) el.hidden = el.dataset["draw"] !== state.kind;
+  $("#stops").hidden = tab !== "route" || state.stops.length === 0;
   const end = usesEnd();
   for (const el of [$("#to-endpoint"), $("#swap"), $("#centre-to")]) el.hidden = !end;
   $("#route-inputs").classList.toggle("single", !end);
@@ -279,12 +280,26 @@ for (const dialog of document.querySelectorAll<HTMLDialogElement>("dialog")) {
 $("#about-open").addEventListener("click", () => $<HTMLDialogElement>("#about-dialog").showModal());
 $("#share-open").addEventListener("click", () => $<HTMLDialogElement>("#share-dialog").showModal());
 
+// The skip link goes to whichever view is showing: the start field, or the result.
+$(".skip-link").addEventListener("click", (e) => {
+  e.preventDefault();
+  if (resultEl.hidden) input("from").focus();
+  else resultEl.focus();
+});
+
 // --- Choosing start and end ----------------------------------------------------------------------
 
 const input = (end: End) => $<HTMLInputElement>(`#${end}-input`);
 
+/** What a GPS fix is called on the page; links never carry it (see writeLink). */
+const MY_LOCATION = "My location";
+/** Ends set from a GPS fix and not yet snapped to the graph by a planned walk: kept out of links. */
+const unsnapped = new Set<End>();
+
 /** Sets one end. Moving an end clears the park stops, which belonged to the old route. */
-function setEnd(end: End, point: [number, number] | null, name: string | null, keepStops = false): void {
+function setEnd(end: End, point: [number, number] | null, name: string | null, keepStops = false, fromGps = false): void {
+  if (fromGps) unsnapped.add(end);
+  else unsnapped.delete(end);
   const moved = state[end]?.[0] !== point?.[0] || state[end]?.[1] !== point?.[1];
   if (moved && !keepStops && state.stops.length) {
     state.stops = [];
@@ -375,7 +390,7 @@ function locate(end: End): void {
         setStatus(near.id === CITY.id ? `You seem to be outside ${CITY.name}.` : `You seem to be outside ${CITY.name}. ${near.name} is the nearest area; pick it above.`, true);
         return;
       }
-      setEnd(end, point, "My location");
+      setEnd(end, point, MY_LOCATION, false, true);
       routeMap?.flyTo(point);
       endsChanged();
     },
@@ -452,12 +467,17 @@ $("#shuffle").addEventListener("click", () => {
 
 // --- Longer walks ----------------------------------------------------------------------------------
 
-/** Opting in to a longer walk lets the detour run to 90 minutes instead of an hour. */
-$<HTMLInputElement>("#long-walk").addEventListener("change", (e) => {
-  state.long = (e.target as HTMLInputElement).checked;
+/** Opting in to a longer walk lets the detour run to two hours instead of one (see safety/limits.ts). */
+$<HTMLInputElement>("#long-walk").addEventListener("change", (e) => setLong((e.target as HTMLInputElement).checked));
+// Offered on a result that's just the normal route because the hour left no room.
+$("#allow-long").addEventListener("click", () => setLong(true));
+
+function setLong(long: boolean): void {
+  state.long = long;
+  $<HTMLInputElement>("#long-walk").checked = long;
   writeLink();
   if (state.from && state.to) requestPlan();
-});
+}
 
 // --- Planning ------------------------------------------------------------------------------------
 
@@ -514,6 +534,7 @@ function onPlan(result: PlanResult): void {
   // Store the snapped points (on a path), not the exact tap or GPS fix.
   state.from = result.from;
   state.to = result.to;
+  unsnapped.clear();
   routeMap?.setMarker("from", result.from);
   routeMap?.setMarker("to", result.to);
   writeLink();
@@ -540,23 +561,46 @@ function showResult(trip: string, modes = false): void {
 
 // --- Sharing -------------------------------------------------------------------------------------
 
+/**
+ * Mirrors the state in the address bar, for sharing. A GPS fix goes in only once a planned walk
+ * has snapped it to the nearest path, and never with the name "My location", which would tell
+ * whoever gets the link where the sender was standing.
+ */
 function writeLink(): void {
-  const q = serializeLink(state);
+  const linked: LinkState = { ...state };
+  for (const end of ["from", "to"] as End[]) {
+    if (unsnapped.has(end)) linked[end] = null;
+    const key = end === "from" ? "fromName" : "toName";
+    if (linked[key] === MY_LOCATION) linked[key] = null;
+  }
+  const q = serializeLink(linked);
   const withArea = CITY.id === DEFAULT_AREA ? q : `?area=${CITY.id}${q.length > 1 ? `&${q.slice(1)}` : ""}`;
   history.replaceState(null, "", `${window.location.pathname}${withArea}`);
+}
+
+/** Feedback for sharing, shown in the share dialog (the page behind it is out of reach while it's open). */
+function shareStatus(text: string): void {
+  $("#share-status").textContent = text;
 }
 
 $("#share").addEventListener("click", async () => {
   if (!lastCard) return;
   const url = window.location.href;
+  const field = $<HTMLInputElement>("#share-url");
+  field.hidden = true;
   try {
     if (navigator.share) await navigator.share({ title: "Better Directions", text: lastCard.summary, url });
     else {
       await navigator.clipboard.writeText(url);
-      setStatus("Link copied.");
+      shareStatus("Link copied.");
     }
-  } catch {
-    // The user closed the share sheet, or the clipboard isn't available: nothing to do.
+  } catch (err) {
+    // Closing the share sheet is fine; anything else, offer the link to copy by hand.
+    if (err instanceof DOMException && err.name === "AbortError") return;
+    shareStatus("Couldn't share or copy it automatically. Here's the link to copy:");
+    field.value = url;
+    field.hidden = false;
+    field.select();
   }
 });
 
@@ -570,13 +614,19 @@ function clearShareImage(): void {
   shareBlob = null;
   shareUrl = null;
   $("#share-image").hidden = true;
+  $("#share-url").hidden = true;
+  shareStatus("");
 }
 
 $("#make-image").addEventListener("click", async () => {
   if (!lastCard || !routeMap) return;
   clearShareImage();
-  setStatus("Drawing your share image…");
+  shareStatus("Drawing your share image…");
+  // A word kept out of links stays out of the image too: leave off the dashed ideal lettering,
+  // which would spell it out.
+  const privateWord = lastSpell && state.spell && !state.spellInLink ? lastSpell : null;
   try {
+    if (privateWord) routeMap.setRoutes([], privateWord.strokeLines, privateWord.penUpLines);
     // Frame the route in the visible map first, whatever the user has panned or expanded since.
     setSheetFull(false);
     await routeMap.fitRoute();
@@ -585,9 +635,11 @@ $("#make-image").addEventListener("click", async () => {
     $<HTMLImageElement>("#share-preview").src = shareUrl;
     $<HTMLAnchorElement>("#share-image-download").href = shareUrl;
     $("#share-image").hidden = false;
-    setStatus("Share image ready. It was drawn on your device.");
+    shareStatus("Share image ready. It was drawn on your device.");
   } catch {
-    setStatus("Couldn't draw the share image on this device.", true);
+    shareStatus("Couldn't draw the share image on this device.");
+  } finally {
+    if (privateWord) routeMap.setRoutes(privateWord.template, privateWord.strokeLines, privateWord.penUpLines);
   }
 });
 
@@ -642,6 +694,7 @@ function onArt(result: ArtResultMsg): void {
   goButton.disabled = false;
   lastCard = artCard(result);
   state.from = result.start;
+  unsnapped.delete("from");
   routeMap?.setMarker("from", result.start);
   const end = result.line.at(-1)!;
   routeMap?.setMarker("to", SHAPES[result.shape].closed ? null : end);
@@ -707,6 +760,7 @@ function onSpell(result: SpellResultMsg): void {
   spellInput.value = result.word;
   lastCard = spellCard(result, state.spellInLink);
   state.from = result.start;
+  unsnapped.delete("from");
   routeMap?.setMarker("from", result.start);
   routeMap?.setMarker("to", result.end);
   writeLink();
@@ -738,7 +792,7 @@ function parkActions(pin: Pin): PinAction[] {
 }
 
 function renderStops(): void {
-  $("#stops").hidden = state.stops.length === 0;
+  $("#stops").hidden = state.kind !== "route" || state.stops.length === 0;
   $("#stop-list").replaceChildren(
     ...state.stops.map((_, i) => {
       const li = document.createElement("li");
@@ -893,8 +947,14 @@ function onTour(result: TourResult): void {
   goButton.disabled = false;
   lastCard = tourCard(result);
   state.from = result.start;
+  unsnapped.delete("from");
   routeMap?.setMarker("from", result.start);
   const loops = result.end[0] === result.start[0] && result.end[1] === result.start[1];
+  if (!loops) {
+    // A crawl that finishes elsewhere: keep its snapped end, as routes do.
+    state.to = result.end;
+    unsnapped.delete("to");
+  }
   routeMap?.setMarker("to", loops ? null : result.end);
   writeLink();
   drawRoutes([], result.line);

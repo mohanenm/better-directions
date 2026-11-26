@@ -105,6 +105,9 @@ describe("the kind of walk in links", () => {
     expect(parseLink("?open=spell", BBOX).kind).toBe("word");
     expect(parseLink("?open=plan,famous", BBOX).kind).toBe("route");
   });
+  it("ignores prototype names in old links (they once broke the page)", () => {
+    for (const v of ["constructor", "__proto__", "toString", "hasOwnProperty"]) expect(parseLink(`?open=${v}`, BBOX).kind).toBe("route");
+  });
 });
 
 describe("place search", () => {
