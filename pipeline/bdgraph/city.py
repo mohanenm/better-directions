@@ -27,9 +27,17 @@ class City:
     extract_provider: str
     extract_licence: str
     extract_attribution: str
+    # More extracts merged with the main one, for areas that cross a region boundary (DC's box
+    # reaches into Virginia and Maryland). Geofabrik's state extracts stop at the state line.
+    extract_also: tuple[str, ...] = ()
     # Passages and corridors confirmed open to the public, by OSM way id. See
     # docs/ADDING_A_CITY.md: the build excludes unconfirmed ones through private-looking buildings.
     confirmed_passages: frozenset[int] = frozenset()
+
+
+def extract_urls(city: City) -> tuple[str, ...]:
+    """Every extract the area is built from, the main one first."""
+    return (city.extract_url, *city.extract_also)
 
 
 def load_city(path: Path) -> City:
@@ -43,5 +51,6 @@ def load_city(path: Path) -> City:
         extract_provider=ex["provider"],
         extract_licence=ex["licence"],
         extract_attribution=ex["attribution"],
+        extract_also=tuple(ex.get("also", [])),
         confirmed_passages=frozenset(int(p["way"]) for p in raw.get("confirmed_passages", [])),
     )
