@@ -10,8 +10,9 @@ import type { ModeId } from "./modes";
 import type { CostOfFun } from "./stats";
 import { DETOUR } from "../safety/limits";
 
-function choose(options: string[], seed: number, route: Route): string {
-  const key = route.dirEdges.reduce((h, d) => (Math.imul(h, 31) + d) >>> 0, route.dirEdges.length);
+function choose(options: string[], seed: number, route: Route, g: FeatureIndex["g"]): string {
+  // Hash whole-graph edge numbers, so a tiled graph names the route the same way.
+  const key = route.dirEdges.reduce((h, d) => (Math.imul(h, 31) + (g.globalEdge(d >>> 1) * 2 + (d & 1))) >>> 0, route.dirEdges.length);
   return options[Math.floor(hashUnit(seed, key) * options.length)]!;
 }
 
@@ -77,7 +78,7 @@ export function sameAsNormalReason(p: { mode: ModeId; normal: Route; better: Rou
 }
 
 export function routeName(fi: FeatureIndex, mode: ModeId, stats: CostOfFun, route: Route, seed: number, normal?: CostOfFun): string {
-  const pick = (options: string[]) => choose(options, seed, route);
+  const pick = (options: string[]) => choose(options, seed, route, fi.g);
   // Don't name a route for something it doesn't have.
   if (!deliversMode(mode, stats)) return pick(["A Different Way Round", "The Long Way, Plainly"]);
   switch (mode) {

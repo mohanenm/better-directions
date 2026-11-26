@@ -75,6 +75,15 @@ export class Graph {
     return this.tiled ? (this.tiled.wayLocal[globalWay] ?? -1) : globalWay;
   }
 
+  /** A node's or edge's whole-graph number, for anything seeded or hashed by it. */
+  globalNode(node: number): number {
+    return this.tiled ? this.tiled.nodeGlobal[node]! : node;
+  }
+
+  globalEdge(edge: number): number {
+    return this.tiled ? this.tiled.edgeGlobal[edge]! : edge;
+  }
+
   /** Whether all of a node's edges are loaded (always, unless tiled). */
   nodeOwned(node: number): boolean {
     return !this.tiled || this.tiled.nodeOwned[node] === 1;

@@ -215,7 +215,8 @@ export function chaosWaypointRoute(
   seed: number,
 ): Route | null {
   const g = router.g;
-  const rand = mulberry32(Math.floor(hashUnit(seed, start * 7919 + goal) * 2 ** 32));
+  // Seeded by whole-graph node numbers, so a tiled graph draws the same waypoints.
+  const rand = mulberry32(Math.floor(hashUnit(seed, g.globalNode(start) * 7919 + g.globalNode(goal)) * 2 ** 32));
   const s = g.nodeLonLat(start);
   const t = g.nodeLonLat(goal);
   const direct = haversineM(s, t);

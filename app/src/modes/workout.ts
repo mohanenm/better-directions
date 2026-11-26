@@ -96,7 +96,7 @@ function planLoop(router: Router, fi: FeatureIndex, start: number, minutes: numb
   if (!route || route.timeS < capSeconds * 0.6) {
     let best = route ? worth(route) : -1;
     for (let k = 0; k < 6; k++) {
-      const wander = chaosWaypointRoute(router, fi, start, start, model, capSeconds, start * 13 + minutes + k);
+      const wander = chaosWaypointRoute(router, fi, start, start, model, capSeconds, router.g.globalNode(start) * 13 + minutes + k);
       if (!wander || wander.timeS > capSeconds) continue;
       const w = worth(wander);
       if (w > best || (w === best && wander.timeS > (route?.timeS ?? 0))) {
