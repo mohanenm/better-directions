@@ -49,7 +49,7 @@ Some checks need geometry rather than tags. The build drops a path that crosses 
 
 In the browser the rules run three more times: a load-time audit disables any edge, node or direction that breaks a rule; the search only uses what the audit allowed; and every finished route goes through `assertRouteSafe`, which re-checks it from raw tags, along with connectivity and the detour cap. The property test adds its own independent check on top.
 
-The detour cap is `max(normal, min(4 × normal, 60 min))`, or 90 minutes instead of 60 when the walker ticks "Longer walk" (`long=1` in links). Loops, which have no normal route, are capped by the length chosen: up to 60 minutes, or 90 for the 1 h 30 crawls and workouts. Shapes may take up to an hour, or an hour and a half for the 75-minute option. Spelled words stay within an hour. Nothing exceeds 90 minutes unless the normal route itself does.
+The detour cap is `max(normal, min(4 × normal, 60 min))`. When the walker asks for a longer walk (`long=1` in links), it's `max(min(4 × normal, 120 min), min(normal + 30 min, 4 × normal))`: up to two hours, and always room for half an hour more than the normal walk, within the 4× rule (`safety/limits.ts`). Loops, which have no normal route, are capped by the length chosen: up to two hours for crawls and workouts. Shapes may take up to an hour, or an hour and a half for the 75-minute option; spelled words stay within an hour.
 
 ## Router
 
@@ -72,6 +72,8 @@ Shape templates are scaled to the chosen walk time, anchored at the start, and p
 ## The page
 
 The page is plain TypeScript with MapLibre GL, built by Vite. Planning runs in a Web Worker so the map stays smooth; stale replies are dropped. Place search runs over a local list of about 1,200 squares, stations, parks and landmarks extracted from OSM.
+
+The panel shows either the planner or the result, never both. The planner shows only the chosen kind of walk's options (a route between two places, a crawl, a workout loop, or a drawing); once a walk is ready, the result replaces it, with the directions straight after the summary and the warnings. Warnings that matter on the ground (closures, late finishes, passages under buildings) share one amber box; notes on reading the map are plain text.
 
 A shared link holds the start and end snapped to the walking graph (not the raw tap or GPS fix), the mode and, for chaos, the seed. Parsing ignores anything outside the city and renders names as text only. Share images are drawn on a canvas on the device.
 

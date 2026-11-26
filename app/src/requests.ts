@@ -150,7 +150,7 @@ export function plan(l: Loaded, req: PlanRequest): FromWorker {
 export function art(l: Loaded, req: ArtRequestMsg): FromWorker {
   const { g, router, fi, index } = l;
   const t0 = performance.now();
-  if (!(req.shape in SHAPES)) throw new Error("Unknown shape.");
+  if (!Object.hasOwn(SHAPES, req.shape)) throw new Error("Unknown shape.");
   const minutes = clampArtMinutes(req.minutes);
   const r = drawShape(router, fi, index, { shape: req.shape, start: req.start as LonLat, minutes });
   if (!r) throw new Error("Couldn't fit that shape around here. Try another start point, shape or length.");

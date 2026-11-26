@@ -22,7 +22,7 @@ It's a static site with no server, accounts or tracking. Routes are planned on y
 - **Most inconvenient**: zig-zags, needless ups and downs, nothing straight, but never more busy-road crossings than the normal route. Bellecour to the Terreaux: 220 turns, and 158 places where it could have gone straight.
 - **Random**: a detour picked by a seed, so the same link gives the same route. The scenic route. Very scenic.
 
-Every route gets a name, and can be shared as a link or as an image drawn on your phone. Parks near the route show as pins; tap one to add it as a stop. The Famous routes section has a few to try.
+Every route gets a name, and can be shared as a link or as an image drawn on your phone. Parks near the route show as pins; tap one to add it as a stop. A few famous routes are listed in the planner to try.
 
 ## Crawls and workouts
 
@@ -30,11 +30,11 @@ A crawl visits a few artworks, pubs or wine bars in a sensible order, looping ba
 
 <img src="docs/images/dc-crawl.jpg" alt="An art crawl from U Street station in DC, in dark mode: six murals and sculptures as numbered pins, 44 minutes" width="640">
 
-A workout is a loop from your start of 20 minutes to an hour, or an hour and a half, collecting staircases, hills or both. It shows the staircases, steps and metres climbed, and notes any stretch tagged as unlit. It makes no claims about calories.
+A workout is a loop from your start of 20 minutes to two hours, collecting staircases, hills or both. It shows the staircases, steps and metres climbed, and notes any stretch tagged as unlit. It makes no claims about calories.
 
-There's also an experimental Draw a shape section that finds a walk drawing a heart, star, square or one-stroke letter with real streets, and scores the likeness. Spell a word does the same for a word or initials of up to six letters, with dotted walks between strokes. Grids work much better than Lyon's old town. See [docs/GPS_ART.md](docs/GPS_ART.md).
+There's also an experimental Draw option that finds a walk drawing a heart, star, square or one-stroke letter with real streets, and scores the likeness. Spell a word does the same for a word or initials of up to six letters, with dotted walks between strokes. Grids work much better than Lyon's old town. See [docs/GPS_ART.md](docs/GPS_ART.md).
 
-<img src="docs/images/spell.jpg" alt="The letters DC walked on Capitol Hill's grid: 80% readable, 31 minutes" width="480"> <img src="docs/images/heart.jpg" alt="A heart walked through Guillotière in Lyon: 85% likeness, 46 minutes" width="480">
+<img src="docs/images/spell.jpg" alt="The letters DC walked on Capitol Hill's grid from Eastern Market: 72% readable, 36 minutes" width="480"> <img src="docs/images/heart.jpg" alt="A heart walked through Guillotière in Lyon: 85% likeness, 46 minutes" width="480">
 
 <img src="docs/images/phone.jpg" alt="A Stairs route up Federal Hill in Baltimore on a phone, with the cost of fun" width="300"> <img src="docs/images/share.jpg" alt="The share image for the same route, drawn on the phone" width="300">
 
@@ -46,7 +46,7 @@ These rules are hard-coded, and no mode or setting can change them:
 - "Through a building" means a mapped passage (`tunnel=building_passage`, `covered=yes`, `highway=corridor` or `indoor=corridor`) and only where it's plausibly public: through a shop, mall or station, or with public access tags, a street name, or a confirmation against the city's list. Passages and corridors through flats, offices, campuses and hospitals are left out.
 - Streets that run under a building without a mapped tunnel are kept, but the directions say so.
 - Passages, corridors and parks that may close are flagged, with their hours where mapped. Late at night there's an extra warning.
-- A better route takes at most four times the normal walking time, and never more than an hour unless the normal walk is longer, or an hour and a half if you tick "Longer walk". Routes through stops you pick are measured against the normal route through the same stops. Shapes, crawls and workouts are limited to the length you pick: up to an hour, or the 1 h 15 and 1 h 30 options. Nothing goes past an hour and a half unless the normal walk itself is longer, and walks over an hour say roughly when you'd finish.
+- A better route takes at most four times the normal walking time, and never more than an hour unless the normal walk is longer. Tick "Longer walk" (or tap "Allow a longer walk" on a route that's too long for the hour) and it may take up to two hours, and may always add up to half an hour to the normal walk, so a walk that's already long still gets a detour. Routes through stops you pick are measured against the normal route through the same stops. Crawls and workouts are limited to the length you pick, up to two hours; shapes to an hour, or an hour and a half for the 1 h 15 option. Walks over an hour say roughly when you'd finish, and warn if that's late.
 
 The rules run when the graph is built, again when the page loads, during the search, and on every finished route. The Python build and the TypeScript router pass the same cases in [safety/cases.json](safety/cases.json). A property test plans random routes, loops, crawls and drawings in every area and checks each one independently; before this release it ran about 83,000 of them. Details are in [docs/SECURITY.md](docs/SECURITY.md).
 
@@ -56,7 +56,7 @@ The build is also stricter than the rules above in places. It excludes escalator
 
 The page talks to no one but its own site: tiles, fonts, data and code are all self-hosted, and a strict Content-Security-Policy enforces it. There are no cookies, no storage and no analytics.
 
-A word you spell stays on your device unless you choose to put it in a link. Your location is used only if you tap "My location" or "Nearest to me". It stays on your device, and it's snapped to the nearest path before it goes into a link. Shared links and images do show your start and end points; the page says so next to the share buttons.
+A word you spell stays on your device unless you choose to put it in a link. Your location is used only if you tap "Start at my location" or "Nearest to me". It stays on your device, and it's snapped to the nearest path before it goes into a link. Shared links and images do show your start and end points; the page says so next to the share buttons.
 
 ## What's unusual about it
 

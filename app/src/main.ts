@@ -1,6 +1,6 @@
 /**
  * Page controller. Everything runs on the device: the planner in a Web Worker, place search over
- * a local list, and location only when the user taps "My location" or "Nearest to me".
+ * a local list, and location only when the user taps "Start at my location" or "Nearest to me".
  */
 import { AREAS, CITY, cityData, DEFAULT_AREA, nearestArea } from "./city";
 import "./style.css";
@@ -17,7 +17,7 @@ import { haversineM } from "./router/geometry";
 import { renderShareImage, type ShareCard } from "./ui/share-image";
 import { initThemeToggle } from "./ui/theme";
 import type { Place } from "./ui/search";
-import { DEFAULT_OPEN, MAX_LINK_STOPS, parseLink, SECTION_IDS, serializeLink, type LinkState, type SectionId } from "./ui/url";
+import { MAX_LINK_STOPS, parseLink, serializeLink, type Kind, type LinkState } from "./ui/url";
 
 type End = "from" | "to";
 
@@ -28,7 +28,7 @@ const goButton = $<HTMLButtonElement>("#go");
 
 const state: LinkState = {
   from: null, to: null, fromName: null, toName: null, mode: "stairs", seed: 1, art: null, artMinutes: 40,
-  open: [...DEFAULT_OPEN], stops: [], workout: null, crawl: null, spell: null, spellInLink: false, long: false,
+  kind: "route", stops: [], workout: null, crawl: null, spell: null, spellInLink: false, long: false,
 };
 /** Names for the stops the user picked (links carry only the points). */
 const stopNames: string[] = [];
@@ -45,6 +45,30 @@ function setStatus(text: string, error = false): void {
   statusEl.classList.toggle("error", error);
 }
 
+// --- Plan and result views -------------------------------------------------------------------------
+
+const planView = $("#plan-view");
+const panel = $("#panel");
+
+/** The panel shows either the planner or the result, never both, so the result always starts at the top. */
+function setView(view: "plan" | "result"): void {
+  planView.hidden = view === "result";
+  resultEl.hidden = view === "plan";
+  $("#back-to-result").hidden = view === "result" || !hasResult;
+  panel.scrollTop = 0;
+}
+/** Whether there's a result to go back to (it's dropped when a newer request fails). */
+let hasResult = false;
+
+$("#edit").addEventListener("click", () => {
+  setView("plan");
+  $<HTMLInputElement>(`input[name="kind"][value="${kindTab(state.kind)}"]`).focus();
+});
+$("#back-to-result").addEventListener("click", () => {
+  setView("result");
+  resultEl.focus({ preventScroll: true });
+});
+
 // --- Worker ------------------------------------------------------------------------------------
 
 const worker = new Worker(new URL("./worker.ts", import.meta.url), { type: "module", name: CITY.id });
@@ -60,7 +84,8 @@ worker.addEventListener("message", (event: MessageEvent<FromWorker>) => {
     setStatus(msg.message, true);
     showSuggestion(msg.suggestion);
     // The inputs changed and nothing new was planned: don't leave the old route looking current.
-    resultEl.hidden = true;
+    hasResult = false;
+    setView("plan");
     routeMap?.clearRoutes();
     routeMap?.setPins([], parkActions);
   } else if (msg.type === "art") onArt(msg.result);
@@ -87,7 +112,7 @@ function onReady(ready: ReadyInfo): void {
   // A link whose start or end isn't in this area: say so rather than silently dropping it.
   const asked = new URLSearchParams(window.location.search);
   const dropped = [asked.get("from") && !state.from ? "start" : "", asked.get("to") && !state.to && !state.crawl ? "end" : ""].filter(Boolean);
-  applyOpen();
+  applyKind();
   routeMap = createMap($("#map"), ready.bbox);
   routeMap.onTap(onMapTap);
   syncInputs();
@@ -97,7 +122,7 @@ function onReady(ready: ReadyInfo): void {
   if (noTerrain) $<HTMLInputElement>('input[name="workout-focus"][value="stairs"]').checked = true;
   const canPlan = state.from && (state.to || state.art || state.crawl || state.workout);
   if (dropped.length) setStatus(`The ${dropped.join(" and ")} in that link ${dropped.length > 1 ? "aren't" : "isn't"} in ${CITY.name}, so ${dropped.length > 1 ? "they were" : "it was"} left out. Pick ${dropped.length > 1 ? "them" : "it"} again.`, true);
-  else setStatus(canPlan ? "" : "Pick a start and an end: search, or tap the map.");
+  else setStatus(canPlan ? "" : idleHint());
   if (state.spell) {
     $<HTMLInputElement>("#spell-word").value = state.spell;
     $<HTMLInputElement>("#spell-in-link").checked = state.spellInLink;
@@ -190,43 +215,91 @@ function drawRoutes(...args: Parameters<RouteMap["setRoutes"]>): void {
   routeMap?.setRoutes(...args);
 }
 
-// --- Panel sections ------------------------------------------------------------------------------
+// --- Kind of walk ----------------------------------------------------------------------------------
 
-const sectionHead = (id: SectionId) => $<HTMLButtonElement>(`#${id}-head`);
-const sectionBody = (id: SectionId) => $(`#${id}-body`);
+const KIND_DESC: Record<Kind, string> = {
+  route: "Two places, the long way round on purpose.",
+  crawl: "Art, pubs or wine: a few stops in a sensible order, from your start. Stops are picked by route, not rating.",
+  workout: "A loop from your start with staircases, hills or both. Longer loops prefer lit streets.",
+  shape: "A walk from your start whose trace draws a shape. Experimental.",
+  word: "A walk from your start whose trace spells a word. Grids work best. Experimental.",
+};
 
-function applyOpen(): void {
-  for (const id of SECTION_IDS) {
-    const open = state.open.includes(id);
-    sectionHead(id).setAttribute("aria-expanded", String(open));
-    sectionBody(id).hidden = !open;
-  }
+/** The tab a kind sits under: shapes and words are both drawings. */
+const kindTab = (kind: Kind) => (kind === "shape" || kind === "word" ? "draw" : kind);
+
+/** Whether the walk has an end point: routes, and crawls that finish somewhere else. */
+const usesEnd = () => state.kind === "route" || (state.kind === "crawl" && $<HTMLInputElement>("#crawl-end").checked);
+
+/** Shows the controls for the current kind of walk and hides the rest. */
+function applyKind(): void {
+  const tab = kindTab(state.kind);
+  $<HTMLInputElement>(`input[name="kind"][value="${tab}"]`).checked = true;
+  if (tab === "draw") $<HTMLInputElement>(`input[name="draw"][value="${state.kind}"]`).checked = true;
+  for (const el of document.querySelectorAll<HTMLElement>("[data-kind]")) el.hidden = el.dataset["kind"] !== tab;
+  for (const el of document.querySelectorAll<HTMLElement>("[data-draw]")) el.hidden = el.dataset["draw"] !== state.kind;
+  $("#stops").hidden = tab !== "route" || state.stops.length === 0;
+  const end = usesEnd();
+  for (const el of [$("#to-endpoint"), $("#swap"), $("#centre-to")]) el.hidden = !end;
+  $("#route-inputs").classList.toggle("single", !end);
+  $("#kind-desc").textContent = KIND_DESC[state.kind];
 }
 
-function setOpen(id: SectionId, open: boolean): void {
-  state.open = SECTION_IDS.filter((s) => (s === id ? open : state.open.includes(s)));
-  applyOpen();
+function setKind(kind: Kind): void {
+  if (kind === state.kind) return;
+  state.kind = kind;
+  applyKind();
   writeLink();
+  if (!statusEl.classList.contains("error")) setStatus(state.from && (state.to || !usesEnd()) ? "" : idleHint());
 }
 
-for (const id of SECTION_IDS) {
-  sectionHead(id).addEventListener("click", () => setOpen(id, !state.open.includes(id)));
+/** What to do next, when nothing has been chosen yet. */
+const idleHint = () => (usesEnd() ? "Pick a start and an end: search, or tap the map." : "Pick a start: search, or tap the map.");
+
+for (const radio of document.querySelectorAll<HTMLInputElement>('input[name="kind"]')) {
+  radio.addEventListener("change", () => setKind(radio.value === "draw" ? (radioValue("draw") as Kind) : (radio.value as Kind)));
 }
+for (const radio of document.querySelectorAll<HTMLInputElement>('input[name="draw"]')) {
+  radio.addEventListener("change", () => setKind(radio.value as Kind));
+}
+$<HTMLInputElement>("#crawl-end").addEventListener("change", applyKind);
 
-// Links can open sections before the map has loaded.
-state.open = parseLink(window.location.search, { west: -180, south: -90, east: 180, north: 90 }).open;
-applyOpen();
+// Links can set the kind before the map has loaded.
+state.kind = parseLink(window.location.search, { west: -180, south: -90, east: 180, north: 90 }).kind;
+applyKind();
 
-$(".skip-link").addEventListener("click", () => {
-  if (!state.open.includes("plan")) setOpen("plan", true);
+// --- Dialogs -------------------------------------------------------------------------------------
+
+for (const dialog of document.querySelectorAll<HTMLDialogElement>("dialog")) {
+  for (const b of dialog.querySelectorAll("[data-close]")) b.addEventListener("click", () => dialog.close());
+  // A tap on the backdrop (outside the dialog's box) closes it too.
+  dialog.addEventListener("click", (e) => {
+    if (e.target === dialog) dialog.close();
+  });
+}
+$("#about-open").addEventListener("click", () => $<HTMLDialogElement>("#about-dialog").showModal());
+$("#share-open").addEventListener("click", () => $<HTMLDialogElement>("#share-dialog").showModal());
+
+// The skip link goes to whichever view is showing: the start field, or the result.
+$(".skip-link").addEventListener("click", (e) => {
+  e.preventDefault();
+  if (resultEl.hidden) input("from").focus();
+  else resultEl.focus();
 });
 
 // --- Choosing start and end ----------------------------------------------------------------------
 
 const input = (end: End) => $<HTMLInputElement>(`#${end}-input`);
 
+/** What a GPS fix is called on the page; links never carry it (see writeLink). */
+const MY_LOCATION = "My location";
+/** Ends set from a GPS fix and not yet snapped to the graph by a planned walk: kept out of links. */
+const unsnapped = new Set<End>();
+
 /** Sets one end. Moving an end clears the park stops, which belonged to the old route. */
-function setEnd(end: End, point: [number, number] | null, name: string | null, keepStops = false): void {
+function setEnd(end: End, point: [number, number] | null, name: string | null, keepStops = false, fromGps = false): void {
+  if (fromGps) unsnapped.add(end);
+  else unsnapped.delete(end);
   const moved = state[end]?.[0] !== point?.[0] || state[end]?.[1] !== point?.[1];
   if (moved && !keepStops && state.stops.length) {
     state.stops = [];
@@ -246,16 +319,17 @@ function syncInputs(): void {
     input(end).value = name ?? (state[end] ? "Point on the map" : "");
     routeMap?.setMarker(end, state[end]);
   });
-  const radio = document.querySelector<HTMLInputElement>(`input[name="mode"][value="${state.mode}"]`);
-  if (radio) radio.checked = true;
+  syncModes();
   $<HTMLInputElement>("#long-walk").checked = state.long;
-  updateSeedRow();
 }
 
-/** After one end is chosen, say what's next. */
-function promptNext(): void {
-  if (state.from && !state.to) setStatus("Start set. Now pick an end: search, or tap the map.");
+/** After an end is chosen: plan a route once both are set, else say what's next. */
+function endsChanged(): void {
+  if (state.kind === "route" && state.from && state.to) requestPlan();
+  else if (!usesEnd()) setStatus(state.from ? "" : idleHint());
+  else if (state.from && !state.to) setStatus("Start set. Now pick an end: search, or tap the map.");
   else if (!state.from && state.to) setStatus("End set. Now pick a start: search, or tap the map.");
+  else setStatus("");
 }
 
 /** The end a map tap moves once both are set: the one whose field was focused last, else the end. */
@@ -263,11 +337,10 @@ let tapMoves: End | null = null;
 for (const end of ["from", "to"] as End[]) input(end).addEventListener("focus", () => (tapMoves = end));
 
 function onMapTap(point: [number, number]): void {
-  const end: End = !state.from ? "from" : !state.to ? "to" : (tapMoves ?? "to");
+  const end: End = !usesEnd() ? "from" : !state.from ? "from" : !state.to ? "to" : (tapMoves ?? "to");
   tapMoves = null;
   setEnd(end, point, null);
-  if (state.from && state.to) requestPlan();
-  else promptNext();
+  endsChanged();
 }
 
 for (const end of ["from", "to"] as End[]) {
@@ -275,8 +348,7 @@ for (const end of ["from", "to"] as End[]) {
     setEnd(end, [p.lon, p.lat], p.name);
     tapMoves = null;
     routeMap?.flyTo([p.lon, p.lat]);
-    if (state.from && state.to) requestPlan();
-    else promptNext();
+    endsChanged();
   });
 }
 
@@ -286,8 +358,7 @@ document.querySelectorAll<HTMLButtonElement>("[data-action]").forEach((button) =
     const action = button.dataset["action"];
     if (action === "centre" && routeMap) {
       setEnd(end, routeMap.centre(), null);
-      if (state.from && state.to) requestPlan();
-      else promptNext();
+      endsChanged();
     } else if (action === "swap") {
       const [f, fn, t, tn] = [state.from, state.fromName, state.to, state.toName];
       setEnd("from", t, tn, true);
@@ -296,7 +367,7 @@ document.querySelectorAll<HTMLButtonElement>("[data-action]").forEach((button) =
       state.stops.reverse();
       stopNames.reverse();
       renderStops();
-      if (state.from && state.to) requestPlan();
+      endsChanged();
     } else if (action === "locate") {
       locate(end);
     }
@@ -319,10 +390,9 @@ function locate(end: End): void {
         setStatus(near.id === CITY.id ? `You seem to be outside ${CITY.name}.` : `You seem to be outside ${CITY.name}. ${near.name} is the nearest area; pick it above.`, true);
         return;
       }
-      setEnd(end, point, "My location");
+      setEnd(end, point, MY_LOCATION, false, true);
       routeMap?.flyTo(point);
-      if (state.from && state.to) requestPlan();
-      else setStatus("Got you. Now pick an end.");
+      endsChanged();
     },
     () => setStatus("Couldn't get your location. You can search or tap the map instead.", true),
     { enableHighAccuracy: true, timeout: 15000, maximumAge: 60000 },
@@ -332,6 +402,26 @@ function locate(end: End): void {
 // --- Modes ---------------------------------------------------------------------------------------
 
 const modeList = $("#mode-list");
+const modeChips = $("#mode-chips");
+
+/** Switches mode from either the planner or the result, and plans again. */
+function setMode(id: ModeId): void {
+  state.mode = id;
+  state.art = null;
+  syncModes();
+  writeLink();
+  if (state.from && state.to) requestPlan();
+}
+
+/** The planner's mode radios, the result's mode chips and the description all follow state.mode. */
+function syncModes(): void {
+  const radio = document.querySelector<HTMLInputElement>(`input[name="mode"][value="${state.mode}"]`);
+  if (radio) radio.checked = true;
+  $("#mode-desc").textContent = MODES[state.mode].tagline;
+  for (const b of modeChips.querySelectorAll<HTMLButtonElement>("button")) b.setAttribute("aria-pressed", String(b.dataset["mode"] === state.mode));
+  updateSeedRow();
+}
+
 for (const id of MODE_IDS) {
   const m = MODES[id];
   const wrap = document.createElement("div");
@@ -344,22 +434,22 @@ for (const id of MODE_IDS) {
   radio.checked = id === state.mode;
   const label = document.createElement("label");
   label.htmlFor = radio.id;
-  const strong = document.createElement("strong");
-  strong.textContent = m.name;
-  const span = document.createElement("span");
-  span.textContent = m.tagline;
-  label.append(strong, span);
+  label.textContent = m.name;
+  label.title = m.tagline;
   wrap.append(radio, label);
   modeList.append(wrap);
-  radio.addEventListener("change", () => {
-    scrollToNextResult = false;
-    state.mode = id as ModeId;
-    state.art = null;
-    updateSeedRow();
-    writeLink();
-    if (state.from && state.to) requestPlan();
-  });
+  radio.addEventListener("change", () => setMode(id as ModeId));
+
+  const chip = document.createElement("button");
+  chip.type = "button";
+  chip.className = "chip";
+  chip.dataset["mode"] = id;
+  chip.textContent = m.name;
+  chip.title = m.tagline;
+  chip.addEventListener("click", () => setMode(id as ModeId));
+  modeChips.append(chip);
 }
+syncModes();
 
 function updateSeedRow(): void {
   $("#seed-row").hidden = state.mode !== "chaos";
@@ -370,7 +460,6 @@ $("#shuffle").addEventListener("click", () => {
   const buf = new Uint32Array(1);
   crypto.getRandomValues(buf);
   state.seed = (buf[0]! % 999_999) + 1;
-  scrollToNextResult = false;
   updateSeedRow();
   writeLink();
   if (state.from && state.to) requestPlan();
@@ -378,15 +467,17 @@ $("#shuffle").addEventListener("click", () => {
 
 // --- Longer walks ----------------------------------------------------------------------------------
 
-/** Opting in to a longer walk lets the detour run to 90 minutes instead of an hour. */
-$<HTMLInputElement>("#long-walk").addEventListener("change", (e) => {
-  state.long = (e.target as HTMLInputElement).checked;
+/** Opting in to a longer walk lets the detour run to two hours instead of one (see safety/limits.ts). */
+$<HTMLInputElement>("#long-walk").addEventListener("change", (e) => setLong((e.target as HTMLInputElement).checked));
+// Offered on a result that's just the normal route because the hour left no room.
+$("#allow-long").addEventListener("click", () => setLong(true));
+
+function setLong(long: boolean): void {
+  state.long = long;
+  $<HTMLInputElement>("#long-walk").checked = long;
   writeLink();
-  if (state.from && state.to) {
-    scrollToNextResult = false;
-    requestPlan();
-  }
-});
+  if (state.from && state.to) requestPlan();
+}
 
 // --- Planning ------------------------------------------------------------------------------------
 
@@ -412,6 +503,7 @@ function setShareable(on: boolean): void {
 
 function requestPlan(): void {
   if (!info) return;
+  setKind("route");
   state.art = null;
   state.crawl = null;
   state.workout = null;
@@ -442,59 +534,73 @@ function onPlan(result: PlanResult): void {
   // Store the snapped points (on a path), not the exact tap or GPS fix.
   state.from = result.from;
   state.to = result.to;
+  unsnapped.clear();
   routeMap?.setMarker("from", result.from);
   routeMap?.setMarker("to", result.to);
   writeLink();
   drawRoutes(result.normal, result.better);
   routeMap?.setPins(result.pins, parkActions);
   renderResult(result, (at) => routeMap?.flyTo(at));
-  clearShareImage();
-  showResult();
+  // When the walk already fills the time limit, every mode gives the same route: no chips to try.
+  showResult(`${state.fromName ?? "Your start"} to ${state.toName ?? "your end"}`, result.sameAsNormal !== "too-long");
   // Screen readers hear the result; sighted users see it in the card.
   const same = sameRouteNote(result);
-  $("#announcer").textContent = `Route ready. ${same ?? result.summary} Step-by-step directions follow the stats.`;
+  $("#announcer").textContent = `Route ready. ${same ?? result.summary} Directions follow the notes.`;
 }
 
-/**
- * Whether the next result scrolls the panel to itself. Re-planning from the mode cards or a new
- * seed keeps the panel where it is, so modes can be compared; the map shows the new route.
- */
-let scrollToNextResult = true;
-
-/** Shows the result card, scrolling the panel to it if it's out of sight. */
-function showResult(): void {
-  const wasHidden = resultEl.hidden;
-  resultEl.hidden = false;
+/** Shows the result in place of the planner. Focus moves to it unless it came from the result's own mode chips. */
+function showResult(trip: string, modes = false): void {
+  clearShareImage();
+  $("#trip").textContent = trip;
+  modeChips.hidden = !modes;
+  hasResult = true;
   setStatus("");
-  const scroll = scrollToNextResult || wasHidden;
-  scrollToNextResult = true;
-  const panel = $("#panel").getBoundingClientRect();
-  const card = resultEl.getBoundingClientRect();
-  if (scroll && (card.top > panel.bottom - 80 || card.bottom < panel.top)) {
-    const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    resultEl.scrollIntoView({ block: "start", behavior: reduced ? "auto" : "smooth" });
-  }
+  setView("result");
+  if (!resultEl.contains(document.activeElement)) resultEl.focus({ preventScroll: true });
 }
 
 // --- Sharing -------------------------------------------------------------------------------------
 
+/**
+ * Mirrors the state in the address bar, for sharing. A GPS fix goes in only once a planned walk
+ * has snapped it to the nearest path, and never with the name "My location", which would tell
+ * whoever gets the link where the sender was standing.
+ */
 function writeLink(): void {
-  const q = serializeLink(state);
+  const linked: LinkState = { ...state };
+  for (const end of ["from", "to"] as End[]) {
+    if (unsnapped.has(end)) linked[end] = null;
+    const key = end === "from" ? "fromName" : "toName";
+    if (linked[key] === MY_LOCATION) linked[key] = null;
+  }
+  const q = serializeLink(linked);
   const withArea = CITY.id === DEFAULT_AREA ? q : `?area=${CITY.id}${q.length > 1 ? `&${q.slice(1)}` : ""}`;
   history.replaceState(null, "", `${window.location.pathname}${withArea}`);
+}
+
+/** Feedback for sharing, shown in the share dialog (the page behind it is out of reach while it's open). */
+function shareStatus(text: string): void {
+  $("#share-status").textContent = text;
 }
 
 $("#share").addEventListener("click", async () => {
   if (!lastCard) return;
   const url = window.location.href;
+  const field = $<HTMLInputElement>("#share-url");
+  field.hidden = true;
   try {
     if (navigator.share) await navigator.share({ title: "Better Directions", text: lastCard.summary, url });
     else {
       await navigator.clipboard.writeText(url);
-      setStatus("Link copied.");
+      shareStatus("Link copied.");
     }
-  } catch {
-    // The user closed the share sheet, or the clipboard isn't available: nothing to do.
+  } catch (err) {
+    // Closing the share sheet is fine; anything else, offer the link to copy by hand.
+    if (err instanceof DOMException && err.name === "AbortError") return;
+    shareStatus("Couldn't share or copy it automatically. Here's the link to copy:");
+    field.value = url;
+    field.hidden = false;
+    field.select();
   }
 });
 
@@ -508,13 +614,19 @@ function clearShareImage(): void {
   shareBlob = null;
   shareUrl = null;
   $("#share-image").hidden = true;
+  $("#share-url").hidden = true;
+  shareStatus("");
 }
 
 $("#make-image").addEventListener("click", async () => {
   if (!lastCard || !routeMap) return;
   clearShareImage();
-  setStatus("Drawing your share image…");
+  shareStatus("Drawing your share image…");
+  // A word kept out of links stays out of the image too: leave off the dashed ideal lettering,
+  // which would spell it out.
+  const privateWord = lastSpell && state.spell && !state.spellInLink ? lastSpell : null;
   try {
+    if (privateWord) routeMap.setRoutes([], privateWord.strokeLines, privateWord.penUpLines);
     // Frame the route in the visible map first, whatever the user has panned or expanded since.
     setSheetFull(false);
     await routeMap.fitRoute();
@@ -523,9 +635,11 @@ $("#make-image").addEventListener("click", async () => {
     $<HTMLImageElement>("#share-preview").src = shareUrl;
     $<HTMLAnchorElement>("#share-image-download").href = shareUrl;
     $("#share-image").hidden = false;
-    setStatus("Share image ready. It was drawn on your device.");
+    shareStatus("Share image ready. It was drawn on your device.");
   } catch {
-    setStatus("Couldn't draw the share image on this device.", true);
+    shareStatus("Couldn't draw the share image on this device.");
+  } finally {
+    if (privateWord) routeMap.setRoutes(privateWord.template, privateWord.strokeLines, privateWord.penUpLines);
   }
 });
 
@@ -557,12 +671,7 @@ artShape.replaceChildren(
 
 $<HTMLFormElement>("#art-form").addEventListener("submit", (e) => {
   e.preventDefault();
-  if (!state.from) {
-    setStatus("Pick a From point first; the drawing starts there.", true);
-    if (!state.open.includes("plan")) setOpen("plan", true);
-    input("from").focus();
-    return;
-  }
+  if (!needFrom("drawing")) return;
   state.art = artShape.value as ShapeId;
   state.crawl = null;
   state.workout = null;
@@ -576,7 +685,7 @@ function requestArt(): void {
   artShape.value = state.art;
   const len = document.querySelector<HTMLInputElement>(`input[name="art-len"][value="${state.artMinutes}"]`);
   if (len) len.checked = true;
-  if (!state.open.includes("art")) setOpen("art", true);
+  setKind("shape");
   setStatus(`Drawing a ${SHAPES[state.art].label.toLowerCase()} with ${CITY.name}'s streets…`);
   send({ type: "art", id: requestId, start: state.from, fromName: state.fromName ?? "your start", shape: state.art, minutes: state.artMinutes });
 }
@@ -585,6 +694,7 @@ function onArt(result: ArtResultMsg): void {
   goButton.disabled = false;
   lastCard = artCard(result);
   state.from = result.start;
+  unsnapped.delete("from");
   routeMap?.setMarker("from", result.start);
   const end = result.line.at(-1)!;
   routeMap?.setMarker("to", SHAPES[result.shape].closed ? null : end);
@@ -592,9 +702,8 @@ function onArt(result: ArtResultMsg): void {
   drawRoutes(result.template, result.line);
   routeMap?.setPins([], () => []);
   renderArt(result, (at) => routeMap?.flyTo(at));
-  clearShareImage();
-  showResult();
-  $("#announcer").textContent = `Drawing ready. ${lastCard.summary} Step-by-step directions follow the stats.`;
+  showResult(`${result.label} from ${state.fromName ?? "your start"}`);
+  $("#announcer").textContent = `Drawing ready. ${lastCard.summary} Directions follow the notes.`;
 }
 
 // --- Spell a word --------------------------------------------------------------------------------
@@ -639,7 +748,7 @@ function requestSpell(): void {
   state.crawl = null;
   state.workout = null;
   requestId++;
-  if (!state.open.includes("spell")) setOpen("spell", true);
+  setKind("word");
   setStatus("Laying out the letters…");
   send({ type: "spell", id: requestId, start: state.from, fromName: state.fromName ?? "your start", word: state.spell });
 }
@@ -651,6 +760,7 @@ function onSpell(result: SpellResultMsg): void {
   spellInput.value = result.word;
   lastCard = spellCard(result, state.spellInLink);
   state.from = result.start;
+  unsnapped.delete("from");
   routeMap?.setMarker("from", result.start);
   routeMap?.setMarker("to", result.end);
   writeLink();
@@ -658,9 +768,8 @@ function onSpell(result: SpellResultMsg): void {
   drawRoutes(result.template, result.strokeLines, result.penUpLines);
   routeMap?.setPins([], () => []);
   renderSpell(result, (at) => routeMap?.flyTo(at));
-  clearShareImage();
-  showResult();
-  $("#announcer").textContent = `Word ready. ${result.likeness}% readable, ${Math.max(1, Math.round(result.stats.timeS / 60))} minutes. Step-by-step directions follow the stats.`;
+  showResult(`A word from ${state.fromName ?? "your start"}`);
+  $("#announcer").textContent = `Word ready. ${result.likeness}% readable, ${Math.max(1, Math.round(result.stats.timeS / 60))} minutes. Directions follow the notes.`;
 }
 
 // --- Stops from park pins ------------------------------------------------------------------------
@@ -683,7 +792,7 @@ function parkActions(pin: Pin): PinAction[] {
 }
 
 function renderStops(): void {
-  $("#stops").hidden = state.stops.length === 0;
+  $("#stops").hidden = state.kind !== "route" || state.stops.length === 0;
   $("#stop-list").replaceChildren(
     ...state.stops.map((_, i) => {
       const li = document.createElement("li");
@@ -747,8 +856,7 @@ function syncToolForms(): void {
 
 function needFrom(what: string): boolean {
   if (state.from) return true;
-  setStatus(`Pick a From point first; the ${what} starts there.`, true);
-  if (!state.open.includes("plan")) setOpen("plan", true);
+  setStatus(`Pick a start first; the ${what} starts there.`, true);
   input("from").focus();
   return false;
 }
@@ -758,7 +866,8 @@ $<HTMLFormElement>("#crawl-form").addEventListener("submit", (e) => {
   if (!needFrom("crawl")) return;
   const toEnd = $<HTMLInputElement>("#crawl-end").checked;
   if (toEnd && !state.to) {
-    setStatus("Pick a To point to finish there, or untick the box to loop back.", true);
+    setStatus("Pick an end to finish there, or untick the box to loop back.", true);
+    input("to").focus();
     return;
   }
   const minutes = Number(radioValue("crawl-len"));
@@ -777,7 +886,7 @@ function requestCrawl(): void {
   state.art = null;
   state.workout = null;
   requestId++;
-  if (!state.open.includes("crawl")) setOpen("crawl", true);
+  setKind("crawl");
   setStatus("Planning the crawl…");
   send({
     type: "crawl",
@@ -805,7 +914,7 @@ function requestWorkout(): void {
   state.art = null;
   state.crawl = null;
   requestId++;
-  if (!state.open.includes("workout")) setOpen("workout", true);
+  setKind("workout");
   setStatus("Planning the loop…");
   send({ type: "workout", id: requestId, start: state.from, fromName: state.fromName ?? "your start", minutes: state.workout.minutes, focus: state.workout.focus });
 }
@@ -838,16 +947,21 @@ function onTour(result: TourResult): void {
   goButton.disabled = false;
   lastCard = tourCard(result);
   state.from = result.start;
+  unsnapped.delete("from");
   routeMap?.setMarker("from", result.start);
   const loops = result.end[0] === result.start[0] && result.end[1] === result.start[1];
+  if (!loops) {
+    // A crawl that finishes elsewhere: keep its snapped end, as routes do.
+    state.to = result.end;
+    unsnapped.delete("to");
+  }
   routeMap?.setMarker("to", loops ? null : result.end);
   writeLink();
   drawRoutes([], result.line);
   routeMap?.setPins(result.pins, stopActions);
   renderTour(result, (at) => routeMap?.flyTo(at));
-  clearShareImage();
-  showResult();
-  $("#announcer").textContent = `${result.kind === "crawl" ? "Crawl" : "Loop"} ready. ${result.summary} Step-by-step directions follow the stats.`;
+  showResult(`${result.kind === "crawl" ? "A crawl" : "A loop"} from ${state.fromName ?? "your start"}`);
+  $("#announcer").textContent = `${result.kind === "crawl" ? "Crawl" : "Loop"} ready. ${result.summary} Directions follow the notes.`;
 }
 
 // --- Famous routes -------------------------------------------------------------------------------

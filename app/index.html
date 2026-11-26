@@ -18,10 +18,15 @@
     <header class="banner">
       <div class="brand-row">
         <h1><svg class="logo" viewBox="0 0 64 64" aria-hidden="true"><rect width="64" height="64" rx="14"/><path d="M14 46h10V36h10V26h10V16h6"/></svg><span class="brand-name">Better <em>Directions</em></span></h1>
-        <button type="button" class="icon-button theme-toggle" id="theme-toggle" aria-pressed="false" aria-label="Dark mode" title="Dark mode">
-          <svg class="icon icon-moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20.5 13.2A8.5 8.5 0 1 1 10.8 3.5a6.6 6.6 0 0 0 9.7 9.7z"/></svg>
-          <svg class="icon icon-sun" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2.5v2M12 19.5v2M4.6 4.6 6 6M18 18l1.4 1.4M2.5 12h2M19.5 12h2M4.6 19.4 6 18M18 6l1.4-1.4"/></svg>
-        </button>
+        <div class="header-buttons">
+          <button type="button" class="icon-button" id="about-open" aria-haspopup="dialog" aria-label="About and privacy" title="About and privacy">
+            <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7.5v.5"/></svg>
+          </button>
+          <button type="button" class="icon-button theme-toggle" id="theme-toggle" aria-pressed="false" aria-label="Dark mode" title="Dark mode">
+            <svg class="icon icon-moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20.5 13.2A8.5 8.5 0 1 1 10.8 3.5a6.6 6.6 0 0 0 9.7 9.7z"/></svg>
+            <svg class="icon icon-sun" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2.5v2M12 19.5v2M4.6 4.6 6 6M18 18l1.4 1.4M2.5 12h2M19.5 12h2M4.6 19.4 6 18M18 6l1.4-1.4"/></svg>
+          </button>
+        </div>
       </div>
       <p class="novelty" id="novelty"><strong>For fun.</strong> Use common sense, follow signs and local rules, and don't follow it anywhere that looks unsafe or closed.</p>
     </header>
@@ -31,232 +36,218 @@
 
       <section id="panel" class="panel" aria-label="Route planner">
         <button type="button" class="sheet-handle" id="sheet-toggle" aria-expanded="false" aria-controls="panel" aria-label="Full-height planner"></button>
-        <div class="area-row">
-          <label for="area" class="visually-hidden">Area</label>
-          <span class="select-pill"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s-7-6.2-7-12a7 7 0 0 1 14 0c0 5.8-7 12-7 12z"/><circle cx="12" cy="9" r="2.5"/></svg><select id="area"></select></span>
-          <button type="button" class="chip" id="nearest-area">Nearest to me</button>
-        </div>
-        <p class="help area-note" id="area-note" hidden></p>
-        <!-- Near the top, and sticky, so errors and progress are seen wherever the panel is scrolled. -->
+        <!-- Errors and progress show here, sticky, wherever the panel is scrolled. -->
         <div id="status" class="status" role="status" aria-live="polite"></div>
-        <div class="sections">
-          <section class="section" data-section="plan">
-            <h2 class="section-head">
-              <button type="button" id="plan-head" aria-expanded="true" aria-controls="plan-body">
-                <span class="section-title">Plan a route</span>
-                <span class="section-summary">Two places and a mode. The long way, on purpose.</span>
-              </button>
-            </h2>
-            <div id="plan-body" class="section-body" role="region" aria-labelledby="plan-head">
-              <form id="planner" class="planner" novalidate>
-                <div class="route-inputs">
-                  <div class="endpoint" data-end="from">
-                    <label for="from-input" class="end-badge from"><span aria-hidden="true">A</span><span class="visually-hidden">From</span></label>
-                    <div class="combo">
-                      <input id="from-input" type="text" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="from-list" autocomplete="off" placeholder="Start: search, or tap the map" spellcheck="false">
-                      <ul id="from-list" class="options" role="listbox" aria-label="Matching places" hidden></ul>
-                    </div>
-                  </div>
-                  <div class="endpoint" data-end="to">
-                    <label for="to-input" class="end-badge to"><span aria-hidden="true">B</span><span class="visually-hidden">To</span></label>
-                    <div class="combo">
-                      <input id="to-input" type="text" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="to-list" autocomplete="off" placeholder="End: search, or tap the map" spellcheck="false">
-                      <ul id="to-list" class="options" role="listbox" aria-label="Matching places" hidden></ul>
-                    </div>
-                  </div>
-                  <button type="button" class="icon-button swap" data-action="swap" data-end="from" aria-label="Swap start and end" title="Swap start and end"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 20V4M8 4 4.5 7.5M8 4l3.5 3.5M16 4v16M16 20l-3.5-3.5M16 20l3.5-3.5"/></svg></button>
+
+        <!-- Plan: what kind of walk, from where. Replaced by the result once one is ready. -->
+        <div id="plan-view" class="plan-view">
+          <button type="button" class="back-link" id="back-to-result" hidden>Back to your route</button>
+          <div class="area-row">
+            <label for="area" class="visually-hidden">Area</label>
+            <span class="select-pill"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s-7-6.2-7-12a7 7 0 0 1 14 0c0 5.8-7 12-7 12z"/><circle cx="12" cy="9" r="2.5"/></svg><select id="area"></select></span>
+            <button type="button" class="chip" id="nearest-area">Nearest to me</button>
+          </div>
+          <p class="help area-note" id="area-note" hidden></p>
+
+          <fieldset class="choice segmented kinds">
+            <legend class="visually-hidden">Kind of walk</legend>
+            <label><input type="radio" name="kind" value="route" checked> A to B</label>
+            <label><input type="radio" name="kind" value="crawl"> Crawl</label>
+            <label><input type="radio" name="kind" value="workout"> Workout</label>
+            <label><input type="radio" name="kind" value="draw"> Draw</label>
+          </fieldset>
+          <p class="help kind-desc" id="kind-desc"></p>
+
+          <form id="planner" class="planner" novalidate>
+            <div class="route-inputs" id="route-inputs">
+              <div class="endpoint" data-end="from">
+                <label for="from-input" class="end-badge from"><span aria-hidden="true">A</span><span class="visually-hidden">From</span></label>
+                <div class="combo">
+                  <input id="from-input" type="text" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="from-list" autocomplete="off" placeholder="Start: search, or tap the map" spellcheck="false">
+                  <ul id="from-list" class="options" role="listbox" aria-label="Matching places" hidden></ul>
                 </div>
-                <div class="endpoint-actions">
-                  <button type="button" class="chip" data-action="locate" data-end="from"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="7"/><circle cx="12" cy="12" r="2.5"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg>My location</button>
-                  <button type="button" class="chip" data-action="centre" data-end="from"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8"/><path d="M12 8v8M8 12h8"/></svg>Start at map centre</button>
-                  <button type="button" class="chip" data-action="centre" data-end="to"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8"/><path d="M12 8v8M8 12h8"/></svg>End at map centre</button>
+              </div>
+              <div class="endpoint" data-end="to" id="to-endpoint">
+                <label for="to-input" class="end-badge to"><span aria-hidden="true">B</span><span class="visually-hidden">To</span></label>
+                <div class="combo">
+                  <input id="to-input" type="text" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="to-list" autocomplete="off" placeholder="End: search, or tap the map" spellcheck="false">
+                  <ul id="to-list" class="options" role="listbox" aria-label="Matching places" hidden></ul>
                 </div>
-
-                <div class="stops" id="stops" hidden>
-                  <span class="stops-title">Stops on the way</span>
-                  <ol id="stop-list"></ol>
-                  <p class="help">Tap a park pin on the map to add it as a stop (up to three).</p>
-                </div>
-
-                <fieldset class="modes">
-                  <legend>Mode</legend>
-                  <div class="mode-list" id="mode-list"></div>
-                </fieldset>
-
-                <label class="check"><input type="checkbox" id="long-walk"> Longer walk: allow up to 1 h 30</label>
-
-                <div class="seed-row" id="seed-row" hidden>
-                  <span>Seed <output id="seed-value" for="shuffle">1</output></span>
-                  <button type="button" id="shuffle" class="secondary">New seed</button>
-                </div>
-
-                <button type="submit" class="go" id="go">Find a better route</button>
-              </form>
+              </div>
+              <button type="button" class="icon-button swap" id="swap" data-action="swap" data-end="from" aria-label="Swap start and end" title="Swap start and end"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 20V4M8 4 4.5 7.5M8 4l3.5 3.5M16 4v16M16 20l-3.5-3.5M16 20l3.5-3.5"/></svg></button>
             </div>
-          </section>
-
-          <section class="section" data-section="crawl">
-            <h2 class="section-head">
-              <button type="button" id="crawl-head" aria-expanded="false" aria-controls="crawl-body">
-                <span class="section-title">Crawls</span>
-                <span class="section-summary">Art, pubs or wine: a few stops in a sensible order.</span>
-              </button>
-            </h2>
-            <div id="crawl-body" class="section-body" role="region" aria-labelledby="crawl-head" hidden>
-              <form id="crawl-form" class="tool-form" novalidate>
-                <p class="help">Starts from your From point. Stops are chosen and ordered by route, not by rating.</p>
-                <fieldset class="choice">
-                  <legend>Theme</legend>
-                  <label><input type="radio" name="crawl-theme" value="art" checked> Art: murals, sculptures, galleries</label>
-                  <label><input type="radio" name="crawl-theme" value="pub"> Pubs and bars</label>
-                  <label><input type="radio" name="crawl-theme" value="wine"> Wine bars and shops</label>
-                </fieldset>
-                <label for="crawl-count">Stops</label>
-                <select id="crawl-count"></select>
-                <fieldset class="choice segmented">
-                  <legend>Walking time, about</legend>
-                  <label><input type="radio" name="crawl-len" value="30"> 30 min</label>
-                  <label><input type="radio" name="crawl-len" value="45" checked> 45 min</label>
-                  <label><input type="radio" name="crawl-len" value="60"> 1 h</label>
-                  <label><input type="radio" name="crawl-len" value="90"> 1 h 30</label>
-                </fieldset>
-                <label class="check"><input type="checkbox" id="crawl-end"> Finish at the To point instead of looping back</label>
-                <button type="submit" class="secondary">Plan the crawl</button>
-              </form>
+            <div class="endpoint-actions">
+              <button type="button" class="chip" data-action="locate" data-end="from"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="7"/><circle cx="12" cy="12" r="2.5"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg>Start at my location</button>
             </div>
-          </section>
 
-          <section class="section" data-section="art">
-            <h2 class="section-head">
-              <button type="button" id="art-head" aria-expanded="false" aria-controls="art-body">
-                <span class="section-title">Draw a shape</span>
-                <span class="section-summary">Walk a heart, a star or a letter. Experimental.</span>
-              </button>
-            </h2>
-            <div id="art-body" class="section-body" role="region" aria-labelledby="art-head" hidden>
-              <form id="art-form" class="tool-form" novalidate>
-                <p class="help">Starts from your From point and loops back, or ends where the letter ends.</p>
-                <label for="art-shape">Shape</label>
-                <select id="art-shape"></select>
-                <fieldset class="choice segmented">
-                  <legend>Walk length</legend>
-                  <label><input type="radio" name="art-len" value="25"> 25 min</label>
-                  <label><input type="radio" name="art-len" value="40" checked> 40 min</label>
-                  <label><input type="radio" name="art-len" value="55"> 55 min</label>
-                  <label><input type="radio" name="art-len" value="75"> 1 h 15</label>
-                </fieldset>
-                <button type="submit" class="secondary">Draw it</button>
-              </form>
+            <div class="stops" id="stops" hidden>
+              <span class="stops-title">Stops on the way</span>
+              <ol id="stop-list"></ol>
             </div>
-          </section>
 
-          <section class="section" data-section="spell">
-            <h2 class="section-head">
-              <button type="button" id="spell-head" aria-expanded="false" aria-controls="spell-body">
-                <span class="section-title">Spell a word</span>
-                <span class="section-summary">A walk whose trace spells a name. Grids work best.</span>
-              </button>
-            </h2>
-            <div id="spell-body" class="section-body" role="region" aria-labelledby="spell-head" hidden>
-              <form id="spell-form" class="tool-form" novalidate>
-                <p class="help">Starts from your From point. Up to 6 letters or digits, within an hour's walk; 4 or 5 is usually the most that fits. The word stays on your device.</p>
-                <label for="spell-word">Word or name</label>
-                <input id="spell-word" type="text" maxlength="24" autocomplete="off" autocapitalize="characters" spellcheck="false">
-                <label class="check"><input type="checkbox" id="spell-in-link"> Include the word in shared links</label>
-                <div class="row">
-                  <button type="submit" class="secondary">Spell it</button>
-                  <button type="button" class="link-button" id="spell-suggestion" hidden></button>
-                </div>
-              </form>
-            </div>
-          </section>
+            <fieldset class="modes" data-kind="route">
+              <legend>Mode</legend>
+              <div class="mode-list" id="mode-list"></div>
+              <p class="help mode-desc" id="mode-desc" aria-live="polite"></p>
+            </fieldset>
 
-          <section class="section" data-section="workout">
-            <h2 class="section-head">
-              <button type="button" id="workout-head" aria-expanded="false" aria-controls="workout-body">
-                <span class="section-title">Workout</span>
-                <span class="section-summary">A loop with stairs, hills or both.</span>
-              </button>
-            </h2>
-            <div id="workout-body" class="section-body" role="region" aria-labelledby="workout-head" hidden>
-              <form id="workout-form" class="tool-form" novalidate>
-                <p class="help">Starts and ends at your From point. Longer loops prefer lit streets.</p>
-                <fieldset class="choice">
-                  <legend>Focus</legend>
-                  <label><input type="radio" name="workout-focus" value="stairs" checked> Stairs: as many staircases as fit</label>
-                  <label><input type="radio" name="workout-focus" value="hills"> Hills: as much climbing as fits</label>
-                  <label><input type="radio" name="workout-focus" value="mixed"> Mixed</label>
-                </fieldset>
-                <p class="help" id="workout-terrain-note" hidden>Hills and Mixed need elevation data, which this area doesn't have yet.</p>
-                <fieldset class="choice segmented">
-                  <legend>Length</legend>
-                  <label><input type="radio" name="workout-len" value="20"> 20 min</label>
-                  <label><input type="radio" name="workout-len" value="30" checked> 30 min</label>
-                  <label><input type="radio" name="workout-len" value="45"> 45 min</label>
-                  <label><input type="radio" name="workout-len" value="60"> 1 h</label>
-                  <label><input type="radio" name="workout-len" value="90"> 1 h 30</label>
-                </fieldset>
-                <button type="submit" class="secondary">Plan the loop</button>
-              </form>
-            </div>
-          </section>
+            <button type="submit" class="go" id="go" data-kind="route">Show the better route</button>
+          </form>
 
-          <section class="section" data-section="famous">
-            <h2 class="section-head">
-              <button type="button" id="famous-head" aria-expanded="false" aria-controls="famous-body">
-                <span class="section-title">Famous routes</span>
-                <span class="section-summary">A few good ones to start with.</span>
-              </button>
-            </h2>
-            <div id="famous-body" class="section-body" role="region" aria-labelledby="famous-head" hidden>
-              <ul id="famous-list" class="famous-list"></ul>
-            </div>
-          </section>
+          <form id="crawl-form" class="tool-form" data-kind="crawl" novalidate>
+            <fieldset class="choice">
+              <legend>Theme</legend>
+              <label><input type="radio" name="crawl-theme" value="art" checked> Art: murals, sculptures, galleries</label>
+              <label><input type="radio" name="crawl-theme" value="pub"> Pubs and bars</label>
+              <label><input type="radio" name="crawl-theme" value="wine"> Wine bars and shops</label>
+            </fieldset>
+            <label for="crawl-count">Stops</label>
+            <select id="crawl-count"></select>
+            <fieldset class="choice segmented">
+              <legend>Walking time, about</legend>
+              <label><input type="radio" name="crawl-len" value="30"> 30 min</label>
+              <label><input type="radio" name="crawl-len" value="45" checked> 45 min</label>
+              <label><input type="radio" name="crawl-len" value="60"> 1 h</label>
+              <label><input type="radio" name="crawl-len" value="90"> 1 h 30</label>
+              <label><input type="radio" name="crawl-len" value="120"> 2 h</label>
+            </fieldset>
+            <label class="check"><input type="checkbox" id="crawl-end"> Finish somewhere else instead of looping back</label>
+            <button type="submit">Plan the crawl</button>
+          </form>
 
-          <section class="section" data-section="about">
-            <h2 class="section-head">
-              <button type="button" id="about-head" aria-expanded="false" aria-controls="about-body">
-                <span class="section-title">About and privacy</span>
-                <span class="section-summary">What this is, and what it doesn't collect.</span>
-              </button>
-            </h2>
-            <div id="about-body" class="section-body about" role="region" aria-labelledby="about-head" hidden>
-              <p>Better Directions finds a deliberately longer walk between two places, and shows the normal route next to it so you know what the detour costs. It also plans crawls, workout loops and walks that draw a shape.</p>
-              <p>It only uses paths that are open to walkers in OpenStreetMap. It never routes along railways, motorways, construction or anything marked private, and it only goes through buildings by mapped public passages. It can still be wrong: the map may be out of date, and gates and doors close. Follow signs, and skip anything that looks closed or unsafe.</p>
-              <p>Everything runs on your device. There are no cookies, no tracking and no accounts, and the page talks to no one but this site. Your location is used only when you tap "My location" or "Nearest to me", and it stays on your device. Shared links and images include your start and end points.</p>
+          <form id="workout-form" class="tool-form" data-kind="workout" novalidate>
+            <fieldset class="choice">
+              <legend>Focus</legend>
+              <label><input type="radio" name="workout-focus" value="stairs" checked> Stairs: as many staircases as fit</label>
+              <label><input type="radio" name="workout-focus" value="hills"> Hills: as much climbing as fits</label>
+              <label><input type="radio" name="workout-focus" value="mixed"> Mixed</label>
+            </fieldset>
+            <p class="help" id="workout-terrain-note" hidden>Hills and Mixed need elevation data, which this area doesn't have yet.</p>
+            <fieldset class="choice segmented">
+              <legend>Length</legend>
+              <label><input type="radio" name="workout-len" value="20"> 20 min</label>
+              <label><input type="radio" name="workout-len" value="30" checked> 30 min</label>
+              <label><input type="radio" name="workout-len" value="45"> 45 min</label>
+              <label><input type="radio" name="workout-len" value="60"> 1 h</label>
+              <label><input type="radio" name="workout-len" value="90"> 1 h 30</label>
+              <label><input type="radio" name="workout-len" value="120"> 2 h</label>
+            </fieldset>
+            <button type="submit">Plan the loop</button>
+          </form>
+
+          <div class="draw" data-kind="draw">
+            <fieldset class="choice segmented">
+              <legend class="visually-hidden">Draw</legend>
+              <label><input type="radio" name="draw" value="shape" checked> A shape</label>
+              <label><input type="radio" name="draw" value="word"> A word</label>
+            </fieldset>
+            <form id="art-form" class="tool-form" data-draw="shape" novalidate>
+              <label for="art-shape">Shape</label>
+              <select id="art-shape"></select>
+              <fieldset class="choice segmented">
+                <legend>Walk length</legend>
+                <label><input type="radio" name="art-len" value="25"> 25 min</label>
+                <label><input type="radio" name="art-len" value="40" checked> 40 min</label>
+                <label><input type="radio" name="art-len" value="55"> 55 min</label>
+                <label><input type="radio" name="art-len" value="75"> 1 h 15</label>
+              </fieldset>
+              <button type="submit">Draw it</button>
+            </form>
+            <form id="spell-form" class="tool-form" data-draw="word" novalidate hidden>
+              <label for="spell-word">Word or initials</label>
+              <input id="spell-word" type="text" maxlength="24" autocomplete="off" autocapitalize="characters" spellcheck="false" aria-describedby="spell-help">
+              <p class="help" id="spell-help">Up to 6 letters or digits; 4 or 5 usually fit an hour. The word stays on your device.</p>
+              <label class="check"><input type="checkbox" id="spell-in-link"> Include the word in shared links</label>
+              <div class="row">
+                <button type="submit">Spell it</button>
+                <button type="button" class="link-button" id="spell-suggestion" hidden></button>
+              </div>
+            </form>
+          </div>
+
+          <details class="more" id="more">
+            <summary>More options</summary>
+            <div class="more-body">
+              <label class="check" data-kind="route"><input type="checkbox" id="long-walk"> Longer walk: allow up to 2 h</label>
+              <div class="seed-row" id="seed-row" hidden>
+                <span>Seed <output id="seed-value" for="shuffle">1</output></span>
+                <button type="button" id="shuffle" class="secondary">New seed</button>
+              </div>
+              <div class="endpoint-actions">
+                <button type="button" class="chip" data-action="centre" data-end="from"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8"/><path d="M12 8v8M8 12h8"/></svg>Start at map centre</button>
+                <button type="button" class="chip" data-action="centre" data-end="to" id="centre-to"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8"/><path d="M12 8v8M8 12h8"/></svg>End at map centre</button>
+              </div>
             </div>
+          </details>
+
+          <section class="famous" aria-labelledby="famous-title">
+            <h2 id="famous-title">Famous routes to try</h2>
+            <ul id="famous-list" class="famous-list"></ul>
           </section>
         </div>
 
-        <div id="announcer" class="visually-hidden" aria-live="polite"></div>
-
+        <!-- Result: replaces the plan view. Directions come straight after the summary and notes. -->
         <section id="result" class="result" aria-labelledby="result-title" hidden tabindex="-1">
+          <div class="trip-bar">
+            <button type="button" class="back-button" id="edit"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg>Edit</button>
+            <p class="trip" id="trip"></p>
+            <button type="button" class="secondary share-open" id="share-open" aria-haspopup="dialog">Share</button>
+          </div>
+          <div class="mode-chips" id="mode-chips" role="group" aria-label="Try another mode" hidden></div>
           <h2 id="result-title" class="route-name"><span class="visually-hidden">Your route: </span><span id="route-name"></span></h2>
+          <div class="callout" id="same-box" hidden>
+            <p id="same-note"></p>
+            <button type="button" class="secondary" id="allow-long" hidden>Allow a longer walk</button>
+          </div>
           <p class="summary" id="summary"></p>
           <div class="legend" aria-hidden="true">
             <span class="swatch better"></span> <span id="legend-better">Better route</span>
             <span class="swatch normal"></span> <span id="legend-normal">Normal route</span>
           </div>
           <dl class="stats" id="stats"></dl>
-          <p class="late-hint" id="late-hint" hidden>It's late. Some parks and passages on this route may already be locked; check the notes below.</p>
-          <ul class="notes" id="notes" aria-label="Things to know"></ul>
-          <div class="share-row">
-            <button type="button" id="share" class="secondary">Share link</button>
-            <button type="button" id="make-image" class="secondary">Make a share image</button>
-            <span class="share-note">Links and images show your start and end points.</span>
+          <ul class="info" id="info"></ul>
+          <div class="warnings" id="warnings" hidden>
+            <p class="late-hint" id="late-hint" hidden>It's late: some of these may already be shut.</p>
+            <ul class="notes" id="notes" aria-label="Before you go"></ul>
           </div>
-          <figure class="share-image" id="share-image" hidden>
-            <img id="share-preview" alt="Share image: the route on a map with its name and what the detour costs." width="1080" height="1350">
-            <figcaption>
-              <button type="button" id="share-image-share" class="secondary">Share image</button>
-              <a id="share-image-download" class="button-link" download="better-directions.png" href="#">Download</a>
-            </figcaption>
-          </figure>
-          <h3>Step by step</h3>
+          <h3 id="directions-title">Directions <span class="count" id="step-count"></span></h3>
           <ol class="steps" id="steps"></ol>
         </section>
+
+        <div id="announcer" class="visually-hidden" aria-live="polite"></div>
       </section>
     </main>
+
+    <dialog id="share-dialog" class="dialog" aria-labelledby="share-title">
+      <div class="dialog-head">
+        <h2 id="share-title">Share this walk</h2>
+        <button type="button" class="icon-button" data-close aria-label="Close"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
+      </div>
+      <div class="share-row">
+        <button type="button" id="share" class="secondary">Share link</button>
+        <button type="button" id="make-image" class="secondary">Make a share image</button>
+      </div>
+      <p class="share-note">Links and images show your start and end points.</p>
+      <p class="share-status" id="share-status" role="status" aria-live="polite"></p>
+      <input class="share-url" id="share-url" type="text" readonly aria-label="Link to this walk" hidden>
+      <figure class="share-image" id="share-image" hidden>
+        <img id="share-preview" alt="Share image: the route on a map with its name and what the detour costs." width="1080" height="1350">
+        <figcaption>
+          <button type="button" id="share-image-share" class="secondary">Share image</button>
+          <a id="share-image-download" class="button-link" download="better-directions.png" href="#">Download</a>
+        </figcaption>
+      </figure>
+    </dialog>
+
+    <dialog id="about-dialog" class="dialog about" aria-labelledby="about-title">
+      <div class="dialog-head">
+        <h2 id="about-title">About and privacy</h2>
+        <button type="button" class="icon-button" data-close aria-label="Close"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
+      </div>
+      <p>Better Directions finds a deliberately longer walk between two places, and shows the normal route next to it so you know what the detour costs. It also plans crawls, workout loops and walks that draw a shape or spell a word.</p>
+      <p>It only uses paths that are open to walkers in OpenStreetMap. It never routes along railways, motorways, construction or anything marked private, and it only goes through buildings by mapped public passages. It can still be wrong: the map may be out of date, and gates and doors close. Follow signs, and skip anything that looks closed or unsafe.</p>
+      <p>Everything runs on your device. There are no cookies, no tracking and no accounts, and the page talks to no one but this site. Your location is used only when you tap "Start at my location" or "Nearest to me", and it stays on your device. Shared links and images include your start and end points.</p>
+    </dialog>
 
     <footer class="attribution">
       <p>

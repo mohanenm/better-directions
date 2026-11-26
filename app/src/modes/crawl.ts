@@ -147,8 +147,8 @@ export function eveningNote(openingHours: string, theme: CrawlTheme): string {
   return lateEnough ? "" : `Hours (${openingHours}) suggest it may be closed in the evening.`;
 }
 
-/** Crawls are 15 to 90 minutes; the planner and the tile loader both use these. */
-export const clampCrawlMinutes = (minutes: number): number => Math.max(15, Math.min(90, minutes));
+/** Crawls are 15 to 120 minutes; the planner and the tile loader both use these. */
+export const clampCrawlMinutes = (minutes: number): number => Math.max(15, Math.min(120, minutes));
 export const crawlCapSeconds = (minutes: number): number => loopCapSeconds(clampCrawlMinutes(minutes));
 
 export function planCrawl(router: Router, fi: FeatureIndex, opts: CrawlOptions): CrawlPlan | null {

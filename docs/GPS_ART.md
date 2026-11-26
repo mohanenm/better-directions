@@ -40,7 +40,7 @@ Straight-edged shapes suit a city of streets, and Guillotière's regular grid is
 
 ## Spelling a word
 
-The Spell a word section draws 2 to 6 capital letters and digits with a stroke font (`app/src/art/font.ts`) made mostly of straight lines and right angles. The word is laid out left to right and sized so the whole walk should take under an hour: letters are between 160 and 450 m tall. If even the smallest size won't fit, the page says so, and for a name of several words suggests its initials. In practice 4 or 5 letters is the most that fits; 6 only with narrow characters.
+Spelling a word (Draw, then A word) draws 2 to 6 capital letters and digits with a stroke font (`app/src/art/font.ts`) made mostly of straight lines and right angles. The word is laid out left to right and sized so the whole walk should take under an hour: letters are between 160 and 450 m tall. If even the smallest size won't fit, the page says so, and for a name of several words suggests its initials. In practice 4 or 5 letters is the most that fits; 6 only with narrow characters.
 
 Placements are tried at a few rotations (level, ±8°, and the dominant street direction within 700 m), two sizes and five offsets, scored against the street network, and the five best are traced. Each stroke is traced like a shape; between strokes the walk takes the shortest way to the next one, shown dotted on the map. Readability is the same chamfer measure as likeness, per letter and overall, relative to the letter height.
 

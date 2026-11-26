@@ -73,7 +73,8 @@ try {
   await send("Emulation.setDeviceMetricsOverride", { width: 390, height: 844, deviceScaleFactor: 2, mobile: true });
   await send("Target.setAutoAttach", { autoAttach: true, waitForDebuggerOnStart: true, flatten: true });
 
-  const query = `?${AREA === "lyon" ? "" : `area=${AREA}&`}${ROUTES[AREA]}`;
+  // ROUTE="from=…&to=…&mode=…" measures another route instead.
+  const query = `?${AREA === "lyon" ? "" : `area=${AREA}&`}${process.env.ROUTE ?? ROUTES[AREA]}`;
   const t0 = Date.now();
   await send("Page.navigate", { url: `${URL_BASE}/better-directions/${query}` });
   let ready = 0, routed = 0;

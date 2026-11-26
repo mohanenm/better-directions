@@ -70,7 +70,7 @@ export type SameAsNormal = "too-long" | "already" | "nothing-here" | "no-detour"
  */
 export function sameAsNormalReason(p: { mode: ModeId; normal: Route; better: Route; normalStats: CostOfFun; betterStats: CostOfFun; capSeconds: number }): SameAsNormal | null {
   if (p.better.timeS - p.normal.timeS >= 60) return null;
-  // The cap is set by the walk's own length once that reaches the hour (or hour and a half).
+  // The cap is set by the walk's own length once that reaches the hour (a longer walk always has room).
   if (p.normal.timeS >= DETOUR.maxSeconds - 60 && p.capSeconds - p.normal.timeS < 60) return "too-long";
   if (p.mode === "no-right" && p.normalStats.rightTurns === 0) return "already";
   if (MODE_FEATURE[p.mode] && !deliversMode(p.mode, p.betterStats)) return "nothing-here";

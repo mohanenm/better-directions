@@ -28,7 +28,7 @@ export interface PlanRequest {
   seed: number;
   /** Points the route must pass through, in order. */
   stops: [number, number][];
-  /** A longer walk: detours may take up to 90 minutes instead of an hour. */
+  /** A longer walk: detours may take up to two hours instead of one (see safety/limits.ts). */
   long: boolean;
 }
 
@@ -152,7 +152,7 @@ export interface PlanResult {
    * there's none of the mode's feature within reach; or no detour fits.
    */
   sameAsNormal: SameAsNormal | null;
-  /** Whether the walker asked for a longer walk (detours up to 90 minutes). */
+  /** Whether the walker asked for a longer walk (detours up to two hours). */
   long: boolean;
   /** What the mode looks for, when the route found none of it ("staircases"), else null. */
   missingFeature: string | null;

@@ -5,8 +5,8 @@ import { parseLink, serializeLink } from "../src/ui/url";
 const BBOX = { west: 4.77, south: 45.7, east: 4.93, north: 45.81 };
 
 describe("shareable links", () => {
-  it("round-trips start, end, mode, seed and open sections", () => {
-    const state = { from: [4.832, 45.7578] as [number, number], to: [4.8336, 45.7675] as [number, number], fromName: "Place Bellecour", toName: "Place des Terreaux", mode: "chaos" as const, seed: 42, art: null, artMinutes: 40, open: ["plan", "famous"] as ("plan" | "famous")[], stops: [[4.84, 45.76]] as [number, number][], workout: null, crawl: null, spell: null, spellInLink: false, long: false };
+  it("round-trips start, end, mode, seed and stops", () => {
+    const state = { from: [4.832, 45.7578] as [number, number], to: [4.8336, 45.7675] as [number, number], fromName: "Place Bellecour", toName: "Place des Terreaux", mode: "chaos" as const, seed: 42, art: null, artMinutes: 40, kind: "route" as const, stops: [[4.84, 45.76]] as [number, number][], workout: null, crawl: null, spell: null, spellInLink: false, long: false };
     const parsed = parseLink(serializeLink(state), BBOX);
     expect(parsed).toEqual(state);
   });
@@ -28,18 +28,18 @@ describe("shareable links", () => {
   });
 
   it("only includes the seed for random routes", () => {
-    expect(serializeLink({ from: null, to: null, fromName: null, toName: null, mode: "parks", seed: 9, art: null, artMinutes: 40, open: ["plan"], stops: [], workout: null, crawl: null, spell: null, spellInLink: false, long: false })).toBe("?mode=parks");
+    expect(serializeLink({ from: null, to: null, fromName: null, toName: null, mode: "parks", seed: 9, art: null, artMinutes: 40, kind: "route", stops: [], workout: null, crawl: null, spell: null, spellInLink: false, long: false })).toBe("?mode=parks");
   });
 });
 
 describe("crawl and workout links", () => {
   const base = { from: [4.832, 45.7578] as [number, number], to: [4.84, 45.76] as [number, number], fromName: "Place Bellecour", toName: "Croix-Rousse", mode: "stairs" as const, seed: 1, art: null, artMinutes: 40, stops: [], spell: null, spellInLink: false, long: false };
   it("round-trip a crawl, with and without an end", () => {
-    const loop = { ...base, open: ["crawl" as const], workout: null, crawl: { theme: "pub" as const, count: 4, minutes: 60, toEnd: false } };
+    const loop = { ...base, kind: "crawl" as const, workout: null, crawl: { theme: "pub" as const, count: 4, minutes: 60, toEnd: false } };
     const parsed = parseLink(serializeLink(loop), BBOX);
     expect(parsed.crawl).toEqual(loop.crawl);
     expect(parsed.to).toBeNull();
-    expect(parsed.open).toEqual(["crawl"]);
+    expect(parsed.kind).toBe("crawl");
     const oneWay = { ...loop, crawl: { ...loop.crawl, toEnd: true } };
     expect(parseLink(serializeLink(oneWay), BBOX).to).toEqual([4.84, 45.76]);
   });
@@ -48,7 +48,7 @@ describe("crawl and workout links", () => {
     expect(parseLink("?crawl=absinthe", BBOX).crawl).toBeNull();
   });
   it("round-trips a workout and rejects unknown lengths", () => {
-    const w = { ...base, open: ["workout" as const], crawl: null, workout: { focus: "hills" as const, minutes: 45 } };
+    const w = { ...base, kind: "workout" as const, crawl: null, workout: { focus: "hills" as const, minutes: 45 } };
     expect(parseLink(serializeLink(w), BBOX).workout).toEqual(w.workout);
     expect(parseLink("?workout=stairs&len=600", BBOX).workout).toEqual({ focus: "stairs", minutes: 30 });
   });
@@ -58,13 +58,14 @@ describe("crawl and workout links", () => {
 });
 
 describe("spelled words in links", () => {
-  const base = { from: [4.845, 45.751] as [number, number], to: null, fromName: null, toName: null, mode: "stairs" as const, seed: 1, art: null, artMinutes: 40, open: ["spell" as const], stops: [], workout: null, crawl: null, long: false };
+  const base = { from: [4.845, 45.751] as [number, number], to: null, fromName: null, toName: null, mode: "stairs" as const, seed: 1, art: null, artMinutes: 40, kind: "word" as const, stops: [], workout: null, crawl: null, long: false };
   it("leaves the word out unless asked", () => {
     const hidden = serializeLink({ ...base, spell: "ADA", spellInLink: false, long: false });
     expect(hidden).not.toContain("ADA");
-    expect(parseLink(hidden, BBOX).spell).toBeNull();
+    // The link still opens the word tool, just empty.
+    expect(parseLink(hidden, BBOX)).toMatchObject({ spell: null, kind: "word" });
     const shown = serializeLink({ ...base, spell: "ADA", spellInLink: true });
-    expect(parseLink(shown, BBOX)).toMatchObject({ spell: "ADA", spellInLink: true, open: ["spell"] });
+    expect(parseLink(shown, BBOX)).toMatchObject({ spell: "ADA", spellInLink: true, kind: "word" });
   });
   it("cleans up words from links", () => {
     expect(parseLink("?spell=z%C3%B6%3Cb%3E", BBOX).spell).toBe("ZOB");
@@ -74,9 +75,9 @@ describe("spelled words in links", () => {
   it("uses the default stop count when a crawl link has none", () => {
     expect(parseLink("?from=4.83,45.76&crawl=art", BBOX).crawl?.count).toBe(5);
   });
-  it("keeps one tool per link, and opens its panel", () => {
-    expect(parseLink("?from=4.83,45.76&crawl=pub&workout=hills", BBOX)).toMatchObject({ crawl: null, workout: { focus: "hills" }, open: ["workout"] });
-    expect(parseLink("?from=4.83,45.76&spell=HI&art=heart", BBOX)).toMatchObject({ art: null, spell: "HI", open: ["spell"] });
+  it("keeps one tool per link, and sets the planner to it", () => {
+    expect(parseLink("?from=4.83,45.76&crawl=pub&workout=hills", BBOX)).toMatchObject({ crawl: null, workout: { focus: "hills" }, kind: "workout" });
+    expect(parseLink("?from=4.83,45.76&spell=HI&art=heart", BBOX)).toMatchObject({ art: null, spell: "HI", kind: "word" });
   });
   it("keeps points to the graph's precision, so a link reopens the same snapped point", () => {
     const base = parseLink("", BBOX);
@@ -88,11 +89,24 @@ describe("spelled words in links", () => {
   });
 });
 
-describe("open sections in links", () => {
-  it("defaults to the route planner and drops unknown sections", () => {
-    expect(parseLink("", BBOX).open).toEqual(["plan"]);
-    expect(parseLink("?open=about,nonsense,art", BBOX).open).toEqual(["art", "about"]);
-    expect(parseLink("?open=", BBOX).open).toEqual([]);
+describe("the kind of walk in links", () => {
+  it("defaults to a route, and ignores unknown kinds", () => {
+    expect(parseLink("", BBOX).kind).toBe("route");
+    expect(parseLink("?kind=teleport", BBOX).kind).toBe("route");
+    expect(parseLink("?kind=workout", BBOX).kind).toBe("workout");
+  });
+  it("only writes the kind when the rest of the link doesn't imply it", () => {
+    const empty = parseLink("", BBOX);
+    expect(serializeLink({ ...empty, kind: "crawl" })).toContain("kind=crawl");
+    expect(serializeLink(empty)).not.toContain("kind");
+  });
+  it("still reads older links that named open panel sections", () => {
+    expect(parseLink("?open=plan,about,art", BBOX).kind).toBe("shape");
+    expect(parseLink("?open=spell", BBOX).kind).toBe("word");
+    expect(parseLink("?open=plan,famous", BBOX).kind).toBe("route");
+  });
+  it("ignores prototype names in old links (they once broke the page)", () => {
+    for (const v of ["constructor", "__proto__", "toString", "hasOwnProperty"]) expect(parseLink(`?open=${v}`, BBOX).kind).toBe("route");
   });
 });
 
@@ -116,7 +130,7 @@ describe("place search", () => {
 
 describe("GPS art links", () => {
   it("round-trip shape and length, and ignore unknown shapes and lengths", () => {
-    const link = serializeLink({ from: [4.832, 45.7578], to: [4.84, 45.76], fromName: "Place Bellecour", toName: null, mode: "stairs", seed: 1, art: "heart", artMinutes: 55, open: ["art"], stops: [], workout: null, crawl: null, spell: null, spellInLink: false, long: false });
+    const link = serializeLink({ from: [4.832, 45.7578], to: [4.84, 45.76], fromName: "Place Bellecour", toName: null, mode: "stairs", seed: 1, art: "heart", artMinutes: 55, kind: "shape", stops: [], workout: null, crawl: null, spell: null, spellInLink: false, long: false });
     expect(link).toBe("?from=4.832%2C45.7578&fromName=Place+Bellecour&art=heart&len=55");
     const parsed = parseLink(link, BBOX);
     expect(parsed.art).toBe("heart");
