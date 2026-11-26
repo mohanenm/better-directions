@@ -24,7 +24,7 @@ from pathlib import Path
 
 import osmium
 
-from bdgraph.city import City, load_city
+from bdgraph.city import City, extract_urls, load_city
 
 USER_AGENT = "better-directions-build/0.1 (offline graph build)"
 CHUNK = 1 << 20
@@ -67,8 +67,8 @@ def download(url: str, dest: Path) -> None:
     tmp.rename(dest)
 
 
-def fetch_region(city: City, raw_dir: Path) -> tuple[Path, str]:
-    dated_url = resolve_dated_url(city.extract_url)
+def fetch_region(url: str, raw_dir: Path) -> tuple[Path, str]:
+    dated_url = resolve_dated_url(url)
     dest = raw_dir / dated_url.rsplit("/", 1)[1]
     with _open(dated_url + ".md5") as resp:
         expected_md5 = resp.read().decode().split()[0]
@@ -120,11 +120,65 @@ def crop(region: Path, out: Path, city: City) -> dict[str, int]:
     return counts
 
 
-def write_source(
-    city: City, path: Path, *, dated_url: str, region: Path, cropped: Path, counts: dict[str, int]
-) -> None:
+class _Copy:
+    """A handler that writes every object it's given, for merging."""
+
+    def __init__(self, writer: osmium.SimpleWriter) -> None:
+        self.writer = writer
+
+    def node(self, n) -> None:
+        self.writer.add_node(n)
+
+    def way(self, w) -> None:
+        self.writer.add_way(w)
+
+    def relation(self, r) -> None:
+        self.writer.add_relation(r)
+
+
+def merge(parts: list[Path], out: Path) -> None:
+    """Merge cropped extracts into one file. Objects in more than one (ways crossing the state
+    line, shared nodes) are kept once, in their newest version."""
+    reader = osmium.MergeInputReader()
+    for p in parts:
+        reader.add_file(str(p))
+    with osmium.SimpleWriter(str(out), overwrite=True) as writer:
+        reader.apply(_Copy(writer), simplify=True)
+
+
+def count_inside(path: Path, city: City) -> dict[str, int]:
+    """Nodes inside the bbox, and ways and area relations, in a cropped file."""
+    b = city.bbox
+    counts = {"nodes": 0, "ways": 0, "relations": 0}
+    for obj in osmium.FileProcessor(str(path)):
+        if obj.is_node():
+            loc = obj.location
+            inside = loc.valid() and b.west <= loc.lon <= b.east and b.south <= loc.lat <= b.north
+            counts["nodes"] += int(inside)
+        elif obj.is_way():
+            counts["ways"] += 1
+        elif obj.is_relation():
+            counts["relations"] += 1
+    return counts
+
+
+def _replication(region: Path) -> str:
     header = osmium.io.Reader(str(region), osmium.osm.osm_entity_bits.NOTHING).header()
-    replication = header.get("osmosis_replication_timestamp", "unknown")
+    return header.get("osmosis_replication_timestamp", "unknown")
+
+
+def write_source(
+    city: City,
+    path: Path,
+    *,
+    dated_urls: list[str],
+    regions: list[Path],
+    cropped: Path,
+    counts: dict[str, int],
+) -> None:
+    # Merged extracts are only as current as the oldest of them.
+    replication = min(_replication(r) for r in regions)
+    dated_url = dated_urls[0]
     path.parent.mkdir(parents=True, exist_ok=True)
     b = city.bbox
     cropped_sha256 = file_digest(cropped, "sha256")
@@ -134,6 +188,7 @@ def write_source(
             {
                 "provider": city.extract_provider,
                 "dated_url": dated_url,
+                **({"also": dated_urls[1:]} if len(dated_urls) > 1 else {}),
                 "data_as_of": replication,
                 "licence": city.extract_licence,
                 "attribution": city.extract_attribution,
@@ -144,17 +199,21 @@ def write_source(
         + "\n",
         encoding="utf-8",
     )
+    plural_req = "s" if city.extract_also else ""
+    plural_files = "s" if len(dated_urls) > 1 else ""
+    oldest_note = " (the oldest of the merged files)" if len(regions) > 1 else ""
+    md5s = ", ".join(f"`{file_digest(r, 'md5')}`" for r in regions)
     path.write_text(
         f"""# Data source: {city.name}
 
 | | |
 |---|---|
 | Provider | {city.extract_provider} |
-| Requested URL | {city.extract_url} |
-| Dated file | {dated_url} |
-| OSM data as of | {replication} |
+| Requested URL{plural_req} | {", ".join(extract_urls(city))} |
+| Dated file{plural_files} | {", ".join(dated_urls)} |
+| OSM data as of | {replication}{oldest_note} |
 | Downloaded | {dt.date.today().isoformat()} |
-| Region file md5 | `{file_digest(region, "md5")}` |
+| Region file md5 | {md5s} |
 | Crop bbox (W,S,E,N) | {b.west}, {b.south}, {b.east}, {b.north} |
 | Cropped file sha256 | `{cropped_sha256}` |
 | Cropped contents | {counts["nodes"]} nodes in bbox, {counts["ways"]} ways, \
@@ -179,24 +238,41 @@ def main(argv: list[str] | None = None) -> None:
     raw_dir = args.data_dir / "raw"
     raw_dir.mkdir(parents=True, exist_ok=True)
 
+    meta_path = raw_dir / f"{city.id}.region.json"
     if args.crop_only:
-        meta_path = raw_dir / f"{city.id}.region.json"
         meta = json.loads(meta_path.read_text())
-        region, dated_url = raw_dir / meta["file"], meta["dated_url"]
+        # Older records name a single file.
+        entries = meta.get("regions", [meta])
+        regions = [raw_dir / e["file"] for e in entries]
+        dated_urls = [e["dated_url"] for e in entries]
     else:
-        region, dated_url = fetch_region(city, raw_dir)
-        (raw_dir / f"{city.id}.region.json").write_text(
-            json.dumps({"file": region.name, "dated_url": dated_url}, indent=2)
-        )
+        fetched = [fetch_region(url, raw_dir) for url in extract_urls(city)]
+        regions = [r for r, _ in fetched]
+        dated_urls = [u for _, u in fetched]
+        record = {"regions": [{"file": r.name, "dated_url": u} for r, u in fetched]}
+        meta_path.write_text(json.dumps(record, indent=2))
 
     cropped = raw_dir / f"{city.id}.osm.pbf"
-    print(f"Cropping {region.name} -> {cropped.name}", file=sys.stderr)
-    counts = crop(region, cropped, city)
+    if len(regions) == 1:
+        print(f"Cropping {regions[0].name} -> {cropped.name}", file=sys.stderr)
+        counts = crop(regions[0], cropped, city)
+    else:
+        parts = []
+        for i, region in enumerate(regions):
+            part = raw_dir / f"{city.id}.part{i}.osm.pbf"
+            print(f"Cropping {region.name} -> {part.name}", file=sys.stderr)
+            crop(region, part, city)
+            parts.append(part)
+        print(f"Merging {len(parts)} parts -> {cropped.name}", file=sys.stderr)
+        merge(parts, cropped)
+        for part in parts:
+            part.unlink()
+        counts = count_inside(cropped, city)
     write_source(
         city,
         args.data_dir / city.id / "SOURCE.md",
-        dated_url=dated_url,
-        region=region,
+        dated_urls=dated_urls,
+        regions=regions,
         cropped=cropped,
         counts=counts,
     )

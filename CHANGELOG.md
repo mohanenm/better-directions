@@ -27,6 +27,7 @@
 
 ### Fixed
 
+- DC, Arlington and Silver Spring now include the paths on the other side of the state lines inside their boxes. Each was built from one state's extract, so most of DC was unroutable from the Arlington area ("too far from any walkable path") despite showing on the map. When a point can't be placed, the message now says whether it's outside the area and names an area that covers it.
 - The map sometimes kept showing the previous route after a new one was planned.
 - Errors appeared below all the panel's sections, out of sight; they now show near the top, and the old route is cleared.
 - A walk already over an hour, or with nothing for the chosen mode within reach, now says why the better route is the normal one, and routes are no longer named for features they don't have.
