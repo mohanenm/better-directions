@@ -144,8 +144,17 @@ export function createMap(container: HTMLElement, bbox: Bbox): RouteMap {
   const markers: Record<"from" | "to", Marker | null> = { from: null, to: null };
   let pinMarkers: Marker[] = [];
   let popup: Popup | null = null;
-  // Routes that arrive before the style has loaded are drawn once it has.
+  // Routes that arrive before our sources exist (first load, or mid theme switch) are drawn as
+  // soon as they do. Don't wait for isStyleLoaded(): it stays false while any tile is loading, so
+  // a route arriving after the map moved would wait for an event that never comes.
   let queued: { normal: Line[]; better: Line[]; penUp: Line[] } | null = null;
+  const flushQueued = () => {
+    if (!queued || !map.getSource("better")) return;
+    const q = queued;
+    queued = null;
+    draw(q.normal, q.better, q.penUp);
+  };
+  map.on("styledata", flushQueued);
 
   map.on("load", () => {
     const empty = { type: "FeatureCollection" as const, features: [] };
@@ -180,8 +189,7 @@ export function createMap(container: HTMLElement, bbox: Bbox): RouteMap {
       layout: { "line-cap": "round", "line-join": "round" },
       paint: { "line-color": colour("route-better"), "line-width": 5.5 },
     });
-    if (queued) draw(queued.normal, queued.better, queued.penUp);
-    queued = null;
+    flushQueued();
   });
 
   const lines = (coords: Line[]) => ({
@@ -208,7 +216,7 @@ export function createMap(container: HTMLElement, bbox: Bbox): RouteMap {
     setRoutes(normal, better, penUp = []) {
       const n = asLines(normal);
       const b = asLines(better);
-      if (map.isStyleLoaded() && map.getSource("better")) draw(n, b, penUp);
+      if (map.getSource("better")) draw(n, b, penUp);
       else queued = { normal: n, better: b, penUp };
     },
     clearRoutes() {
