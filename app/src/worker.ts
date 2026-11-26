@@ -2,7 +2,7 @@
  * Planning worker: loads the graph once, then plans routes on request. Runs off the main thread
  * so the page never freezes. Everything happens on the device; nothing is sent anywhere.
  */
-import { cityData } from "./city";
+import { AREAS, CITY, cityData, type Area } from "./city";
 import { drawShape } from "./art/fit";
 import { initials, isSpellable, normaliseWord } from "./art/font";
 import { heightFor, spellWord } from "./art/word";
@@ -85,8 +85,20 @@ function parkPins(route: Route): Pin[] {
 
 function snap(point: [number, number], what: string): number {
   const n = state!.index.nearest(point as LonLat, SNAP_LIMIT_M);
-  if (n === null) throw new Error(`The ${what} is too far from any walkable path. Try somewhere closer to a street.`);
+  if (n === null) throw new Error(tooFarMessage(point, what));
   return n;
+}
+
+/**
+ * Why a point couldn't be placed on a path: outside this area, in a part of its box with no
+ * walking data, or just far from paths (water, a big site). Names an area that covers it.
+ */
+function tooFarMessage([lon, lat]: [number, number], what: string): string {
+  const inBox = (a: Area) => lon >= a.bbox.west && lon <= a.bbox.east && lat >= a.bbox.south && lat <= a.bbox.north;
+  const other = AREAS.find((a) => a.id !== CITY.id && inBox(a));
+  const pick = other ? ` For there, pick ${other.name} from the area list.` : "";
+  if (!inBox(CITY)) return `The ${what} is outside ${CITY.name}.${pick || " Pick a point inside it."}`;
+  return `The ${what} is more than ${SNAP_LIMIT_M} m from any walking path in ${CITY.name}'s map.${pick || " Try somewhere closer to a street."}`;
 }
 
 function plan(req: PlanRequest): void {
