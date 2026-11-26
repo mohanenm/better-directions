@@ -73,6 +73,8 @@ Shape templates are scaled to the chosen walk time, anchored at the start, and p
 
 The page is plain TypeScript with MapLibre GL, built by Vite. Planning runs in a Web Worker so the map stays smooth; stale replies are dropped. Place search runs over a local list of about 1,200 squares, stations, parks and landmarks extracted from OSM.
 
+The panel shows either the planner or the result, never both. The planner shows only the chosen kind of walk's options (a route between two places, a crawl, a workout loop, or a drawing); once a walk is ready, the result replaces it, with the directions straight after the summary and the warnings. Warnings that matter on the ground (closures, late finishes, passages under buildings) share one amber box; notes on reading the map are plain text.
+
 A shared link holds the start and end snapped to the walking graph (not the raw tap or GPS fix), the mode and, for chaos, the seed. Parsing ignores anything outside the city and renders names as text only. Share images are drawn on a canvas on the device.
 
 The production build adds a strict Content-Security-Policy as a meta tag: every request goes to the site itself. There are no cookies, no storage and no analytics.

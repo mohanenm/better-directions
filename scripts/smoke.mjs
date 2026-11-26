@@ -123,10 +123,9 @@ async function runCase(c) {
   }
   if (c.famous) {
     for (let i = 0; i < 60; i++) { await sleep(250); if ((await evaluate("document.getElementById('status').textContent")).startsWith("Pick a start")) break; }
-    // Open the section from its header, check the link remembers it, then pick a route.
-    await evaluate("document.getElementById('famous-head').click()");
-    const opened = await evaluate("document.getElementById('famous-head').getAttribute('aria-expanded') === 'true' && !document.getElementById('famous-body').hidden && new URLSearchParams(location.search).get('open') === 'plan,famous'");
-    if (!opened) problems.push("sections: opening Famous routes didn't update aria-expanded, the panel or the link");
+    // Famous routes are listed in the planner from the start; pick the first.
+    const listed = await evaluate("document.querySelectorAll('#famous-list button').length > 0 && document.getElementById('famous-list').getBoundingClientRect().height > 0");
+    if (!listed) problems.push("famous routes aren't listed in the planner");
     await evaluate("document.querySelector('#famous-list button').click()");
   }
   const wantRoute = c.expectRoute !== false;
@@ -200,7 +199,8 @@ async function runCase(c) {
   if (c.rapidModes) {
     // Switch modes quickly: the line on the map must end up as the last result's line.
     await evaluate("document.getElementById('announcer').textContent = ''");
-    for (const m of ["parks", "trail", "snacks", "no-right"]) { await evaluate(`document.getElementById('mode-${m}').click()`); await sleep(60); }
+    // From the result's own mode chips, as someone comparing modes would.
+    for (const m of ["parks", "trail", "snacks", "no-right"]) { await evaluate(`document.querySelector('#mode-chips [data-mode="${m}"]').click()`); await sleep(60); }
     await waitForReady();
     await sleep(2500);
     const keys = JSON.parse(await evaluate("JSON.stringify([document.getElementById('map').dataset.routeKey, document.getElementById('result').dataset.routeKey, new URLSearchParams(location.search).get('mode')])"));
@@ -217,14 +217,14 @@ async function runCase(c) {
     if (!seen.error || !seen.onScreen || !seen.uncovered) problems.push(`error not visible: ${JSON.stringify(seen)}`);
   }
   if (c.tooLong) {
-    const seen = JSON.parse(await evaluate("JSON.stringify({ title: document.getElementById('route-name').textContent, notes: document.getElementById('notes').textContent })"));
+    const seen = JSON.parse(await evaluate("JSON.stringify({ title: document.getElementById('route-name').textContent, notes: document.getElementById('info').textContent })"));
     if (seen.title !== "Just the Normal Route" || !/capped at an hour/.test(seen.notes)) problems.push(`too long: not explained (${JSON.stringify(seen)})`);
   }
   if (c.noTerrain) {
     // An area without elevation data says so: under the area picker, in the result and the footer.
     const seen = JSON.parse(await evaluate(`JSON.stringify({
       areaNote: !document.getElementById('area-note').hidden && document.getElementById('area-note').textContent.includes('no elevation data'),
-      resultNote: document.getElementById('notes').textContent.includes('no elevation data'),
+      resultNote: document.getElementById('info').textContent.includes('no elevation data'),
       footer: document.querySelector('.attribution').textContent.includes('No elevation data'),
       hillsOff: document.querySelector('input[name="workout-focus"][value="hills"]').disabled })`));
     for (const [k, ok] of Object.entries(seen)) if (!ok) problems.push(`no elevation: ${k} doesn't say so`);
@@ -236,6 +236,8 @@ async function runCase(c) {
     if (!/Drink responsibly/.test(notes)) problems.push("crawl: no drinking note");
   }
   if (c.famous) {
+    await evaluate("document.getElementById('share-open').click()");
+    if (!(await evaluate("document.getElementById('share-dialog').open"))) problems.push("share: the Share button didn't open the share dialog");
     await evaluate("document.getElementById('make-image').click()");
     let ready = false;
     for (let i = 0; i < 40 && !ready; i++) { await sleep(250); ready = await evaluate("!document.getElementById('share-image').hidden && document.getElementById('share-preview').complete && document.getElementById('share-preview').naturalWidth > 0"); }
@@ -252,6 +254,7 @@ async function runCase(c) {
     if (!ready || img.w !== 1080 || img.h !== 1350) problems.push(`share image wrong size: ${JSON.stringify(img)}`);
     if (img.colours < 20) problems.push(`share image map area looks blank (${img.colours} colours)`);
     console.log(`  share image ${img.w}x${img.h}, ${img.colours} sampled colours, route "${img.name}"`);
+    await evaluate("document.getElementById('share-dialog').close()");
   }
   if (c.scroll) {
     // Scrolling the panel to the bottom must move only the panel: not the page, map or footer.
@@ -285,6 +288,7 @@ async function runCase(c) {
     cspMeta: await evaluate("!!document.querySelector('meta[http-equiv=\"Content-Security-Policy\"]')"),
     noCookies: await evaluate("document.cookie === ''"),
     noStorage: await evaluate("localStorage.length === 0 && sessionStorage.length === 0"),
+    aboutOutOfPanel: await evaluate("!document.getElementById('panel').contains(document.getElementById('about-dialog')) && !!document.getElementById('about-open')"),
   };
   if (wantRoute) {
     checks.route = READY.test(status);
@@ -292,6 +296,16 @@ async function runCase(c) {
     const summary = (await evaluate("document.getElementById('summary').textContent")) ?? "";
     checks.summary = /Normal: \d+ min\. Better: \d+ min/.test(summary) || /likeness|-minute loop|min of walking|readable/.test(summary);
     checks.seedRowHiddenUnlessChaos = await evaluate("(getComputedStyle(document.getElementById('seed-row')).display === 'none') === !location.search.includes('mode=chaos')");
+    // The result replaces the planner, and its directions start within the first screen or so of
+    // it (later only when there are many warnings, which come first).
+    const view = JSON.parse(await evaluate(`JSON.stringify((() => {
+      const panel = document.getElementById('panel');
+      const top = document.getElementById('result').getBoundingClientRect().top + panel.scrollTop - panel.getBoundingClientRect().top;
+      const directions = document.getElementById('directions-title').getBoundingClientRect().top + panel.scrollTop - panel.getBoundingClientRect().top;
+      return { planHidden: document.getElementById('plan-view').hidden, directionsAt: Math.round(directions - top), screen: panel.clientHeight };
+    })())`));
+    checks.resultReplacesPlanner = view.planHidden;
+    if (view.directionsAt > view.screen * 1.5) problems.push(`directions start ${view.directionsAt}px into the result, with ${view.screen}px of panel on screen`);
   }
   // Accessibility tree: every interactive control and image needs a name; landmarks must exist.
   await send("Accessibility.enable");

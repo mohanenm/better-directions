@@ -1,5 +1,5 @@
 /**
- * Shareable state in the query string: ?from=lon,lat&to=lon,lat&mode=stairs&seed=7&open=plan,art
+ * Shareable state in the query string: ?from=lon,lat&to=lon,lat&mode=stairs&seed=7&kind=crawl
  * Works on a static host with no server routing. Coordinates are rounded to 5 decimals (~1 m)
  * and must fall inside the city's bbox; anything invalid is ignored rather than trusted.
  */
@@ -27,8 +27,8 @@ export interface LinkState {
   /** GPS art: the shape to draw from `from`, and the walk length in minutes. */
   art: ShapeId | null;
   artMinutes: number;
-  /** Panel sections that are open. */
-  open: SectionId[];
+  /** Which kind of walk the planner is set to (the tool's own state implies it when present). */
+  kind: Kind;
   /** Points a route must pass through, in order (at most MAX_LINK_STOPS). */
   stops: [number, number][];
   workout: { focus: WorkoutFocus; minutes: number } | null;
@@ -40,19 +40,24 @@ export interface LinkState {
 }
 
 export const MAX_LINK_STOPS = 3;
-export const SECTION_IDS = ["plan", "crawl", "art", "spell", "workout", "famous", "about"] as const;
-export type SectionId = (typeof SECTION_IDS)[number];
-export const DEFAULT_OPEN: SectionId[] = ["plan"];
+/** The kinds of walk the planner offers: a route between two places, or one of the loop tools. */
+export const KINDS = ["route", "crawl", "workout", "shape", "word"] as const;
+export type Kind = (typeof KINDS)[number];
 
-function parseOpen(value: string | null, fallback: SectionId[]): SectionId[] {
-  if (value === null) return [...fallback];
-  const ids = value.split(",").filter((v): v is SectionId => (SECTION_IDS as readonly string[]).includes(v));
-  return SECTION_IDS.filter((id) => ids.includes(id));
+/** Older links named open panel sections instead (?open=plan,art); the first tool among them wins. */
+const LEGACY_SECTIONS: Record<string, Kind> = { crawl: "crawl", art: "shape", spell: "word", workout: "workout" };
+
+function parseKind(q: URLSearchParams, implied: Kind | null): Kind {
+  if (implied) return implied;
+  const kind = q.get("kind");
+  if ((KINDS as readonly string[]).includes(kind ?? "")) return kind as Kind;
+  const legacy = (q.get("open") ?? "").split(",").map((v) => LEGACY_SECTIONS[v]).find((k) => k);
+  return legacy ?? "route";
 }
 
-function serializeOpen(q: URLSearchParams, open: SectionId[], fallback: SectionId[]): void {
-  const sorted = SECTION_IDS.filter((id) => open.includes(id));
-  if (sorted.join(",") !== fallback.join(",")) q.set("open", sorted.join(","));
+/** Writes the kind only when the rest of the link doesn't already say it. */
+function serializeKind(q: URLSearchParams, kind: Kind, implied: Kind): void {
+  if (kind !== implied) q.set("kind", kind);
 }
 
 export const ART_LENGTHS = [25, 40, 55, 75] as const; // 75 is a long walk, chosen deliberately
@@ -102,8 +107,8 @@ export function parseLink(search: string, bbox: Bbox): LinkState {
     : null;
   const word = normaliseWord(q.get("spell") ?? "");
   const spell = isSpellable(word) ? word : null;
-  // One tool at a time, in this order: spell, shape, workout, crawl. The open panel follows suit.
-  const fallbackOpen: SectionId[] = spell ? ["spell"] : art ? ["art"] : workout ? ["workout"] : crawl ? ["crawl"] : DEFAULT_OPEN;
+  // One tool at a time, in this order: spell, shape, workout, crawl. The planner's kind follows suit.
+  const implied: Kind | null = spell ? "word" : art ? "shape" : workout ? "workout" : crawl ? "crawl" : null;
   return {
     from: parsePoint(q.get("from"), bbox),
     to: parsePoint(q.get("to"), bbox),
@@ -114,7 +119,7 @@ export function parseLink(search: string, bbox: Bbox): LinkState {
     long: q.get("long") === "1",
     art: spell ? null : art,
     artMinutes: (ART_LENGTHS as readonly number[]).includes(Number(q.get("len"))) ? Number(q.get("len")) : 40,
-    open: parseOpen(q.get("open"), fallbackOpen),
+    kind: parseKind(q, implied),
     stops: (q.get("via") ?? "").split(";").map((v) => parsePoint(v, bbox)).filter((p): p is [number, number] => p !== null).slice(0, MAX_LINK_STOPS),
     workout: art || spell ? null : workout,
     crawl: art || spell || workout ? null : crawl,
@@ -134,7 +139,7 @@ export function serializeLink(state: LinkState): string {
     if (state.from) q.set("from", fmt(state.from));
     if (state.fromName) q.set("fromName", state.fromName);
     if (state.spellInLink) q.set("spell", state.spell);
-    serializeOpen(q, state.open, state.spellInLink ? ["spell"] : DEFAULT_OPEN);
+    serializeKind(q, state.kind, state.spellInLink ? "word" : "route");
     return `?${q.toString()}`;
   }
   if (state.art) {
@@ -142,7 +147,7 @@ export function serializeLink(state: LinkState): string {
     if (state.fromName) q.set("fromName", state.fromName);
     q.set("art", state.art);
     q.set("len", String(state.artMinutes));
-    serializeOpen(q, state.open, ["art"]);
+    serializeKind(q, state.kind, "shape");
     return `?${q.toString()}`;
   }
   if (state.crawl) {
@@ -156,7 +161,7 @@ export function serializeLink(state: LinkState): string {
     q.set("crawl", state.crawl.theme);
     q.set("count", String(state.crawl.count));
     q.set("len", String(state.crawl.minutes));
-    serializeOpen(q, state.open, ["crawl"]);
+    serializeKind(q, state.kind, "crawl");
     return `?${q.toString()}`;
   }
   if (state.workout) {
@@ -164,7 +169,7 @@ export function serializeLink(state: LinkState): string {
     if (state.fromName) q.set("fromName", state.fromName);
     q.set("workout", state.workout.focus);
     q.set("len", String(state.workout.minutes));
-    serializeOpen(q, state.open, ["workout"]);
+    serializeKind(q, state.kind, "workout");
     return `?${q.toString()}`;
   }
   if (state.from) q.set("from", fmt(state.from));
@@ -175,6 +180,6 @@ export function serializeLink(state: LinkState): string {
   q.set("mode", state.mode);
   if (state.mode === "chaos") q.set("seed", String(state.seed));
   if (state.long) q.set("long", "1");
-  serializeOpen(q, state.open, DEFAULT_OPEN);
+  serializeKind(q, state.kind, "route");
   return `?${q.toString()}`;
 }

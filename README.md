@@ -22,7 +22,7 @@ It's a static site with no server, accounts or tracking. Routes are planned on y
 - **Most inconvenient**: zig-zags, needless ups and downs, nothing straight, but never more busy-road crossings than the normal route. Bellecour to the Terreaux: 220 turns, and 158 places where it could have gone straight.
 - **Random**: a detour picked by a seed, so the same link gives the same route. The scenic route. Very scenic.
 
-Every route gets a name, and can be shared as a link or as an image drawn on your phone. Parks near the route show as pins; tap one to add it as a stop. The Famous routes section has a few to try.
+Every route gets a name, and can be shared as a link or as an image drawn on your phone. Parks near the route show as pins; tap one to add it as a stop. A few famous routes are listed in the planner to try.
 
 ## Crawls and workouts
 
@@ -32,9 +32,9 @@ A crawl visits a few artworks, pubs or wine bars in a sensible order, looping ba
 
 A workout is a loop from your start of 20 minutes to an hour, or an hour and a half, collecting staircases, hills or both. It shows the staircases, steps and metres climbed, and notes any stretch tagged as unlit. It makes no claims about calories.
 
-There's also an experimental Draw a shape section that finds a walk drawing a heart, star, square or one-stroke letter with real streets, and scores the likeness. Spell a word does the same for a word or initials of up to six letters, with dotted walks between strokes. Grids work much better than Lyon's old town. See [docs/GPS_ART.md](docs/GPS_ART.md).
+There's also an experimental Draw option that finds a walk drawing a heart, star, square or one-stroke letter with real streets, and scores the likeness. Spell a word does the same for a word or initials of up to six letters, with dotted walks between strokes. Grids work much better than Lyon's old town. See [docs/GPS_ART.md](docs/GPS_ART.md).
 
-<img src="docs/images/spell.jpg" alt="The letters DC walked on Capitol Hill's grid: 80% readable, 31 minutes" width="480"> <img src="docs/images/heart.jpg" alt="A heart walked through Guillotière in Lyon: 85% likeness, 46 minutes" width="480">
+<img src="docs/images/spell.jpg" alt="The letters DC walked on Capitol Hill's grid from Eastern Market: 72% readable, 36 minutes" width="480"> <img src="docs/images/heart.jpg" alt="A heart walked through Guillotière in Lyon: 85% likeness, 46 minutes" width="480">
 
 <img src="docs/images/phone.jpg" alt="A Stairs route up Federal Hill in Baltimore on a phone, with the cost of fun" width="300"> <img src="docs/images/share.jpg" alt="The share image for the same route, drawn on the phone" width="300">
 
@@ -56,7 +56,7 @@ The build is also stricter than the rules above in places. It excludes escalator
 
 The page talks to no one but its own site: tiles, fonts, data and code are all self-hosted, and a strict Content-Security-Policy enforces it. There are no cookies, no storage and no analytics.
 
-A word you spell stays on your device unless you choose to put it in a link. Your location is used only if you tap "My location" or "Nearest to me". It stays on your device, and it's snapped to the nearest path before it goes into a link. Shared links and images do show your start and end points; the page says so next to the share buttons.
+A word you spell stays on your device unless you choose to put it in a link. Your location is used only if you tap "Start at my location" or "Nearest to me". It stays on your device, and it's snapped to the nearest path before it goes into a link. Shared links and images do show your start and end points; the page says so next to the share buttons.
 
 ## What's unusual about it
 

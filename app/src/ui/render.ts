@@ -1,6 +1,11 @@
-/** Renders a planned route as text: summary, stats, notes and step-by-step directions. */
+/**
+ * Renders a planned walk as text: summary, stats, notes and directions. Notes come in two kinds:
+ * warnings (closures, late finishes, anything to check on the ground), shown together in one
+ * amber box, and plain information (how to read the map, why the route is what it is).
+ */
 import { CITY } from "../city";
 import { DETOUR } from "../safety/limits";
+import { MAX_LINK_STOPS } from "./url";
 import type { CostOfFun } from "../modes/stats";
 import type { Step } from "../modes/directions";
 import type { ArtResultMsg, PlanResult, SpellResultMsg, TourResult } from "./protocol";
@@ -16,11 +21,9 @@ const el = <K extends keyof HTMLElementTagNameMap>(tag: K, text?: string, classN
 export function statItems(r: PlanResult): [string, string][] {
   const b: CostOfFun = r.betterStats;
   const n: CostOfFun = r.normalStats;
-  const min = (s: number) => `${Math.max(1, Math.round(s / 60))} min`;
-  const items: [string, string][] = [
-    ["Normal", `${min(n.timeS)} · ${(n.lengthM / 1000).toFixed(1)} km`],
-    ["Better", `${min(b.timeS)} · ${(b.lengthM / 1000).toFixed(1)} km`],
-  ];
+  // The summary already gives both times; the tiles add the distance and what the detour collects.
+  const extraKm = Math.max(0, (b.lengthM - n.lengthM) / 1000);
+  const items: [string, string][] = [["Distance", `${(b.lengthM / 1000).toFixed(1)} km (+${extraKm.toFixed(1)})`]];
   if (b.staircases) items.push(["Staircases", String(b.staircases)]);
   if (b.stepsUp) items.push(["Steps up", String(b.stepsUp)]);
   if (b.climbM >= 5) items.push(["Climb", `${Math.round(b.climbM)} m`]);
@@ -57,7 +60,7 @@ export function setAreaNotes(notes: string[]): void {
   areaNotes = notes;
 }
 
-function renderCard(name: string, summary: string, stats: [string, string][], b: CostOfFun, extraNotes: string[], steps: Step[], legend: [string, string], onStep: (at: [number, number]) => void): void {
+function renderCard(name: string, summary: string, stats: [string, string][], b: CostOfFun, info: string[], warnings: string[], steps: Step[], legend: [string, string], onStep: (at: [number, number]) => void): void {
   get("route-name").textContent = name;
   get("summary").textContent = summary;
   get("legend-better").textContent = legend[0];
@@ -72,16 +75,17 @@ function renderCard(name: string, summary: string, stats: [string, string][], b:
     }),
   );
 
-  const notes: string[] = [...extraNotes];
+  const warn: string[] = [...warnings];
   if (b.underBuildings) {
-    notes.push("This route passes under a building where no tunnel is mapped. Check it's open to walkers.");
+    warn.push("This route passes under a building where no tunnel is mapped. Check it's open to walkers.");
   }
   for (const c of b.mayClose) {
-    notes.push(`${c.name} may be closed outside opening hours${c.openingHours ? ` (${c.openingHours})` : ""}.`);
+    warn.push(`${c.name} may be closed outside opening hours${c.openingHours ? ` (${c.openingHours})` : ""}.`);
   }
-  notes.push(...areaNotes);
-  get("notes").replaceChildren(...notes.map((t) => el("li", t)));
+  get("notes").replaceChildren(...warn.map((t) => el("li", t)));
+  get("warnings").hidden = warn.length === 0;
   get("late-hint").hidden = !(isLate() && b.mayClose.length > 0);
+  get("info").replaceChildren(...[...info, ...areaNotes].map((t) => el("li", t)));
   renderSteps(steps, onStep);
 }
 
@@ -124,18 +128,19 @@ export function planTitle(r: PlanResult): string {
 
 export function renderResult(r: PlanResult, onStep: (at: [number, number]) => void): void {
   const same = sameRouteNote(r);
-  const notes = [
+  const info = [
     ...(same ? [same] : []),
     ...(!same && r.missingFeature ? [`This route doesn't pass any ${r.missingFeature}: there are none within reach, so it's just a different way round.`] : []),
-    ...(r.strategy === "via-stops" ? ["Goes through the stops you picked, in order."] : []),
-    ...[finishNote(r.betterStats.timeS)].filter((n): n is string => n !== null),
+    ...(r.strategy === "via-stops" ? ["Goes through the stops you picked, in order. The normal route goes through them too."] : []),
+    ...(r.pins.some((p) => p.kind === "park") ? [`Tap a green park pin on the map to add it as a stop (up to ${MAX_LINK_STOPS}).`] : []),
   ];
-  renderCard(planTitle(r), r.summary, statItems(r), r.betterStats, notes, r.steps, ["Better route", "Normal route"], onStep);
+  const finish = finishNote(r.betterStats.timeS);
+  renderCard(planTitle(r), r.summary, statItems(r), r.betterStats, info, finish ? [finish] : [], r.steps, ["Better route", "Normal route"], onStep);
 }
 
 export function renderTour(r: TourResult, onStep: (at: [number, number]) => void): void {
   const finish = finishNote(r.stats.timeS);
-  renderCard(r.name, r.summary, r.statItems, r.stats, finish ? [...r.notes, finish] : r.notes, r.steps, [r.kind === "crawl" ? "The crawl" : "The loop", ""], onStep);
+  renderCard(r.name, r.summary, r.statItems, r.stats, [], finish ? [...r.notes, finish] : r.notes, r.steps, [r.kind === "crawl" ? "The crawl" : "The loop", ""], onStep);
 }
 
 export function tourCard(r: TourResult): ShareCard {
@@ -159,16 +164,15 @@ function artStats(r: ArtResultMsg): [string, string][] {
 }
 
 export function renderArt(r: ArtResultMsg, onStep: (at: [number, number]) => void): void {
-  const notes = ["Experimental: streets rarely match a shape exactly, so expect wobbles. The dashed line is the ideal shape."];
-  if (r.likeness < 60) notes.unshift("The streets here don't follow this shape well, so it may be hard to make out. Try another start point.");
+  const info = ["Experimental: streets rarely match a shape exactly, so expect wobbles. The dashed line is the ideal shape."];
+  if (r.likeness < 60) info.unshift("The streets here don't follow this shape well, so it may be hard to make out. Try another start point.");
   const finish = finishNote(r.stats.timeS);
-  if (finish) notes.push(finish);
-  renderCard(artName(r), artSummary(r), artStats(r), r.stats, notes, r.steps, ["Your walk", "Ideal shape"], onStep);
+  renderCard(artName(r), artSummary(r), artStats(r), r.stats, info, finish ? [finish] : [], r.steps, ["Your walk", "Ideal shape"], onStep);
 }
 
 export function planCard(r: PlanResult): ShareCard {
   const extra = Math.round((r.betterStats.timeS - r.normalStats.timeS) / 60);
-  return { name: planTitle(r), summary: r.summary, chips: [["Extra time", `+${extra} min`], ...statItems(r).slice(2, 4)], from: r.from, to: r.to, legend: ["Better route", "Normal route"] };
+  return { name: planTitle(r), summary: r.summary, chips: [["Extra time", `+${extra} min`], ...statItems(r).slice(1, 3)], from: r.from, to: r.to, legend: ["Better route", "Normal route"] };
 }
 
 export function artCard(r: ArtResultMsg): ShareCard {
@@ -176,15 +180,29 @@ export function artCard(r: ArtResultMsg): ShareCard {
 }
 
 function renderSteps(steps: Step[], onStep: (at: [number, number]) => void): void {
-  get("steps").replaceChildren(
+  get("step-count").textContent = `(${steps.length} ${steps.length === 1 ? "step" : "steps"})`;
+  // A place's note (its opening hours, say) is shown at the first step through it, not at every one.
+  const seen = new Set<string>();
+  const list = get("steps");
+  list.replaceChildren(
     ...steps.map((s) => {
       const li = el("li");
+      const text = el("div", undefined, "step-text");
       const button = el("button", s.text);
       button.type = "button";
       button.setAttribute("aria-label", `${s.text} Show on map.`);
-      button.addEventListener("click", () => onStep(s.at));
-      li.append(button);
-      for (const note of s.notes) li.append(el("span", note, "step-note"));
+      button.addEventListener("click", () => {
+        for (const other of list.querySelectorAll("[aria-current]")) other.removeAttribute("aria-current");
+        li.setAttribute("aria-current", "step");
+        onStep(s.at);
+      });
+      text.append(button);
+      for (const note of s.notes) {
+        if (seen.has(note)) continue;
+        seen.add(note);
+        text.append(el("span", note, "step-note"));
+      }
+      li.append(text);
       return li;
     }),
   );
@@ -209,9 +227,9 @@ function spellStats(r: SpellResultMsg): [string, string][] {
 }
 
 export function renderSpell(r: SpellResultMsg, onStep: (at: [number, number]) => void): void {
-  const notes = ["Solid lines are the letters; dotted lines are walks between strokes. The dashed outline is the ideal lettering."];
-  if (r.likeness < 60) notes.push("Streets here don't spell well. A neighbourhood with a regular grid will read better.");
-  renderCard(r.word, spellSummary(r), spellStats(r), r.stats, notes, r.steps, ["Letters", "Ideal outline"], onStep);
+  const info = ["Solid lines are the letters; dotted lines are walks between strokes. The dashed outline is the ideal lettering."];
+  if (r.likeness < 60) info.push("Streets here don't spell well. A neighbourhood with a regular grid will read better.");
+  renderCard(r.word, spellSummary(r), spellStats(r), r.stats, info, [], r.steps, ["Letters", "Ideal outline"], onStep);
 }
 
 export function spellCard(r: SpellResultMsg, showWord: boolean): ShareCard {

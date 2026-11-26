@@ -20,7 +20,7 @@
 
 - Stricter safety: no paths on military land; inside private or no-access grounds only explicitly public paths; no walking down busy roads whose sidewalks are mapped separately or that have none. Cemeteries are flagged as places that may close.
 - Directions only call it a turn at a real junction, matching the turn counts.
-- The side panel is now a set of collapsible sections (Plan a route, Draw a shape, Famous routes, About and privacy), each with a one-line summary. Open sections are kept in shared links.
+- A simpler panel. Pick the kind of walk (A to B, Crawl, Workout or Draw) and only its options show. Once a walk is ready, the result replaces the planner: the trip, the route's name and stats, any warnings in one box, then the directions, with Edit to go back and mode chips to compare modes without leaving the result. About and privacy, and sharing, open as dialogs. Links keep the kind of walk (`kind=`); older links with `open=` still work.
 - A new look: the map fills the screen, with the planner floating over it on wide screens and as a bottom sheet on phones that expands to full height. Start and end sit in one field with a swap button; modes are cards; short choices are segmented controls. Routes are fitted into the part of the map the planner leaves visible, and so is the share image.
 - Modes are listed with a description each, and have shorter names: Through buildings, Trails, Stairs, Parks, Snacks, Left turns only and Random. Links using the old mode ids still work.
 - Copy, route names and directions are drier and plainer. The safety notice is unchanged.
@@ -32,6 +32,9 @@
 - DC, Arlington and Silver Spring now include the paths on the other side of the state lines inside their boxes. Each was built from one state's extract, so most of DC was unroutable from the Arlington area ("too far from any walkable path") despite showing on the map. When a point can't be placed, the message now says whether it's outside the area and names an area that covers it.
 - The map sometimes kept showing the previous route after a new one was planned.
 - Errors appeared below all the panel's sections, out of sight; they now show near the top, and the old route is cleared.
+- A step's note (such as a park's opening hours) was squeezed into the step-number column, one word per line, making some routes' directions dozens of screens long; it now sits under the step, once per place.
+- The map opened on the whole area's box, which on a phone showed the suburbs; it now opens on the centre of town.
+- Landscape phones get the side-panel layout, and the header and footer no longer cover the map at large text sizes.
 - A walk already over an hour, or with nothing for the chosen mode within reach, now says why the better route is the normal one, and routes are no longer named for features they don't have.
 - Shared links could reopen a slightly different route; park stops from an earlier route carried over into later ones; the dark share image's title was unreadable; the share image could crop a sliver of map.
 - A stairs workout could drop the staircases it found; crawls short of stops now say so; Spell a word no longer offers 10 letters when about 5 fit, or suggests chopped words.

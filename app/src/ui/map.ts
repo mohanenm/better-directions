@@ -109,10 +109,15 @@ export function createMap(container: HTMLElement, bbox: Bbox): RouteMap {
     },
     layers: layers("protomaps", namedFlavor(theme), { lang: CITY.labelLang }),
   });
+  // Open on the centre of town, about 5 km across, rather than the whole area box: squeezed above
+  // a phone's sheet, the box showed the suburbs with the centre at its edge.
+  const [cx, cy] = CITY.center;
+  const dLat = 0.022;
+  const dLon = dLat / Math.cos((cy * Math.PI) / 180);
   const map = new MapLibreMap({
     container,
     style: basemap(currentTheme()),
-    bounds: [bbox.west, bbox.south, bbox.east, bbox.north],
+    bounds: [Math.max(bbox.west, cx - dLon), Math.max(bbox.south, cy - dLat), Math.min(bbox.east, cx + dLon), Math.min(bbox.north, cy + dLat)],
     fitBoundsOptions: { padding: coveredInsets(container) },
     // Room to pan past the area: fitting a route above the phone sheet (or beside the desktop
     // panel) centres the map well off the route, and a route near the edge of the area would
