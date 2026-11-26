@@ -30,7 +30,7 @@ export function statItems(r: PlanResult): [string, string][] {
   if (r.mode === "no-right") items.push(["Turns", `${b.leftTurns} left, ${b.rightTurns} right`]);
   if (r.mode === "inconvenient") {
     items.push(["Turns", String(b.leftTurns + b.rightTurns + b.uTurns)]);
-    items.push(["Up and down", `${Math.round(b.climbM)} m up, ${Math.round(b.descentM)} m down`]);
+    if (terrainKnown) items.push(["Up and down", `${Math.round(b.climbM)} m up, ${Math.round(b.descentM)} m down`]);
     items.push(["Could have gone straight", `${b.straightSkips} times`]);
     items.push(["Busy roads crossed", `${b.busyCrossings} (normal: ${n.busyCrossings})`]);
   }
@@ -43,6 +43,12 @@ export function isLate(now = new Date()): boolean {
 }
 
 const get = (id: string) => document.getElementById(id)!;
+
+/** Whether the area has elevation data; without it, climb figures would only ever read 0. */
+let terrainKnown = true;
+export function setTerrainKnown(known: boolean): void {
+  terrainKnown = known;
+}
 
 /** Notes about the area itself (such as missing elevation data), shown with every result. */
 let areaNotes: string[] = [];

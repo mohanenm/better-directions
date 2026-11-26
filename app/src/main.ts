@@ -10,9 +10,10 @@ import { CRAWL_MINUTES, MAX_STOPS, MIN_STOPS, type CrawlTheme, type WorkoutFocus
 import { attachCombo } from "./ui/combo";
 import { FAMOUS } from "./ui/famous";
 import { createMap, type RouteMap } from "./ui/map";
-import type { PinAction } from "./ui/map";
+import { lineKey, type PinAction } from "./ui/map";
 import type { ArtResultMsg, FromWorker, Pin, PlanResult, ReadyInfo, SpellResultMsg, ToWorker, TourResult } from "./ui/protocol";
-import { artCard, planCard, renderArt, renderResult, renderSpell, renderTour, sameRouteNote, setAreaNotes, spellCard, tourCard } from "./ui/render";
+import { artCard, planCard, renderArt, renderResult, renderSpell, renderTour, sameRouteNote, setAreaNotes, setTerrainKnown, spellCard, tourCard } from "./ui/render";
+import { haversineM } from "./router/geometry";
 import { renderShareImage, type ShareCard } from "./ui/share-image";
 import { initThemeToggle } from "./ui/theme";
 import type { Place } from "./ui/search";
@@ -58,6 +59,10 @@ worker.addEventListener("message", (event: MessageEvent<FromWorker>) => {
     goButton.disabled = false;
     setStatus(msg.message, true);
     showSuggestion(msg.suggestion);
+    // The inputs changed and nothing new was planned: don't leave the old route looking current.
+    resultEl.hidden = true;
+    routeMap?.clearRoutes();
+    routeMap?.setPins([], parkActions);
   } else if (msg.type === "art") onArt(msg.result);
   else if (msg.type === "tour") onTour(msg.result);
   else if (msg.type === "spell") onSpell(msg.result);
@@ -76,16 +81,23 @@ function onReady(ready: ReadyInfo): void {
   $("#area-note").hidden = !noTerrain;
   setAreaNotes(noTerrain ? [`There's no elevation data for ${CITY.name} yet, so climbs and steps up aren't known.`] : []);
   for (const input of document.querySelectorAll<HTMLInputElement>('input[name="workout-focus"]:not([value="stairs"])')) input.disabled = noTerrain;
-  for (const span of document.querySelectorAll<HTMLElement>(".needs-terrain")) span.hidden = !noTerrain;
+  $("#workout-terrain-note").hidden = !noTerrain;
+  setTerrainKnown(!noTerrain);
   Object.assign(state, parseLink(window.location.search, ready.bbox));
+  // A link whose start or end isn't in this area: say so rather than silently dropping it.
+  const asked = new URLSearchParams(window.location.search);
+  const dropped = [asked.get("from") && !state.from ? "start" : "", asked.get("to") && !state.to && !state.crawl ? "end" : ""].filter(Boolean);
   applyOpen();
   routeMap = createMap($("#map"), ready.bbox);
   routeMap.onTap(onMapTap);
   syncInputs();
   syncToolForms();
   renderStops();
+  // Hill and mixed workouts need elevation data; leave Stairs selected for the next loop.
+  if (noTerrain) $<HTMLInputElement>('input[name="workout-focus"][value="stairs"]').checked = true;
   const canPlan = state.from && (state.to || state.art || state.crawl || state.workout);
-  setStatus(canPlan ? "" : "Pick a start and an end: search, or tap the map.");
+  if (dropped.length) setStatus(`The ${dropped.join(" and ")} in that link ${dropped.length > 1 ? "aren't" : "isn't"} in ${CITY.name}, so ${dropped.length > 1 ? "they were" : "it was"} left out. Pick ${dropped.length > 1 ? "them" : "it"} again.`, true);
+  else setStatus(canPlan ? "" : "Pick a start and an end: search, or tap the map.");
   if (state.spell) {
     $<HTMLInputElement>("#spell-word").value = state.spell;
     $<HTMLInputElement>("#spell-in-link").checked = state.spellInLink;
@@ -128,8 +140,12 @@ $("#nearest-area").addEventListener("click", () => {
   setStatus("Finding the nearest area… (your location stays on this device)");
   navigator.geolocation.getCurrentPosition(
     (pos) => {
-      const near = nearestArea(pos.coords.longitude, pos.coords.latitude);
-      if (near.id === CITY.id) setStatus(`${CITY.name} is already the nearest area.`);
+      const here: [number, number] = [pos.coords.longitude, pos.coords.latitude];
+      const near = nearestArea(here[0], here[1]);
+      const km = Math.round(haversineM(here, near.center) / 1000);
+      // Far from every area, don't jump anywhere: say which is nearest and how far.
+      if (km > 150) setStatus(`None of the areas is near you. The nearest is ${near.name}, about ${km.toLocaleString("en")} km away; pick one from the list.`);
+      else if (near.id === CITY.id) setStatus(`${CITY.name} is already the nearest area.`);
       else switchArea(near.id);
     },
     () => setStatus("Couldn't get your location. Pick an area from the list instead.", true),
@@ -147,11 +163,30 @@ function setSheetFull(full: boolean): void {
   document.body.classList.toggle("sheet-full", full);
   sheetToggle.setAttribute("aria-expanded", String(full));
 }
-sheetToggle.addEventListener("click", () => setSheetFull(!document.body.classList.contains("sheet-full")));
+// Tap the handle to toggle, or drag it: up for full height, down for half.
+let dragFrom: number | null = null;
+let dragged = false;
+sheetToggle.addEventListener("pointerdown", (e) => {
+  dragFrom = e.clientY;
+  dragged = false;
+  sheetToggle.setPointerCapture(e.pointerId);
+});
+sheetToggle.addEventListener("pointermove", (e) => {
+  if (dragFrom === null || Math.abs(e.clientY - dragFrom) < 24) return;
+  dragged = true;
+  setSheetFull(e.clientY < dragFrom);
+});
+sheetToggle.addEventListener("pointerup", () => (dragFrom = null));
+sheetToggle.addEventListener("pointercancel", () => (dragFrom = null));
+sheetToggle.addEventListener("click", () => {
+  if (dragged) dragged = false; // the drag already decided
+  else setSheetFull(!document.body.classList.contains("sheet-full"));
+});
 
 /** Draw routes, first lowering a full-height sheet so they can be seen. */
 function drawRoutes(...args: Parameters<RouteMap["setRoutes"]>): void {
   setSheetFull(false);
+  resultEl.dataset["routeKey"] = lineKey(args[1]); // the map's copy should match (checked by the smoke test)
   routeMap?.setRoutes(...args);
 }
 
@@ -190,7 +225,14 @@ $(".skip-link").addEventListener("click", () => {
 
 const input = (end: End) => $<HTMLInputElement>(`#${end}-input`);
 
-function setEnd(end: End, point: [number, number] | null, name: string | null): void {
+/** Sets one end. Moving an end clears the park stops, which belonged to the old route. */
+function setEnd(end: End, point: [number, number] | null, name: string | null, keepStops = false): void {
+  const moved = state[end]?.[0] !== point?.[0] || state[end]?.[1] !== point?.[1];
+  if (moved && !keepStops && state.stops.length) {
+    state.stops = [];
+    stopNames.length = 0;
+    renderStops();
+  }
   state[end] = point;
   state[end === "from" ? "fromName" : "toName"] = name;
   input(end).value = name ?? (point ? "Point on the map" : "");
@@ -209,18 +251,31 @@ function syncInputs(): void {
   updateSeedRow();
 }
 
+/** After one end is chosen, say what's next. */
+function promptNext(): void {
+  if (state.from && !state.to) setStatus("Start set. Now pick an end: search, or tap the map.");
+  else if (!state.from && state.to) setStatus("End set. Now pick a start: search, or tap the map.");
+}
+
+/** The end a map tap moves once both are set: the one whose field was focused last, else the end. */
+let tapMoves: End | null = null;
+for (const end of ["from", "to"] as End[]) input(end).addEventListener("focus", () => (tapMoves = end));
+
 function onMapTap(point: [number, number]): void {
-  const end: End = !state.from ? "from" : !state.to ? "to" : document.activeElement === input("from") ? "from" : "to";
+  const end: End = !state.from ? "from" : !state.to ? "to" : (tapMoves ?? "to");
+  tapMoves = null;
   setEnd(end, point, null);
   if (state.from && state.to) requestPlan();
-  else setStatus("Start set. Now pick an end.");
+  else promptNext();
 }
 
 for (const end of ["from", "to"] as End[]) {
   attachCombo(input(end), $<HTMLUListElement>(`#${end}-list`), () => places, (p) => {
     setEnd(end, [p.lon, p.lat], p.name);
+    tapMoves = null;
     routeMap?.flyTo([p.lon, p.lat]);
     if (state.from && state.to) requestPlan();
+    else promptNext();
   });
 }
 
@@ -231,10 +286,15 @@ document.querySelectorAll<HTMLButtonElement>("[data-action]").forEach((button) =
     if (action === "centre" && routeMap) {
       setEnd(end, routeMap.centre(), null);
       if (state.from && state.to) requestPlan();
+      else promptNext();
     } else if (action === "swap") {
       const [f, fn, t, tn] = [state.from, state.fromName, state.to, state.toName];
-      setEnd("from", t, tn);
-      setEnd("to", f, fn);
+      setEnd("from", t, tn, true);
+      setEnd("to", f, fn, true);
+      // The walk now runs the other way, so visit the stops in reverse.
+      state.stops.reverse();
+      stopNames.reverse();
+      renderStops();
       if (state.from && state.to) requestPlan();
     } else if (action === "locate") {
       locate(end);
@@ -291,6 +351,7 @@ for (const id of MODE_IDS) {
   wrap.append(radio, label);
   modeList.append(wrap);
   radio.addEventListener("change", () => {
+    scrollToNextResult = false;
     state.mode = id as ModeId;
     state.art = null;
     updateSeedRow();
@@ -308,6 +369,7 @@ $("#shuffle").addEventListener("click", () => {
   const buf = new Uint32Array(1);
   crypto.getRandomValues(buf);
   state.seed = (buf[0]! % 999_999) + 1;
+  scrollToNextResult = false;
   updateSeedRow();
   writeLink();
   if (state.from && state.to) requestPlan();
@@ -379,13 +441,22 @@ function onPlan(result: PlanResult): void {
   $("#announcer").textContent = `Route ready. ${same ?? result.summary} Step-by-step directions follow the stats.`;
 }
 
+/**
+ * Whether the next result scrolls the panel to itself. Re-planning from the mode cards or a new
+ * seed keeps the panel where it is, so modes can be compared; the map shows the new route.
+ */
+let scrollToNextResult = true;
+
 /** Shows the result card, scrolling the panel to it if it's out of sight. */
 function showResult(): void {
+  const wasHidden = resultEl.hidden;
   resultEl.hidden = false;
   setStatus("");
+  const scroll = scrollToNextResult || wasHidden;
+  scrollToNextResult = true;
   const panel = $("#panel").getBoundingClientRect();
   const card = resultEl.getBoundingClientRect();
-  if (card.top > panel.bottom - 80 || card.bottom < panel.top) {
+  if (scroll && (card.top > panel.bottom - 80 || card.bottom < panel.top)) {
     const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     resultEl.scrollIntoView({ block: "start", behavior: reduced ? "auto" : "smooth" });
   }
@@ -430,6 +501,9 @@ $("#make-image").addEventListener("click", async () => {
   clearShareImage();
   setStatus("Drawing your share image…");
   try {
+    // Frame the route in the visible map first, whatever the user has panned or expanded since.
+    setSheetFull(false);
+    await routeMap.fitRoute();
     shareBlob = await renderShareImage(routeMap.map, lastCard, routeMap.visibleBox());
     shareUrl = URL.createObjectURL(shareBlob);
     $<HTMLImageElement>("#share-preview").src = shareUrl;
@@ -580,7 +654,9 @@ function onSpell(result: SpellResultMsg): void {
 function parkActions(pin: Pin): PinAction[] {
   if (pin.kind !== "park") return [];
   const already = state.stops.some((p) => p[0] === pin.at[0] && p[1] === pin.at[1]);
-  if (already || state.stops.length >= MAX_LINK_STOPS || !state.to) return [];
+  if (already) return [{ label: "Already one of your stops." }];
+  if (!state.to) return [{ label: "Pick an end first to add stops." }];
+  if (state.stops.length >= MAX_LINK_STOPS) return [{ label: `You have ${MAX_LINK_STOPS} stops already. Remove one to add this.` }];
   return [{
     label: "Add as a stop",
     run: () => {

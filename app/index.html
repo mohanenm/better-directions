@@ -37,6 +37,8 @@
           <button type="button" class="chip" id="nearest-area">Nearest to me</button>
         </div>
         <p class="help area-note" id="area-note" hidden></p>
+        <!-- Near the top, and sticky, so errors and progress are seen wherever the panel is scrolled. -->
+        <div id="status" class="status" role="status" aria-live="polite"></div>
         <div class="sections">
           <section class="section" data-section="plan">
             <h2 class="section-head">
@@ -178,9 +180,10 @@
                 <fieldset class="choice">
                   <legend>Focus</legend>
                   <label><input type="radio" name="workout-focus" value="stairs" checked> Stairs: as many staircases as fit</label>
-                  <label><input type="radio" name="workout-focus" value="hills"> Hills: as much climbing as fits<span class="needs-terrain" hidden> (needs elevation data)</span></label>
-                  <label><input type="radio" name="workout-focus" value="mixed"> Mixed<span class="needs-terrain" hidden> (needs elevation data)</span></label>
+                  <label><input type="radio" name="workout-focus" value="hills"> Hills: as much climbing as fits</label>
+                  <label><input type="radio" name="workout-focus" value="mixed"> Mixed</label>
                 </fieldset>
+                <p class="help" id="workout-terrain-note" hidden>Hills and Mixed need elevation data, which this area doesn't have yet.</p>
                 <fieldset class="choice segmented">
                   <legend>Length</legend>
                   <label><input type="radio" name="workout-len" value="20"> 20 min</label>
@@ -219,7 +222,6 @@
           </section>
         </div>
 
-        <div id="status" class="status" role="status" aria-live="polite"></div>
         <div id="announcer" class="visually-hidden" aria-live="polite"></div>
 
         <section id="result" class="result" aria-labelledby="result-title" hidden tabindex="-1">

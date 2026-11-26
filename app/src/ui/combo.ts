@@ -14,13 +14,27 @@ export function attachCombo(input: HTMLInputElement, list: HTMLUListElement, pla
   let active = -1;
 
   const close = () => {
+    empty = false;
     list.hidden = true;
     input.setAttribute("aria-expanded", "false");
     input.removeAttribute("aria-activedescendant");
     active = -1;
   };
 
+  let empty = false; // typed enough, but nothing matched
   const render = () => {
+    if (empty) {
+      const li = document.createElement("li");
+      li.className = "empty";
+      li.setAttribute("role", "option");
+      li.setAttribute("aria-disabled", "true");
+      li.textContent = "No matching places. You can tap the map instead.";
+      list.replaceChildren(li);
+      list.hidden = false;
+      input.setAttribute("aria-expanded", "true");
+      input.removeAttribute("aria-activedescendant");
+      return;
+    }
     list.replaceChildren(
       ...matches.map((p, i) => {
         const li = document.createElement("li");
@@ -55,6 +69,7 @@ export function attachCombo(input: HTMLInputElement, list: HTMLUListElement, pla
 
   input.addEventListener("input", () => {
     matches = searchPlaces(places(), input.value);
+    empty = matches.length === 0 && input.value.trim().length >= 2;
     active = -1;
     render();
   });

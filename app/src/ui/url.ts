@@ -120,7 +120,9 @@ export function parseLink(search: string, bbox: Bbox): LinkState {
   };
 }
 
-const fmt = (p: [number, number]) => `${p[0].toFixed(5)},${p[1].toFixed(5)}`;
+// Six decimals is the graph's own precision (microdegrees), so a link names exactly the point
+// that was planned from and reopens the same route. Five could round onto a neighbouring node.
+const fmt = (p: [number, number]) => `${+p[0].toFixed(6)},${+p[1].toFixed(6)}`; // no trailing zeros
 
 export function serializeLink(state: LinkState): string {
   const q = new URLSearchParams();

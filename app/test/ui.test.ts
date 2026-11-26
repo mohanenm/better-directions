@@ -71,6 +71,11 @@ describe("spelled words in links", () => {
     expect(parseLink("?from=4.83,45.76&crawl=pub&workout=hills", BBOX)).toMatchObject({ crawl: null, workout: { focus: "hills" }, open: ["workout"] });
     expect(parseLink("?from=4.83,45.76&spell=HI&art=heart", BBOX)).toMatchObject({ art: null, spell: "HI", open: ["spell"] });
   });
+  it("keeps points to the graph's precision, so a link reopens the same snapped point", () => {
+    const base = parseLink("", BBOX);
+    const from: [number, number] = [4.832123, 45.757891];
+    expect(parseLink(serializeLink({ ...base, from }), BBOX).from).toEqual(from);
+  });
   it("drops invisible bidi and zero-width characters from names", () => {
     expect(parseLink("?from=4.83,45.76&fromName=Gare%E2%80%AE%E2%80%8Bx", BBOX).fromName).toBe("Garex");
   });
@@ -105,10 +110,25 @@ describe("place search", () => {
 describe("GPS art links", () => {
   it("round-trip shape and length, and ignore unknown shapes and lengths", () => {
     const link = serializeLink({ from: [4.832, 45.7578], to: [4.84, 45.76], fromName: "Place Bellecour", toName: null, mode: "stairs", seed: 1, art: "heart", artMinutes: 55, open: ["art"], stops: [], workout: null, crawl: null, spell: null, spellInLink: false });
-    expect(link).toBe("?from=4.83200%2C45.75780&fromName=Place+Bellecour&art=heart&len=55");
+    expect(link).toBe("?from=4.832%2C45.7578&fromName=Place+Bellecour&art=heart&len=55");
     const parsed = parseLink(link, BBOX);
     expect(parsed.art).toBe("heart");
     expect(parsed.artMinutes).toBe(55);
     expect(parseLink("?art=swastika&len=999", BBOX)).toMatchObject({ art: null, artMinutes: 40 });
+  });
+});
+
+describe("place search", () => {
+  const P = (name: string, kind: Place["kind"], lon = 4.83, lat = 45.76): Place => ({ name, kind, lon, lat });
+  it("shows a place once when OpenStreetMap has it twice, differently capitalised", () => {
+    const hits = searchPlaces([P("Belvédère Cardinal", "sight"), P("belvedere cardinal", "sight")], "belv");
+    expect(hits).toHaveLength(1);
+  });
+  it("keeps same-named places that are far apart", () => {
+    expect(searchPlaces([P("Jardin", "park"), P("Jardin", "park", 4.9, 45.8)], "jar")).toHaveLength(2);
+  });
+  it("ranks stations above sights for the same kind of match", () => {
+    const hits = searchPlaces([P("Belvédère du Sud", "sight"), P("Bellecour", "station")], "be");
+    expect(hits[0]!.name).toBe("Bellecour");
   });
 });

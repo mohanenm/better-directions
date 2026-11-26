@@ -30,9 +30,18 @@ type Line = [number, number][];
 type Lines = Line | Line[];
 const asLines = (l: Lines): Line[] => (l.length && Array.isArray(l[0]![0]) ? (l as Line[]) : l.length ? [l as Line] : []);
 
+/** A button in a pin's popup, or (without run) a line of explanation such as "Three stops already". */
 export interface PinAction {
   label: string;
-  run: () => void;
+  run?: () => void;
+}
+
+/** A short fingerprint of the lines drawn, so tests can check the map shows the latest route. */
+export function lineKey(lines: Lines): string {
+  const all = asLines(lines).flat();
+  if (!all.length) return "";
+  const f = (p: [number, number]) => `${p[0].toFixed(5)},${p[1].toFixed(5)}`;
+  return `${all.length}:${f(all[0]!)}:${f(all.at(-1)!)}`;
 }
 
 /** The part of the map not covered by the panel, in CSS pixels from the map's top left. */
@@ -49,6 +58,8 @@ export interface RouteMap {
   setRoutes(normal: Lines, better: Lines, penUp?: [number, number][][]): void;
   clearRoutes(): void;
   setMarker(end: "from" | "to", point: [number, number] | null): void;
+  /** Fit the current route into the visible part of the map, without animation; resolves when drawn. */
+  fitRoute(): Promise<void>;
   /** Pins with a popup each; `actions` lists the buttons to offer for a pin. */
   setPins(pins: Pin[], actions: (pin: Pin) => PinAction[]): void;
   /** The centre of the visible part of the map. */
@@ -198,17 +209,20 @@ export function createMap(container: HTMLElement, bbox: Bbox): RouteMap {
     geometry: { type: "MultiLineString" as const, coordinates: coords },
   });
 
+  let drawn: [number, number][] = [];
+  function fit(duration: number): void {
+    if (!drawn.length) return;
+    const bounds = drawn.reduce((b, p) => b.extend(p), new LngLatBounds(drawn[0]!, drawn[0]!));
+    map.fitBounds(bounds as LngLatBoundsLike, { padding: padding(), duration, maxZoom: 17 });
+  }
+
   function draw(normal: Line[], better: Line[], penUp: Line[]): void {
     (map.getSource("normal") as GeoJSONSource).setData(lines(normal));
     (map.getSource("better") as GeoJSONSource).setData(lines(better));
     (map.getSource("penup") as GeoJSONSource).setData(lines(penUp));
-    const all = [...normal.flat(), ...better.flat(), ...penUp.flat()];
-    if (!all.length) return;
-    const bounds = all.reduce(
-      (b, p) => b.extend(p),
-      new LngLatBounds(all[0]!, all[0]!),
-    );
-    map.fitBounds(bounds as LngLatBoundsLike, { padding: padding(), duration: reducedMotion() ? 0 : 600, maxZoom: 17 });
+    container.dataset["routeKey"] = lineKey(better);
+    drawn = [...normal.flat(), ...better.flat(), ...penUp.flat()];
+    fit(reducedMotion() ? 0 : 600);
   }
 
   return {
@@ -219,7 +233,18 @@ export function createMap(container: HTMLElement, bbox: Bbox): RouteMap {
       if (map.getSource("better")) draw(n, b, penUp);
       else queued = { normal: n, better: b, penUp };
     },
+    fitRoute() {
+      return new Promise<void>((resolve) => {
+        if (!drawn.length) return resolve();
+        fit(0);
+        map.once("idle", () => resolve());
+        map.triggerRepaint();
+      });
+    },
     clearRoutes() {
+      queued = null;
+      drawn = [];
+      container.dataset["routeKey"] = "";
       if (!map.getSource("better")) return;
       const empty = { type: "FeatureCollection" as const, features: [] };
       (map.getSource("normal") as GeoJSONSource).setData(empty);
@@ -262,13 +287,20 @@ export function createMap(container: HTMLElement, bbox: Bbox): RouteMap {
             body.append(p);
           }
           for (const action of actions(pin)) {
+            if (!action.run) {
+              const note = document.createElement("p");
+              note.textContent = action.label;
+              body.append(note);
+              continue;
+            }
+            const run = action.run;
             const b = document.createElement("button");
             b.type = "button";
             b.className = "secondary";
             b.textContent = action.label;
             b.addEventListener("click", () => {
               popup?.remove();
-              action.run();
+              run();
             });
             body.append(b);
           }
