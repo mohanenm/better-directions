@@ -2,6 +2,7 @@
 import type { Step } from "../modes/directions";
 import type { ShapeId } from "../art/shapes";
 import type { ModeId } from "../modes/modes";
+import type { SameAsNormal } from "../modes/names";
 import type { CrawlTheme, WorkoutFocus } from "../modes/options";
 import type { CostOfFun } from "../modes/stats";
 
@@ -143,6 +144,14 @@ export interface PlanResult {
   name: string;
   steps: Step[];
   strategy: string;
+  /**
+   * Set when the better route is the normal one, or adds under a minute, and why: the normal
+   * walk already fills the time limit; it already does what the mode asks (no right turns);
+   * there's none of the mode's feature within reach; or no detour fits.
+   */
+  sameAsNormal: SameAsNormal | null;
+  /** What the mode looks for, when the route found none of it ("staircases"), else null. */
+  missingFeature: string | null;
   /** Parks along or near the better route. */
   pins: Pin[];
   ms: number;

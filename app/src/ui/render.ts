@@ -78,9 +78,37 @@ function renderCard(name: string, summary: string, stats: [string, string][], b:
   renderSteps(steps, onStep);
 }
 
+/** Why the better route is (nearly) the normal one, or null when it isn't. */
+export function sameRouteNote(r: PlanResult): string | null {
+  const minutes = Math.max(1, Math.round(r.normalStats.timeS / 60));
+  const stops = r.strategy === "via-stops";
+  switch (r.sameAsNormal) {
+    case "too-long":
+      return `This walk${stops ? " with its stops" : ""} already takes ${minutes} minutes and detours are capped at an hour, so the better route is the normal one. ${stops ? "Drop a stop, or pick" : "Pick"} places closer together, or plan a loop from your start.`;
+    case "already":
+      return "The normal route already has no right turns, so it's the better route too.";
+    case "nothing-here":
+      return `There are no ${r.missingFeature} within reach here, so the better route is the normal one. Try another mode.`;
+    case "no-detour":
+      return `No detour in this mode fits within ${r.capMinutes} minutes here, so the better route is the normal one. Try another mode or a different pair of places.`;
+    default:
+      return null;
+  }
+}
+
+/** The card's title: the route's own name, unless it's really just the normal route. */
+export function planTitle(r: PlanResult): string {
+  return r.sameAsNormal && r.sameAsNormal !== "already" ? "Just the Normal Route" : r.name;
+}
+
 export function renderResult(r: PlanResult, onStep: (at: [number, number]) => void): void {
-  const notes = r.strategy === "via-stops" ? ["Goes through the stops you picked, in order."] : [];
-  renderCard(r.name, r.summary, statItems(r), r.betterStats, notes, r.steps, ["Better route", "Normal route"], onStep);
+  const same = sameRouteNote(r);
+  const notes = [
+    ...(same ? [same] : []),
+    ...(!same && r.missingFeature ? [`This route doesn't pass any ${r.missingFeature}: there are none within reach, so it's just a different way round.`] : []),
+    ...(r.strategy === "via-stops" ? ["Goes through the stops you picked, in order."] : []),
+  ];
+  renderCard(planTitle(r), r.summary, statItems(r), r.betterStats, notes, r.steps, ["Better route", "Normal route"], onStep);
 }
 
 export function renderTour(r: TourResult, onStep: (at: [number, number]) => void): void {
@@ -109,12 +137,13 @@ function artStats(r: ArtResultMsg): [string, string][] {
 
 export function renderArt(r: ArtResultMsg, onStep: (at: [number, number]) => void): void {
   const notes = ["Experimental: streets rarely match a shape exactly, so expect wobbles. The dashed line is the ideal shape."];
+  if (r.likeness < 60) notes.unshift("The streets here don't follow this shape well, so it may be hard to make out. Try another start point.");
   renderCard(artName(r), artSummary(r), artStats(r), r.stats, notes, r.steps, ["Your walk", "Ideal shape"], onStep);
 }
 
 export function planCard(r: PlanResult): ShareCard {
   const extra = Math.round((r.betterStats.timeS - r.normalStats.timeS) / 60);
-  return { name: r.name, summary: r.summary, chips: [["Extra time", `+${extra} min`], ...statItems(r).slice(2, 4)], from: r.from, to: r.to, legend: ["Better route", "Normal route"] };
+  return { name: planTitle(r), summary: r.summary, chips: [["Extra time", `+${extra} min`], ...statItems(r).slice(2, 4)], from: r.from, to: r.to, legend: ["Better route", "Normal route"] };
 }
 
 export function artCard(r: ArtResultMsg): ShareCard {

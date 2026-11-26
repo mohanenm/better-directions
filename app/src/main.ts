@@ -12,7 +12,7 @@ import { FAMOUS } from "./ui/famous";
 import { createMap, type RouteMap } from "./ui/map";
 import type { PinAction } from "./ui/map";
 import type { ArtResultMsg, FromWorker, Pin, PlanResult, ReadyInfo, SpellResultMsg, ToWorker, TourResult } from "./ui/protocol";
-import { artCard, planCard, renderArt, renderResult, renderSpell, renderTour, setAreaNotes, spellCard, tourCard } from "./ui/render";
+import { artCard, planCard, renderArt, renderResult, renderSpell, renderTour, sameRouteNote, setAreaNotes, spellCard, tourCard } from "./ui/render";
 import { renderShareImage, type ShareCard } from "./ui/share-image";
 import { initThemeToggle } from "./ui/theme";
 import type { Place } from "./ui/search";
@@ -375,7 +375,8 @@ function onPlan(result: PlanResult): void {
   clearShareImage();
   showResult();
   // Screen readers hear the result; sighted users see it in the card.
-  $("#announcer").textContent = `Route ready. ${result.summary} Step-by-step directions follow the stats.`;
+  const same = sameRouteNote(result);
+  $("#announcer").textContent = `Route ready. ${same ?? result.summary} Step-by-step directions follow the stats.`;
 }
 
 /** Shows the result card, scrolling the panel to it if it's out of sight. */

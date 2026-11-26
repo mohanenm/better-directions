@@ -12,6 +12,7 @@ import type { FeatureIndex } from "./features";
 import type { ModeId } from "./modes";
 import type { Route } from "../router/astar";
 import type { ModePlan } from "./plan-mode";
+import { deliversMode } from "./names";
 import { minutes, TURN_DEG } from "./stats";
 
 export type StepKind =
@@ -218,7 +219,8 @@ function closureNote(fi: FeatureIndex, grp: Group): string | null {
 export function directions(fi: FeatureIndex, plan: ModePlan, fromName: string, toName: string): Step[] {
   const time = `${minutes(plan.better.timeS)} min instead of ${minutes(plan.normal.timeS)}`;
   return describeRoute(fi, plan.better, {
-    quips: plan.mode,
+    // A route that found none of its mode's features gets the plain lines, not "more courtyards than most".
+    quips: deliversMode(plan.mode, plan.betterStats) ? plan.mode : "normal",
     seed: plan.seed,
     fromName,
     arriveText: `Arrive at ${toName}: ${time}.`,
