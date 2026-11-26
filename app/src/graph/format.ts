@@ -59,7 +59,7 @@ export interface GraphMeta {
   sections: { name: string; type: SectionType; count: number }[];
 }
 
-type SectionType = "i32" | "u32" | "u16" | "u8" | "f32" | "f64";
+export type SectionType = "i32" | "u32" | "u16" | "u8" | "f32" | "f64";
 
 export interface GraphSections {
   node_lat: Int32Array;
@@ -122,29 +122,67 @@ const ARRAYS = {
 
 export class GraphFormatError extends Error {}
 
-export function decodeGraph(buffer: ArrayBuffer): DecodedGraph {
-  if (buffer.byteLength < 12) throw new GraphFormatError("file too short");
-  const head = new Uint8Array(buffer, 0, 4);
-  if (String.fromCharCode(...head) !== MAGIC) throw new GraphFormatError("not a Better Directions graph");
+export interface SectionInfo {
+  name: string;
+  type: SectionType;
+  count: number;
+}
+
+/**
+ * The container graph.bin and graph tiles share: a 4-byte magic, a u32 version, a u32 length and
+ * a JSON header listing the sections, then each section as a typed array starting on an 8-byte
+ * boundary, with nothing after the last. Sections become zero-copy views over the buffer.
+ */
+export function readContainer<M extends { sections: SectionInfo[] }>(buffer: ArrayBuffer, magic: string, version: number, what: string): { meta: M; sections: Record<string, ArrayBufferView> } {
+  if (buffer.byteLength < 12) throw new GraphFormatError(`${what}: file too short`);
+  if (String.fromCharCode(...new Uint8Array(buffer, 0, 4)) !== magic) throw new GraphFormatError(`not a Better Directions ${what}`);
   const view = new DataView(buffer);
-  const version = view.getUint32(4, true);
-  if (version !== SUPPORTED_VERSION) throw new GraphFormatError(`unsupported version ${version}`);
+  const v = view.getUint32(4, true);
+  if (v !== version) throw new GraphFormatError(`${what}: unsupported version ${v}`);
   const metaLen = view.getUint32(8, true);
-  const meta = JSON.parse(new TextDecoder().decode(new Uint8Array(buffer, 12, metaLen))) as GraphMeta;
-
+  const meta = JSON.parse(new TextDecoder().decode(new Uint8Array(buffer, 12, metaLen))) as M;
   if (!littleEndianHost()) throw new GraphFormatError("big-endian hosts are not supported");
-
   const sections: Record<string, ArrayBufferView> = {};
   let pos = 12 + metaLen;
   for (const sec of meta.sections) {
     pos += (8 - (pos % 8)) % 8;
     const Ctor = ARRAYS[sec.type];
     const bytes = Ctor.BYTES_PER_ELEMENT * sec.count;
-    if (pos + bytes > buffer.byteLength) throw new GraphFormatError(`section ${sec.name} overruns the file`);
+    if (pos + bytes > buffer.byteLength) throw new GraphFormatError(`${what}: section ${sec.name} overruns the file`);
     sections[sec.name] = new Ctor(buffer, pos, sec.count);
     pos += bytes;
   }
-  if (pos !== buffer.byteLength) throw new GraphFormatError(`trailing bytes: read ${pos} of ${buffer.byteLength}`);
+  if (pos !== buffer.byteLength) throw new GraphFormatError(`${what}: trailing bytes: read ${pos} of ${buffer.byteLength}`);
+  return { meta, sections };
+}
+
+/** Write the same container (graph tiles; graph.bin itself is written by the Python pipeline). */
+export function writeContainer(magic: string, version: number, header: Record<string, unknown>, arrays: [string, ArrayBufferView][]): Uint8Array {
+  const typeOf = (a: ArrayBufferView): SectionType => {
+    for (const [t, C] of Object.entries(ARRAYS)) if (a instanceof C) return t as SectionType;
+    throw new GraphFormatError("unsupported section type");
+  };
+  const sections: SectionInfo[] = arrays.map(([name, a]) => ({ name, type: typeOf(a), count: a.byteLength / ARRAYS[typeOf(a)].BYTES_PER_ELEMENT }));
+  const metaBytes = new TextEncoder().encode(JSON.stringify({ ...header, sections }));
+  const align = (n: number) => n + ((8 - (n % 8)) % 8);
+  let size = 12 + metaBytes.length;
+  for (const [, a] of arrays) size = align(size) + a.byteLength;
+  const out = new Uint8Array(size);
+  out.set(new TextEncoder().encode(magic), 0);
+  new DataView(out.buffer).setUint32(4, version, true);
+  new DataView(out.buffer).setUint32(8, metaBytes.length, true);
+  out.set(metaBytes, 12);
+  let pos = 12 + metaBytes.length;
+  for (const [, a] of arrays) {
+    pos = align(pos);
+    out.set(new Uint8Array(a.buffer, a.byteOffset, a.byteLength), pos);
+    pos += a.byteLength;
+  }
+  return out;
+}
+
+export function decodeGraph(buffer: ArrayBuffer): DecodedGraph {
+  const { meta, sections } = readContainer<GraphMeta>(buffer, MAGIC, SUPPORTED_VERSION, "graph");
   for (const name of REQUIRED_SECTIONS) {
     if (!(name in sections)) throw new GraphFormatError(`missing section ${name}`);
   }

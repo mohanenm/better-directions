@@ -13,8 +13,8 @@ export interface ReadyInfo {
   terrainAttribution: string;
   dataAsOf: string;
   /** Milliseconds spent loading in the worker (for performance checks). */
-  /** Loading the area's base file; tiles load per request. */
-  timings: { fetchMs: number; baseBytes: number };
+  /** Loading the area: the whole graph, or a tiled area's base file (its tiles load per request). */
+  timings: { loadMs: number; tiled: boolean };
 }
 
 export interface PlanRequest {

@@ -8,7 +8,6 @@ import { blended, plan } from "../router/planner";
 import { assertRouteSafe } from "../router/verify";
 import { haversineM } from "../router/geometry";
 import { hashUnit, mulberry32 } from "../router/rng";
-import { tripRegion } from "../router/region";
 import { FLAT_SPEED_MS } from "../router/time";
 import { detourCapSeconds } from "../safety/limits";
 import { collectRoute, DETOUR_FACTOR, viaRoute } from "./collect";
@@ -45,97 +44,93 @@ export function planMode(
   const base = plan(router, start, goal, model, capSeconds, long);
   if (!base) return null;
 
-  // From here on, candidates outside what this cap can reach are skipped (see router/region.ts).
-  const region = tripRegion([router.g.nodeLonLat(start), router.g.nodeLonLat(goal)], base.capSeconds);
-  return router.withRegion(region, () => {
-    let better = base.better;
-    let strategy: ModePlan["strategy"] = base.fellBackToNormal ? "normal" : "cost-profile";
-    let betterStats = costOfFun(fi, better);
+  let better = base.better;
+  let strategy: ModePlan["strategy"] = base.fellBackToNormal ? "normal" : "cost-profile";
+  let betterStats = costOfFun(fi, better);
 
-    if (mode.collect) {
-      const collected = collectRoute(router, fi, start, goal, mode, model, base.capSeconds);
-      if (collected && collected.timeS <= base.capSeconds) {
-        const stats = costOfFun(fi, collected);
-        const gain = mode.score(stats) - mode.score(betterStats);
-        if (gain > 0 || (gain === 0 && collected.timeS < better.timeS)) {
-          better = collected;
-          betterStats = stats;
-          strategy = "collect";
-        }
-      }
-    }
-
-    if (modeId === "chaos") {
-      const wild = chaosWaypointRoute(router, fi, start, goal, model, base.capSeconds, seed);
-      if (wild) {
-        better = wild;
-        betterStats = costOfFun(fi, wild);
-        strategy = "chaos-waypoints";
-      }
-    }
-
-    const normalStats = costOfFun(fi, base.normal);
-
-    if (modeId === "inconvenient") {
-      // Wander via a few off-route waypoints too; keep the most annoying route that crosses no
-      // more busy roads than the normal one.
-      let bestScore = betterStats.busyCrossings <= normalStats.busyCrossings ? mode.score(betterStats) : -Infinity;
-      for (let k = 1; k <= 3; k++) {
-        const wild = chaosWaypointRoute(router, fi, start, goal, model, base.capSeconds, seed * 31 + k);
-        if (!wild) continue;
-        const stats = costOfFun(fi, wild);
-        if (stats.busyCrossings > normalStats.busyCrossings || mode.score(stats) <= bestScore) continue;
-        bestScore = mode.score(stats);
-        better = wild;
+  if (mode.collect) {
+    const collected = collectRoute(router, fi, start, goal, mode, model, base.capSeconds);
+    if (collected && collected.timeS <= base.capSeconds) {
+      const stats = costOfFun(fi, collected);
+      const gain = mode.score(stats) - mode.score(betterStats);
+      if (gain > 0 || (gain === 0 && collected.timeS < better.timeS)) {
+        better = collected;
         betterStats = stats;
-        strategy = "chaos-waypoints";
+        strategy = "collect";
       }
     }
+  }
 
-    if (modeId === "inconvenient" && betterStats.busyCrossings > normalStats.busyCrossings) {
-      // Inconvenient, not riskier: raise the crossing penalty until it crosses no more than normal.
-      let fixed = false;
-      for (const penalty of CROSSING_PENALTIES_S.slice(1)) {
-        const strict = plan(router, start, goal, inconvenientModel(fi, penalty), base.capSeconds);
-        if (!strict) break;
-        const stats = costOfFun(fi, strict.better);
-        if (stats.busyCrossings <= normalStats.busyCrossings) {
-          better = strict.better;
-          betterStats = stats;
-          strategy = strict.fellBackToNormal ? "normal" : "cost-profile";
-          fixed = true;
-          break;
-        }
-      }
-      if (!fixed) {
-        better = base.normal;
-        betterStats = normalStats;
-        strategy = "normal";
+  if (modeId === "chaos") {
+    const wild = chaosWaypointRoute(router, fi, start, goal, model, base.capSeconds, seed);
+    if (wild) {
+      better = wild;
+      betterStats = costOfFun(fi, wild);
+      strategy = "chaos-waypoints";
+    }
+  }
+
+  const normalStats = costOfFun(fi, base.normal);
+
+  if (modeId === "inconvenient") {
+    // Wander via a few off-route waypoints too; keep the most annoying route that crosses no
+    // more busy roads than the normal one.
+    let bestScore = betterStats.busyCrossings <= normalStats.busyCrossings ? mode.score(betterStats) : -Infinity;
+    for (let k = 1; k <= 3; k++) {
+      const wild = chaosWaypointRoute(router, fi, start, goal, model, base.capSeconds, seed * 31 + k);
+      if (!wild) continue;
+      const stats = costOfFun(fi, wild);
+      if (stats.busyCrossings > normalStats.busyCrossings || mode.score(stats) <= bestScore) continue;
+      bestScore = mode.score(stats);
+      better = wild;
+      betterStats = stats;
+      strategy = "chaos-waypoints";
+    }
+  }
+
+  if (modeId === "inconvenient" && betterStats.busyCrossings > normalStats.busyCrossings) {
+    // Inconvenient, not riskier: raise the crossing penalty until it crosses no more than normal.
+    let fixed = false;
+    for (const penalty of CROSSING_PENALTIES_S.slice(1)) {
+      const strict = plan(router, start, goal, inconvenientModel(fi, penalty), base.capSeconds, long);
+      if (!strict) break;
+      const stats = costOfFun(fi, strict.better);
+      if (stats.busyCrossings <= normalStats.busyCrossings) {
+        better = strict.better;
+        betterStats = stats;
+        strategy = strict.fellBackToNormal ? "normal" : "cost-profile";
+        fixed = true;
+        break;
       }
     }
+    if (!fixed) {
+      better = base.normal;
+      betterStats = normalStats;
+      strategy = "normal";
+    }
+  }
 
-    assertRouteSafe(router.g, better, base.capSeconds);
-    const extras =
-      modeId === "no-right"
-        ? [`${betterStats.leftTurns} left turns, ${betterStats.rightTurns} right`]
-        : modeId === "snacks"
-          ? snackSummary(betterStats)
-          : modeId === "inconvenient"
-            ? inconvenienceSummary(betterStats)
-            : [];
-    return {
-      mode: modeId,
-      seed,
-      normal: base.normal,
-      better,
-      normalStats,
-      betterStats,
-      capSeconds: base.capSeconds,
-      strategy,
-      summary: summarise(normalStats, betterStats, extras),
-      name: routeName(fi, modeId, betterStats, better, seed, normalStats),
-    };
-  });
+  assertRouteSafe(router.g, better, base.capSeconds);
+  const extras =
+    modeId === "no-right"
+      ? [`${betterStats.leftTurns} left turns, ${betterStats.rightTurns} right`]
+      : modeId === "snacks"
+        ? snackSummary(betterStats)
+        : modeId === "inconvenient"
+          ? inconvenienceSummary(betterStats)
+          : [];
+  return {
+    mode: modeId,
+    seed,
+    normal: base.normal,
+    better,
+    normalStats,
+    betterStats,
+    capSeconds: base.capSeconds,
+    strategy,
+    summary: summarise(normalStats, betterStats, extras),
+    name: routeName(fi, modeId, betterStats, better, seed, normalStats),
+  };
 }
 
 /** Joins consecutive routes end to end. */

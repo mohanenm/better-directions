@@ -9,7 +9,6 @@
 import type { Graph } from "../graph/graph";
 import { haversineM } from "./geometry";
 import { MinHeap } from "./heap";
-import type { Region } from "./region";
 import { MAX_SPEED_MS, edgeTimeSeconds } from "./time";
 
 export interface CostModel {
@@ -51,11 +50,6 @@ export class CostModelError extends Error {}
 
 export class Router {
   readonly g: Graph;
-  /**
-   * Where the current request's routes can go (set by the planners once they know the cap). The
-   * search prunes outside it anyway; planners use it to skip candidates that could never fit.
-   */
-  region: Region | null = null;
   private readonly timeS: Float32Array;
   private readonly cost: Float64Array;
   private readonly time: Float64Array;
@@ -152,17 +146,6 @@ export class Router {
       }
     }
     return null;
-  }
-
-  /** Run `fn` with `region` as the current region, restoring the previous one afterwards. */
-  withRegion<T>(region: Region | null, fn: () => T): T {
-    const previous = this.region;
-    this.region = region;
-    try {
-      return fn();
-    } finally {
-      this.region = previous;
-    }
   }
 
   private reconstruct(last: number): Route {

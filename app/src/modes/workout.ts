@@ -5,7 +5,6 @@
  */
 import type { CostModel, Route, Router } from "../router/astar";
 import { assertRouteSafe } from "../router/verify";
-import { loopRegion } from "../router/region";
 import { loopCapSeconds } from "../safety/limits";
 import { collectRoute } from "./collect";
 import type { FeatureIndex } from "./features";
@@ -78,11 +77,6 @@ export interface WorkoutPlan {
 
 export function planWorkout(router: Router, fi: FeatureIndex, start: number, minutes: number, focus: WorkoutFocus): WorkoutPlan | null {
   const capSeconds = loopCapSeconds(minutes);
-  // A loop: nothing further than half the cap's reach from the start (see router/region.ts).
-  return router.withRegion(loopRegion(router.g.nodeLonLat(start), capSeconds, true), () => planLoop(router, fi, start, minutes, focus, capSeconds));
-}
-
-function planLoop(router: Router, fi: FeatureIndex, start: number, minutes: number, focus: WorkoutFocus, capSeconds: number): WorkoutPlan | null {
   const model = workoutModel(fi, focus, minutes);
   let route = collectRoute(router, fi, start, start, workoutMode(fi, focus), model, capSeconds, { maxRetraceShare: LOOP_RETRACE_SHARE });
   // How much of the workout a loop gives: staircases, climb, or both.

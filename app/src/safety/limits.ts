@@ -23,12 +23,7 @@ export function detourCapSeconds(normalSeconds: number, long = false): number {
 export const NOVELTY_NOTICE =
   "For fun. Use common sense, follow signs and local rules, and don't follow it anywhere that looks unsafe or closed.";
 
-/**
- * Loops (GPS art, workouts, crawls) have no "normal route" to compare with, so they're capped by
- * the length chosen: an hour normally, an hour and a half for the long options, never more.
- */
+/** Loops (workouts, crawls, shapes, words) have no "normal route" to compare with: an hour by default. */
 export const LOOP_MAX_SECONDS = DETOUR.maxSeconds;
-export const LONG_LOOP_MAX_SECONDS = DETOUR.longMaxSeconds;
-export const GPS_ART_MAX_SECONDS = LONG_LOOP_MAX_SECONDS;
-/** The cap for a loop of the chosen length. */
-export const loopCapSeconds = (minutes: number): number => Math.min(minutes * 60, minutes > 60 ? LONG_LOOP_MAX_SECONDS : LOOP_MAX_SECONDS);
+/** Crawls and workouts are capped at the length chosen (up to an hour and a half). */
+export const loopCapSeconds = (minutes: number): number => Math.min(minutes * 60, DETOUR.longMaxSeconds);

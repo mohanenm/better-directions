@@ -3,6 +3,8 @@ import type { Graph, LonLat } from "../graph/graph";
 import { haversineM } from "./geometry";
 
 const CELL_DEG = 0.002; // ~150-220 m
+/** How far a tapped or searched point may be from a path and still snap to it. */
+export const SNAP_RADIUS_M = 300;
 
 export class NodeIndex {
   private readonly cells = new Map<string, number[]>();
@@ -20,7 +22,7 @@ export class NodeIndex {
   }
 
   /** Nearest usable node within maxDistanceM, or null. Ties go to the lower node id. */
-  nearest(point: LonLat, maxDistanceM = 300): number | null {
+  nearest(point: LonLat, maxDistanceM = SNAP_RADIUS_M): number | null {
     const cx = Math.floor(point[0] / CELL_DEG);
     const cy = Math.floor(point[1] / CELL_DEG);
     let best = -1;

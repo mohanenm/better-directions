@@ -7,7 +7,7 @@
 import type { CostModel, Route, Router } from "../router/astar";
 import { haversineM } from "../router/geometry";
 import { assertRouteSafe } from "../router/verify";
-import { loopRegion, restSeconds, tripRegion } from "../router/region";
+import { restSeconds, tripRegion } from "../router/region";
 import { loopCapSeconds } from "../safety/limits";
 import type { CrawlStop, FeatureIndex } from "./features";
 import { MAX_STOPS, MIN_STOPS, type CrawlTheme } from "./options";
@@ -147,11 +147,15 @@ export function eveningNote(openingHours: string, theme: CrawlTheme): string {
   return lateEnough ? "" : `Hours (${openingHours}) suggest it may be closed in the evening.`;
 }
 
+/** Crawls are 15 to 90 minutes; the planner and the tile loader both use these. */
+export const clampCrawlMinutes = (minutes: number): number => Math.max(15, Math.min(90, minutes));
+export const crawlCapSeconds = (minutes: number): number => loopCapSeconds(clampCrawlMinutes(minutes));
+
 export function planCrawl(router: Router, fi: FeatureIndex, opts: CrawlOptions): CrawlPlan | null {
   const g = fi.g;
   const count = Math.max(MIN_STOPS, Math.min(MAX_STOPS[opts.theme], Math.round(opts.stops)));
-  const minutes = Math.max(15, Math.min(90, opts.minutes));
-  const capSeconds = loopCapSeconds(minutes);
+  const minutes = clampCrawlMinutes(opts.minutes);
+  const capSeconds = crawlCapSeconds(minutes);
   const startNode = opts.start;
   const endNode = opts.end ?? opts.start;
   const start = g.nodeLonLat(startNode);
@@ -160,7 +164,7 @@ export function planCrawl(router: Router, fi: FeatureIndex, opts: CrawlOptions):
   const skip = new Set(opts.skip ?? []);
   const drinks = opts.theme !== "art";
   // Only stops the cap can reach at all (see router/region.ts), then a rough distance budget.
-  const region = opts.end ? tripRegion([start, end], capSeconds) : loopRegion(start, capSeconds, true);
+  const region = tripRegion([start, end], capSeconds); // a loop when end is the start
   const pool = fi.crawlStops.filter((s) => {
     if (s.theme !== opts.theme || skip.has(s.index) || s.dirEdge < 0) return false;
     if (!region.contains(g.nodeLonLat(g.tail(s.dirEdge))) || !region.contains(g.nodeLonLat(g.head(s.dirEdge)))) return false;

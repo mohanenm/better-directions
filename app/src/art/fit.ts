@@ -9,14 +9,14 @@
  *    to the shape's size, reported as a likeness percentage.
  *
  * Every route is an ordinary router route, so the safety rules, audit and final check all apply,
- * and the walk is limited to the cap for the chosen length (an hour, or 90 minutes for a long one).
+ * and the walk may take up to an hour (an hour and a half for the long, 75-minute shapes).
  */
 import type { Graph, LonLat } from "../graph/graph";
 import type { FeatureIndex } from "../modes/features";
 import type { CostModel, Route, Router } from "../router/astar";
 import type { NodeIndex } from "../router/snap";
 import { assertRouteSafe } from "../router/verify";
-import { GPS_ART_MAX_SECONDS, LOOP_MAX_SECONDS, loopCapSeconds } from "../safety/limits";
+import { DETOUR, LOOP_MAX_SECONDS } from "../safety/limits";
 import { SHAPES, type ShapeId } from "./shapes";
 
 type XY = [number, number];
@@ -43,6 +43,15 @@ const STREET_FACTOR = 1.25;
 const PLANNING_SPEED_MS = 1.3;
 
 /** Shape width (metres) whose outline, walked along streets, takes about `minutes`. */
+/** Shape lengths are 15 to 75 minutes; the planner and the tile loader both clamp to this. */
+export const clampArtMinutes = (minutes: number): number => Math.max(15, Math.min(75, minutes));
+
+/**
+ * A shape may take up to an hour whatever length was chosen (the length sizes the shape; streets
+ * add detours), and up to an hour and a half for the long, over-an-hour option.
+ */
+export const artCapSeconds = (minutes: number): number => (clampArtMinutes(minutes) > 60 ? DETOUR.longMaxSeconds : DETOUR.maxSeconds);
+
 export function sizeForMinutes(shape: ShapeId, minutes: number): number {
   const pts = SHAPES[shape].points;
   let unitPerimeter = 0; // in half-widths
@@ -264,7 +273,7 @@ export function drawShape(router: Router, fi: FeatureIndex, index: NodeIndex, re
   const m = cloud.m;
   const anchor = m.xy(req.start);
   const rotations = SHAPES[req.shape].closed ? SHAPE_ROTATIONS : LETTER_ROTATIONS;
-  const cap = Math.min(GPS_ART_MAX_SECONDS, loopCapSeconds(req.minutes));
+  const cap = artCapSeconds(req.minutes);
 
   // 1. Cheap placement search.
   const placements: Placement[] = [];
