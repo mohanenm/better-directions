@@ -1,89 +1,89 @@
 {
   "city": "silver-spring",
   "graph": {
-    "nodes": 31982,
-    "edges": 42313,
-    "ways": 18954,
-    "length_km": 1760.1,
-    "bytes": 2300168,
-    "gzip_bytes": 757242
+    "nodes": 39676,
+    "edges": 53175,
+    "ways": 23181,
+    "length_km": 2111.0,
+    "bytes": 2834636,
+    "gzip_bytes": 911847
   },
   "connectivity": {
-    "nodes_before": 32878,
-    "nodes_kept": 31982,
-    "node_share": 0.9727,
-    "length_share": 0.9791
+    "nodes_before": 40591,
+    "nodes_kept": 39676,
+    "node_share": 0.9775,
+    "length_share": 0.9825
   },
   "terrain": {
     "source": "Elevation: USGS 3DEP",
     "edges_with_elevation_share": 1.0,
-    "edges_10pct_or_steeper": 330,
+    "edges_10pct_or_steeper": 375,
     "steepest_grade_pct": 37.8,
     "steepest_name": ""
   },
   "edges_by_highway": {
     "footway": {
-      "edges": 19267,
-      "km": 624.2
+      "edges": 25714,
+      "km": 802.4
     },
     "residential": {
-      "edges": 9506,
-      "km": 619.9
+      "edges": 11438,
+      "km": 693.0
     },
     "service": {
-      "edges": 7974,
-      "km": 255.6
+      "edges": 9791,
+      "km": 318.4
     },
     "tertiary": {
-      "edges": 1403,
-      "km": 70.1
+      "edges": 1543,
+      "km": 76.6
     },
     "primary": {
-      "edges": 1324,
-      "km": 67.9
+      "edges": 1472,
+      "km": 73.5
     },
     "cycleway": {
-      "edges": 779,
-      "km": 41.6
+      "edges": 818,
+      "km": 45.6
     },
     "secondary": {
-      "edges": 706,
-      "km": 33.5
+      "edges": 806,
+      "km": 37.1
     },
     "path": {
-      "edges": 305,
-      "km": 20.7
+      "edges": 343,
+      "km": 25.5
     },
     "unclassified": {
-      "edges": 225,
-      "km": 8.4
+      "edges": 285,
+      "km": 11.3
     },
     "pedestrian": {
-      "edges": 298,
-      "km": 7.4
+      "edges": 337,
+      "km": 9.7
+    },
+    "bridleway": {
+      "edges": 63,
+      "km": 9.0
     },
     "steps": {
-      "edges": 350,
-      "km": 3.4
+      "edges": 390,
+      "km": 3.7
     },
     "primary_link": {
       "edges": 117,
       "km": 3.1
-    },
-    "bridleway": {
-      "edges": 5,
-      "km": 2.4
     },
     "platform": {
       "edges": 11,
       "km": 0.7
     },
     "tertiary_link": {
-      "edges": 21,
-      "km": 0.5
+      "edges": 24,
+      "km": 0.6
     },
     "secondary_link": {
-      "edges": 16,
+      "edges": 17,
       "km": 0.4
     },
     "living_street": {
@@ -97,104 +97,104 @@
   },
   "features": {
     "building_passage": {
-      "edges": 17,
-      "km": 0.28
+      "edges": 19,
+      "km": 0.3
     },
     "corridor": {
       "edges": 0,
       "km": 0
     },
     "covered": {
-      "edges": 134,
-      "km": 1.64
+      "edges": 155,
+      "km": 1.78
     },
     "through_building": {
-      "edges": 62,
-      "km": 0.79
+      "edges": 73,
+      "km": 0.87
     },
     "under_building": {
       "edges": 7,
       "km": 0.26
     },
     "may_close": {
-      "edges": 393,
-      "km": 10.13
+      "edges": 407,
+      "km": 10.27
     },
     "steps": {
-      "edges": 350,
-      "km": 3.39
+      "edges": 390,
+      "km": 3.66
     },
     "park_path": {
-      "edges": 1145,
-      "km": 35.03
+      "edges": 1344,
+      "km": 39.75
     },
     "unpaved": {
-      "edges": 374,
-      "km": 30.66
+      "edges": 505,
+      "km": 48.31
     },
     "lit": {
-      "edges": 3589,
-      "km": 141.76
+      "edges": 3650,
+      "km": 144.09
     },
     "informal": {
-      "edges": 122,
-      "km": 9.59
+      "edges": 136,
+      "km": 10.48
     }
   },
   "steps": {
-    "total_steps": 9794,
-    "estimated_edges": 222
+    "total_steps": 10680,
+    "estimated_edges": 258
   },
   "distinct": {
-    "parks_on_paths": 107,
-    "buildings_passed_through": 37,
+    "parks_on_paths": 122,
+    "buildings_passed_through": 42,
     "venues": {
       "station": 1
     },
     "stops": {
-      "artwork": 45,
-      "bakery": 12,
-      "bar": 9,
+      "artwork": 51,
+      "bakery": 13,
+      "bar": 11,
       "brewery": 3,
-      "cafe": 41,
+      "cafe": 49,
       "chocolate": 2,
       "gallery": 3,
-      "ice_cream": 11,
+      "ice_cream": 12,
       "pastry": 3,
-      "pub": 8,
+      "pub": 9,
       "wine_shop": 1,
       "winery": 1
     }
   },
   "exclusions": {
     "ways_by_reason": {
-      "access": 1696,
-      "construction": 58,
+      "access": 1780,
+      "construction": 65,
       "escalator_direction_unknown": 3,
-      "fast_road": 175,
-      "foot": 217,
+      "fast_road": 186,
+      "foot": 220,
       "highway_kind": 3,
       "indoor_not_corridor": 4,
-      "no_foot_permission": 138,
-      "no_sidewalk": 50,
+      "no_foot_permission": 169,
+      "no_sidewalk": 51,
       "railway": 13,
-      "sidewalk_separate": 379,
-      "trail_visibility": 2,
-      "walkable": 19860
+      "sidewalk_separate": 480,
+      "trail_visibility": 3,
+      "walkable": 24169
     },
     "segments_dropped": {
       "military_area": 352,
       "node:barrier_no_opening": 84,
-      "node:fast_road_unmarked_crossing": 140,
-      "node:node_access": 26,
+      "node:fast_road_unmarked_crossing": 191,
+      "node:node_access": 28,
       "node:node_crossing_no": 2,
       "node:node_foot": 4,
       "node:node_locked": 5,
       "node:railway_unmapped_crossing": 54,
-      "passage_not_public": 34,
+      "passage_not_public": 35,
       "railway_crossing_geometry": 89,
-      "restricted_area": 726,
-      "through_building_unmapped": 40
+      "restricted_area": 858,
+      "through_building_unmapped": 41
     },
     "dropped_examples": {
       "military_area": [
@@ -304,8 +304,8 @@
     },
     "nodes_excluded": {
       "barrier_no_opening": 70,
-      "fast_road_unmarked_crossing": 100,
-      "node_access": 24,
+      "fast_road_unmarked_crossing": 148,
+      "node_access": 26,
       "node_crossing_no": 1,
       "node_foot": 2,
       "node_locked": 3,

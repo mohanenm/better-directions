@@ -24,4 +24,13 @@ describe("nearest node", () => {
     const g = load("copenhagen");
     expect(new NodeIndex(g).nearest([12.63801, 55.672075], 200)).toBeNull();
   });
+  it("finds DC's paths from the Arlington area, which merges the DC extract", () => {
+    const g = load("arlington");
+    const index = new NodeIndex(g);
+    for (const point of [[-77.063, 38.905], [-77.0434, 38.9096]] as [number, number][]) { // Georgetown, Dupont Circle
+      const n = index.nearest(point);
+      expect(n).not.toBeNull();
+      expect(haversineM(point, g.nodeLonLat(n!))).toBeLessThan(50);
+    }
+  });
 });

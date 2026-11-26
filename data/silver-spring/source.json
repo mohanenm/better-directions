@@ -1,8 +1,12 @@
 {
   "provider": "Geofabrik",
   "dated_url": "https://download.geofabrik.de/north-america/us/maryland/maryland-261124.osm.pbf",
+  "also": [
+    "https://download.geofabrik.de/north-america/us/district-of-columbia/district-of-columbia-261124.osm.pbf",
+    "https://download.geofabrik.de/north-america/us/virginia/virginia-261124.osm.pbf"
+  ],
   "data_as_of": "2026-11-24T21:21:23Z",
   "licence": "ODbL 1.0",
   "attribution": "\u00a9 OpenStreetMap contributors",
-  "cropped_sha256": "8bd4f0ad36ca2f16a5e8e565adf897fc3472295bf57b80580684643ea5f5e9b0"
+  "cropped_sha256": "a143893120eda3b97a348d32e1ecae4e3cbeb7791052762617483f8f99b6d385"
 }
