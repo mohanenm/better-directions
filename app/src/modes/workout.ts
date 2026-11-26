@@ -5,10 +5,11 @@
  */
 import type { CostModel, Route, Router } from "../router/astar";
 import { assertRouteSafe } from "../router/verify";
+import { loopRegion } from "../router/region";
 import { loopCapSeconds } from "../safety/limits";
 import { collectRoute } from "./collect";
 import type { FeatureIndex } from "./features";
-import { MODES, type Collectible, type Mode } from "./modes";
+import { MODES, wayKey, type Collectible, type Mode } from "./modes";
 import { chaosWaypointRoute } from "./plan-mode";
 import { costOfFun, type CostOfFun } from "./stats";
 
@@ -63,8 +64,8 @@ function workoutMode(fi: FeatureIndex, focus: WorkoutFocus): Mode {
   const hillList = hills(fi);
   const hillOfWay = new Map(hillList.map((h) => [h.way, h]));
   const stairCandidates = (): Collectible[] =>
-    fi.staircases.map((s) => ({ key: `s:${s.way}`, path: s.climbPath, value: s.climbM * 1.5 + s.steps / 20 }));
-  const hillCandidates = (): Collectible[] => hillList.map((h) => ({ key: `h:${h.way}`, path: h.path, value: h.climbM }));
+    fi.staircases.map((s) => ({ key: `s:${wayKey(fi, s.way)}`, path: s.climbPath, value: s.climbM * 1.5 + s.steps / 20 }));
+  const hillCandidates = (): Collectible[] => hillList.map((h) => ({ key: `h:${wayKey(fi, h.way)}`, path: h.path, value: h.climbM }));
   return {
     id: "stairs",
     name: "Workout",
@@ -75,9 +76,9 @@ function workoutMode(fi: FeatureIndex, focus: WorkoutFocus): Mode {
       keysOf: (_fi, d) => {
         const way = fi.g.s.edge_way[d >>> 1]!;
         const keys: string[] = [];
-        if (fi.staircaseOfWay.has(way)) keys.push(`s:${way}`);
+        if (fi.staircaseOfWay.has(way)) keys.push(`s:${wayKey(fi, way)}`);
         const hill = hillOfWay.get(way);
-        if (hill && hill.path.includes(d)) keys.push(`h:${way}`);
+        if (hill && hill.path.includes(d)) keys.push(`h:${wayKey(fi, way)}`);
         return keys;
       },
     },
@@ -116,6 +117,11 @@ export interface WorkoutPlan {
 
 export function planWorkout(router: Router, fi: FeatureIndex, start: number, minutes: number, focus: WorkoutFocus): WorkoutPlan | null {
   const capSeconds = loopCapSeconds(minutes);
+  // A loop: nothing further than half the cap's reach from the start (see router/region.ts).
+  return router.withRegion(loopRegion(router.g.nodeLonLat(start), capSeconds, true), () => planLoop(router, fi, start, minutes, focus, capSeconds));
+}
+
+function planLoop(router: Router, fi: FeatureIndex, start: number, minutes: number, focus: WorkoutFocus, capSeconds: number): WorkoutPlan | null {
   const model = workoutModel(fi, focus, minutes);
   let route = collectRoute(router, fi, start, start, workoutMode(fi, focus), model, capSeconds, { maxRetraceShare: LOOP_RETRACE_SHARE });
   // How much of the workout a loop gives: staircases, climb, or both.

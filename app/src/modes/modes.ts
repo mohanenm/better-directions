@@ -13,6 +13,12 @@ import type { FeatureIndex } from "./features";
 import type { CostOfFun } from "./stats";
 import { STRAIGHT_DEG, TURN_DEG, U_TURN_DEG } from "./stats";
 
+/**
+ * A way's key for candidates: its OpenStreetMap id, which is the same however much of the map is
+ * loaded (local way numbers aren't), so ties between candidates break the same way.
+ */
+export const wayKey = (fi: FeatureIndex, way: number): string => String(fi.g.s.way_osm_id[way]);
+
 export type ModeId = "buildings" | "trail" | "stairs" | "parks" | "snacks" | "no-right" | "inconvenient" | "chaos";
 
 /** A feature worth a detour: walk to the start of `path`, along it, and on from its end. */
@@ -95,11 +101,11 @@ const trail: Mode = {
   collect: {
     candidates: (fi) =>
       fi.trails.map((t) => ({
-        key: `t:${t.way}`,
+        key: `t:${wayKey(fi, t.way)}`,
         path: t.path,
         value: Math.max(2, Math.min(t.lengthM, 1500) / 50),
       })),
-    keysOf: (fi, d) => (fi.isTrail[d >>> 1] ? [`t:${fi.g.s.edge_way[d >>> 1]}`] : []),
+    keysOf: (fi, d) => (fi.isTrail[d >>> 1] ? [`t:${wayKey(fi, fi.g.s.edge_way[d >>> 1]!)}`] : []),
   },
   score: (s) => s.trailM / 50 + s.trails * 3 + s.parkM / 200,
 };
@@ -122,14 +128,14 @@ const stairs: Mode = {
     }),
   collect: {
     candidates: (fi) =>
-      fi.staircases.map((s, i) => ({
-        key: `s:${i}`,
+      fi.staircases.map((s) => ({
+        key: `s:${wayKey(fi, s.way)}`,
         path: s.climbPath,
         value: 5 + Math.min(s.climbM, 60) / 2 + Math.min(s.steps, 400) / 40,
       })),
     keysOf: (fi, d) => {
       const sc = fi.staircaseOfWay.get(fi.g.s.edge_way[d >>> 1]!);
-      return sc === undefined ? [] : [`s:${sc}`];
+      return sc === undefined ? [] : [`s:${wayKey(fi, fi.staircases[sc]!.way)}`];
     },
   },
   score: (s) => s.staircases * 10 + s.stepsUp / 10 + s.stepsUnknown / 20 + s.stepsDown / 40,

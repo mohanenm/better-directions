@@ -7,6 +7,7 @@
 import type { CostModel, Route, Router } from "../router/astar";
 import { haversineM } from "../router/geometry";
 import { assertRouteSafe } from "../router/verify";
+import { loopRegion, tripRegion } from "../router/region";
 import { loopCapSeconds } from "../safety/limits";
 import type { CrawlStop, FeatureIndex } from "./features";
 import { MAX_STOPS, MIN_STOPS, type CrawlTheme } from "./options";
@@ -158,8 +159,11 @@ export function planCrawl(router: Router, fi: FeatureIndex, opts: CrawlOptions):
   const budgetM = (capSeconds * SPEED_MS) / DETOUR;
   const skip = new Set(opts.skip ?? []);
   const drinks = opts.theme !== "art";
+  // Only stops the cap can reach at all (see router/region.ts), then a rough distance budget.
+  const region = opts.end ? tripRegion([start, end], capSeconds) : loopRegion(start, capSeconds, true);
   const pool = fi.crawlStops.filter((s) => {
     if (s.theme !== opts.theme || skip.has(s.index)) return false;
+    if (!region.contains(g.nodeLonLat(g.tail(s.dirEdge))) || !region.contains(g.nodeLonLat(g.head(s.dirEdge)))) return false;
     const p = at(fi, s);
     return haversineM(start, p) + haversineM(p, end) <= budgetM;
   });

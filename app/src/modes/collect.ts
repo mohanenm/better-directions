@@ -8,6 +8,7 @@
  */
 import { NORMAL, type CostModel, type Route, type Router } from "../router/astar";
 import { haversineM } from "../router/geometry";
+import { pathInRegion } from "../router/region";
 import { FLAT_SPEED_MS } from "../router/time";
 import type { FeatureIndex } from "./features";
 import type { Collectible, Mode } from "./modes";
@@ -71,8 +72,12 @@ export function collectRoute(
   const budgetM = (capSeconds * FLAT_SPEED_MS) / DETOUR_FACTOR;
   const startPt = pt(start);
   const goalPt = pt(goal);
+  // Only candidates the cap can reach at all (every node inside the region), then a rough
+  // budget on the straight-line detour.
+  const nodesOf = (path: number[]) => [g.tail(path[0]!), ...path.map((d) => g.head(d))];
   const candidates = collect
     .candidates(fi)
+    .filter((c) => pathInRegion(router.region, pt, nodesOf(c.path)))
     .filter((c) => haversineM(startPt, pt(enterOf(c))) + haversineM(pt(exitOf(c)), goalPt) <= budgetM);
   const rejected = new Set<string>();
   let seen = visited();
