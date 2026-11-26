@@ -114,7 +114,10 @@ export function createMap(container: HTMLElement, bbox: Bbox): RouteMap {
     style: basemap(currentTheme()),
     bounds: [bbox.west, bbox.south, bbox.east, bbox.north],
     fitBoundsOptions: { padding: coveredInsets(container) },
-    maxBounds: [bbox.west - 0.03, bbox.south - 0.02, bbox.east + 0.03, bbox.north + 0.02],
+    // Room to pan past the area: fitting a route above the phone sheet (or beside the desktop
+    // panel) centres the map well off the route, and a route near the edge of the area would
+    // otherwise stay hidden under the sheet. Past the box the map is just blank.
+    maxBounds: [bbox.west - 0.16, bbox.south - 0.12, bbox.east + 0.16, bbox.north + 0.12],
     minZoom: 11,
     maxZoom: 19,
     attributionControl: false,
