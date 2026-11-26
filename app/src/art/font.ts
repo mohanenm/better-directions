@@ -54,7 +54,8 @@ export const GLYPHS: Readonly<Record<string, Glyph>> = {
 export const LETTER_GAP = 0.3;
 export const SPACE_WIDTH = 0.5;
 export const MIN_LETTERS = 2;
-export const MAX_LETTERS = 10;
+/** Even narrow 6-character words only just fit an hour; most words over 4 or 5 letters don't. */
+export const MAX_LETTERS = 6;
 
 /** Upper-cases, strips accents, keeps letters, digits and single spaces. */
 export function normaliseWord(raw: string): string {
