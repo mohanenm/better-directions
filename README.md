@@ -28,7 +28,7 @@ Every route gets a name, and can be shared as a link or as an image drawn on you
 
 A crawl visits a few artworks, pubs or wine bars in a sensible order, looping back or ending somewhere else. Stops are numbered pins you can swap or skip. Pub and wine crawls keep the walks short, prefer lit streets, and flag places whose hours suggest they close before the evening. See [docs/CRAWLS.md](docs/CRAWLS.md) for what counts as a stop.
 
-<img src="docs/images/dc-crawl.jpg" alt="An art crawl from U Street station in DC: six murals and sculptures as numbered pins, 44 minutes" width="640">
+<img src="docs/images/dc-crawl.jpg" alt="An art crawl from U Street station in DC, in dark mode: six murals and sculptures as numbered pins, 44 minutes" width="640">
 
 A workout is a 20, 30 or 45-minute loop from your start, collecting staircases, hills or both. It shows the staircases, steps and metres climbed, and notes any stretch tagged as unlit. It makes no claims about calories.
 
@@ -56,7 +56,7 @@ The build is also stricter than the rules above in places. It excludes escalator
 
 The page talks to no one but its own site: tiles, fonts, data and code are all self-hosted, and a strict Content-Security-Policy enforces it. There are no cookies, no storage and no analytics.
 
-A word you spell stays on your device unless you choose to put it in a link. Your location is used only if you tap "Use my location". It stays on your device, and it's snapped to the nearest path before it goes into a link. Shared links and images do show your start and end points; the page says so next to the share buttons.
+A word you spell stays on your device unless you choose to put it in a link. Your location is used only if you tap "My location" or "Nearest to me". It stays on your device, and it's snapped to the nearest path before it goes into a link. Shared links and images do show your start and end points; the page says so next to the share buttons.
 
 ## Performance
 

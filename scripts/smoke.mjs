@@ -40,6 +40,10 @@ const CASES = [
     query: "?from=4.84500,45.75100&fromName=Guilloti%C3%A8re&open=spell" },
   { name: "dc-left-turns", width: 1280, height: 800, mobile: false,
     query: "?area=dc&from=-77.04340,38.90960&to=-77.02970,38.90960&fromName=Dupont%20Circle&toName=Logan%20Circle&mode=no-right" },
+  { name: "phone-dark", width: 390, height: 844, mobile: true, dark: true, keyboard: true,
+    query: "" },
+  { name: "dark-switch", width: 1280, height: 800, mobile: false, theme: true,
+    query: "?area=chicago&from=-87.64030,41.87890&to=-87.62330,41.88270&fromName=Union%20Station&toName=Cloud%20Gate&mode=stairs" },
   { name: "park-as-stop", width: 1280, height: 800, mobile: false, parkStop: true,
     query: "?from=4.85190,45.77030&to=4.83200,45.75780&fromName=T%C3%AAte%20d%27Or&toName=Place%20Bellecour&mode=trail" },
 ];
@@ -88,6 +92,8 @@ async function runCase(c) {
 
   await send("Runtime.enable"); await send("Log.enable"); await send("Network.enable");
   await send("Emulation.setDeviceMetricsOverride", { width: c.width, height: c.height, deviceScaleFactor: 1, mobile: c.mobile });
+  // A known system theme, so results and the theme switch do not depend on the machine running this.
+  await send("Emulation.setEmulatedMedia", { features: [{ name: "prefers-color-scheme", value: c.dark ? "dark" : "light" }] });
   await send("Page.navigate", { url: `${ORIGIN}${BASE}${c.query}` });
 
   const key = async (k, code) => {
@@ -156,6 +162,32 @@ async function runCase(c) {
     const via = await evaluate("new URLSearchParams(location.search).get('via')");
     const listed = await evaluate("document.querySelectorAll('#stop-list li').length");
     if (!via || listed !== 1) problems.push(`park stop: link via=${via}, ${listed} stops listed`);
+  }
+  if (c.theme) {
+    // Switch to dark with a route on the map: the page, the basemap and the route all follow,
+    // and the route is still drawn. The share image is a snapshot of the map, so sample it.
+    const before = await evaluate("document.getElementById('theme-toggle').getAttribute('aria-pressed')");
+    await evaluate("document.getElementById('theme-toggle').click()");
+    await sleep(2500);
+    const after = JSON.parse(await evaluate(`JSON.stringify({ pressed: document.getElementById('theme-toggle').getAttribute('aria-pressed'),
+      theme: document.documentElement.dataset.theme, paper: getComputedStyle(document.documentElement).getPropertyValue('--paper').trim() })`));
+    if (before !== "false" || after.pressed !== "true" || after.theme !== "dark" || after.paper !== "#121826") problems.push(`theme: switch didn't turn dark (${before} -> ${JSON.stringify(after)})`);
+    await evaluate("document.getElementById('make-image').click()");
+    let ready = false;
+    for (let i = 0; i < 40 && !ready; i++) { await sleep(250); ready = await evaluate("!document.getElementById('share-image').hidden && document.getElementById('share-preview').naturalWidth > 0"); }
+    const seen = JSON.parse(await evaluate(`JSON.stringify((() => {
+      const img = document.getElementById('share-preview');
+      const c = document.createElement('canvas'); c.width = img.naturalWidth; c.height = img.naturalHeight;
+      const ctx = c.getContext('2d'); ctx.drawImage(img, 0, 0);
+      const px = ctx.getImageData(0, 0, c.width, 820).data; let dark = 0, route = 0, n = 0;
+      for (let i = 0; i < px.length; i += 4 * 7) { n++; const [r, g, b] = [px[i], px[i + 1], px[i + 2]];
+        if (r + g + b < 160) dark++;
+        if (Math.abs(r - 0x8f) < 30 && Math.abs(g - 0x97) < 30 && Math.abs(b - 0xff) < 30) route++; }
+      return { darkShare: dark / n, routeShare: route / n };
+    })())`));
+    if (!ready || seen.darkShare < 0.5) problems.push(`theme: the map didn't turn dark (${JSON.stringify(seen)})`);
+    if (seen.routeShare < 0.002) problems.push(`theme: no route drawn after the switch (${JSON.stringify(seen)})`);
+    console.log(`  dark map ${Math.round(seen.darkShare * 100)}% dark pixels, route ${(seen.routeShare * 100).toFixed(1)}% of the map`);
   }
   if (c.crawl) {
     const pins = await evaluate("document.querySelectorAll('.pin.stop').length");

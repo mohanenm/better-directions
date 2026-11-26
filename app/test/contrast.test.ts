@@ -1,9 +1,10 @@
-/** WCAG AA contrast for the page's text colours, read straight from the stylesheet. */
+/** WCAG AA contrast for the light palette, read straight from the stylesheet (theme.test.ts covers dark). */
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 
 const css = readFileSync(new URL("../src/style.css", import.meta.url), "utf8");
-const vars = Object.fromEntries([...css.matchAll(/--([a-z-]+):\s*(#[0-9a-f]{6})/gi)].map((m) => [m[1]!, m[2]!]));
+const lightBlock = css.slice(css.indexOf(':root, [data-theme="light"] {'), css.indexOf("}", css.indexOf(':root, [data-theme="light"] {')));
+const vars = Object.fromEntries([...lightBlock.matchAll(/--([a-z-]+):\s*(#[0-9a-f]{6})/gi)].map((m) => [m[1]!, m[2]!]));
 
 function luminance(hex: string): number {
   const [r, g, b] = [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16) / 255).map((c) => (c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4));

@@ -63,7 +63,11 @@ FONTS = ("Noto Sans Regular", "Noto Sans Medium", "Noto Sans Italic")
 # Basic Latin + Latin-1 (French accents), Latin Extended-A (oe ligature), general punctuation
 # (curly quotes, dashes, ellipsis).
 GLYPH_RANGES = ("0-255", "256-511", "8192-8447")
-SPRITES = ("light.json", "light.png", "light@2x.json", "light@2x.png")
+SPRITES = tuple(
+    f"{flavor}{suffix}"
+    for flavor in ("light", "dark")
+    for suffix in (".json", ".png", "@2x.json", "@2x.png")
+)
 
 
 def _get(url: str) -> bytes:
