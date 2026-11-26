@@ -216,8 +216,14 @@ function closureNote(fi: FeatureIndex, grp: Group): string | null {
   return hours ? `May be closed outside opening hours (${hours}).` : "May be closed outside opening hours.";
 }
 
+/** "for 120 m", or "for a few metres" for the tiny bits between junctions (never "for 0 m"). */
+function forDistance(m: number): string {
+  return m < 5 ? "for a few metres" : `for ${Math.round(m)} m`;
+}
+
 export function directions(fi: FeatureIndex, plan: ModePlan, fromName: string, toName: string): Step[] {
-  const time = `${minutes(plan.better.timeS)} min instead of ${minutes(plan.normal.timeS)}`;
+  const [better, normal] = [minutes(plan.better.timeS), minutes(plan.normal.timeS)];
+  const time = better === normal ? `${better} min, the same as the normal route` : `${better} min instead of ${normal}`;
   return describeRoute(fi, plan.better, {
     // A route that found none of its mode's features gets the plain lines, not "more courtyards than most".
     quips: deliversMode(plan.mode, plan.betterStats) ? plan.mode : "normal",
@@ -228,7 +234,7 @@ export function directions(fi: FeatureIndex, plan: ModePlan, fromName: string, t
 }
 
 export interface DescribeOptions {
-  quips: ModeId | "art" | "workout" | "crawl";
+  quips: ModeId | "normal" | "art" | "workout" | "crawl";
   seed: number;
   fromName: string;
   /** First sentence of the arrival step (a quip follows). */
@@ -278,23 +284,24 @@ export function describeRoute(fi: FeatureIndex, route: Route, opts: DescribeOpti
         const down = grp.descentM > grp.climbM + 0.5;
         kind = up ? "stairs-up" : down ? "stairs-down" : "stairs";
         const where = grp.name === GENERIC_NAMES["steps"] ? "" : ` (${grp.name})`;
+        const n = grp.steps === 1 ? "1 step" : `${grp.steps} steps`;
         text = up
-          ? `Climb ${grp.steps} steps${where}, ${Math.round(grp.climbM)} m up.`
+          ? `Climb ${n}${where}, ${Math.round(grp.climbM)} m up.`
           : down
-            ? `Head down ${grp.steps} steps${where}.`
-            : `Take the ${grp.steps} steps${where}.`;
+            ? `Head down ${n}${where}.`
+            : grp.steps === 1 ? `Take the step${where}.` : `Take the ${n}${where}.`;
         break;
       }
       case "passage": {
         kind = "passage";
         const bname = g.area(grp.building)?.name;
-        text = `Go through the passage${bname ? ` in ${bname}` : " under the building"} (${Math.round(grp.lengthM)} m).`;
+        text = `Go through the passage${bname ? ` in ${bname}` : " under the building"} (${grp.lengthM < 5 ? "a few metres" : `${Math.round(grp.lengthM)} m`}).`;
         break;
       }
       case "corridor": {
         kind = "corridor";
         const venue = g.area(grp.venue)?.name ?? g.area(grp.building)?.name;
-        text = `Follow the corridors${venue ? ` of ${venue}` : ""} for ${Math.round(grp.lengthM)} m.`;
+        text = `Follow the corridors${venue ? ` of ${venue}` : ""} ${forDistance(grp.lengthM)}.`;
         break;
       }
       case "under": {
@@ -305,10 +312,10 @@ export function describeRoute(fi: FeatureIndex, route: Route, opts: DescribeOpti
       }
       case "trail":
         kind = "trail";
-        text = `${onto}, unpaved, for ${Math.round(grp.lengthM)} m.`;
+        text = `${onto}, unpaved, ${forDistance(grp.lengthM)}.`;
         break;
       default:
-        text = `${onto} for ${Math.round(grp.lengthM)} m.`;
+        text = `${onto} ${forDistance(grp.lengthM)}.`;
     }
 
     if (plan.mode === "snacks") {
