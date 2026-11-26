@@ -18,7 +18,7 @@ const CENTRES: Record<string, LonLat> = {
 const SHAPE_LIST: ShapeId[] = ["heart", "star", "circle", "square", "triangle", "L", "V", "Z", "N"];
 
 it("gps art grid", () => {
-  const buf = readFileSync("app/public/data/lyon/graph.bin");
+  const buf = readFileSync("data/lyon/graph.bin");
   const g = Graph.fromBuffer(buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength));
   const router = new Router(g);
   const fi = new FeatureIndex(g);

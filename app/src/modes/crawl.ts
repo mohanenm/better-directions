@@ -7,7 +7,8 @@
 import type { CostModel, Route, Router } from "../router/astar";
 import { haversineM } from "../router/geometry";
 import { assertRouteSafe } from "../router/verify";
-import { LOOP_MAX_SECONDS } from "../safety/limits";
+import { restSeconds, tripRegion } from "../router/region";
+import { loopCapSeconds } from "../safety/limits";
 import type { CrawlStop, FeatureIndex } from "./features";
 import { MAX_STOPS, MIN_STOPS, type CrawlTheme } from "./options";
 import { joinRoutes } from "./plan-mode";
@@ -146,11 +147,15 @@ export function eveningNote(openingHours: string, theme: CrawlTheme): string {
   return lateEnough ? "" : `Hours (${openingHours}) suggest it may be closed in the evening.`;
 }
 
+/** Crawls are 15 to 90 minutes; the planner and the tile loader both use these. */
+export const clampCrawlMinutes = (minutes: number): number => Math.max(15, Math.min(90, minutes));
+export const crawlCapSeconds = (minutes: number): number => loopCapSeconds(clampCrawlMinutes(minutes));
+
 export function planCrawl(router: Router, fi: FeatureIndex, opts: CrawlOptions): CrawlPlan | null {
   const g = fi.g;
   const count = Math.max(MIN_STOPS, Math.min(MAX_STOPS[opts.theme], Math.round(opts.stops)));
-  const minutes = Math.max(15, Math.min(60, opts.minutes));
-  const capSeconds = Math.min(minutes * 60, LOOP_MAX_SECONDS);
+  const minutes = clampCrawlMinutes(opts.minutes);
+  const capSeconds = crawlCapSeconds(minutes);
   const startNode = opts.start;
   const endNode = opts.end ?? opts.start;
   const start = g.nodeLonLat(startNode);
@@ -158,8 +163,11 @@ export function planCrawl(router: Router, fi: FeatureIndex, opts: CrawlOptions):
   const budgetM = (capSeconds * SPEED_MS) / DETOUR;
   const skip = new Set(opts.skip ?? []);
   const drinks = opts.theme !== "art";
+  // Only stops the cap can reach at all (see router/region.ts), then a rough distance budget.
+  const region = tripRegion([start, end], capSeconds); // a loop when end is the start
   const pool = fi.crawlStops.filter((s) => {
-    if (s.theme !== opts.theme || skip.has(s.index)) return false;
+    if (s.theme !== opts.theme || skip.has(s.index) || s.dirEdge < 0) return false;
+    if (!region.contains(g.nodeLonLat(g.tail(s.dirEdge))) || !region.contains(g.nodeLonLat(g.head(s.dirEdge)))) return false;
     const p = at(fi, s);
     return haversineM(start, p) + haversineM(p, end) <= budgetM;
   });
@@ -219,9 +227,12 @@ export function planCrawl(router: Router, fi: FeatureIndex, opts: CrawlOptions):
 
 function routeLegs(router: Router, model: CostModel, points: number[], capSeconds: number): Route[] | null {
   const legs: Route[] = [];
+  const at = points.map((n) => router.g.nodeLonLat(n));
   let spent = 0;
   for (let i = 0; i < points.length - 1; i++) {
-    const leg = points[i] === points[i + 1] ? { dirEdges: [], nodes: [points[i]!], timeS: 0, lengthM: 0, cost: 0 } : router.route(points[i]!, points[i + 1]!, model, { maxTimeS: capSeconds - spent });
+    // Leave room for the legs after this one (see restSeconds).
+    const maxTimeS = capSeconds - spent - restSeconds(at, i + 1);
+    const leg = points[i] === points[i + 1] ? { dirEdges: [], nodes: [points[i]!], timeS: 0, lengthM: 0, cost: 0 } : router.route(points[i]!, points[i + 1]!, model, { maxTimeS });
     if (!leg) return null;
     spent += leg.timeS;
     if (spent > capSeconds) return null;

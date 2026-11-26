@@ -59,3 +59,26 @@ Each section is a typed array: `{ "name", "type", "count" }`, where type is one 
 - Only walkable things are in the file. Every way's tagset passes `way_exclusion`, every node passes `node_exclusion` with its context bits, and every edge through a building passes `passage_exclusion` with its building and venue. Tests check this on the built file, and the browser re-checks it when the file loads.
 - Every node can reach every other node: the graph is one strongly connected component, respecting one-way flags.
 - The same extract and the same code give the same bytes.
+
+## What the page loads
+
+`graph.bin` is a build input (`data/<area>/graph.bin`). `npm run tiles` (which `npm run build` and `npm run dev` run first) turns it into what the page loads, in `app/public/data/<area>/graph/`. It's generated, not committed.
+
+- Most areas: `whole.bin`, which is `graph.bin` unchanged.
+- Areas marked `tiled` in `app/src/city.ts` (DC and Chicago; a test requires every graph of 10 MB or more, `TILED_FROM_BYTES`, to be marked): `base.json` and one `<col>_<row>.bin` per non-empty tile of a grid about 1 km square (`TILE_DEG_LAT` = 0.009°, width scaled to the area's latitude, origin at the area's south-west corner).
+
+`base.json` holds `format` (`"better-directions-tiles"`) and `version` (1), the graph's meta (without `sections` and `pois`; counts are the whole graph's), the grid, the list of tiles that exist, and the feature lists worked out over the whole area (`features`: staircases, parks, passages, trails, snack and crawl stops, workout hills, in whole-graph numbering).
+
+A tile holds the nodes inside it, every edge whose bounding box touches it, and those edges' ways and far-end nodes, all with their whole-graph numbers. It uses the same container as `graph.bin` (magic `BDT1`, u32 version 1, u32 header length, JSON header listing the sections, then 8-byte-aligned arrays; `readContainer` and `writeContainer` in `app/src/graph/format.ts`). Its sections:
+
+| Section | Type | Meaning |
+|---|---|---|
+| `nodeGlobal`, `nodeLat`, `nodeLon` | u32, i32, i32 | Whole-graph node number and microdegrees |
+| `nodeTagset`, `nodeCtx` | u16, u8 | As in `graph.bin` |
+| `nodeOwned` | u8 | 1 if the node is inside this tile (so all its edges are here) |
+| `edgeGlobal`, `edgeFrom`, `edgeTo`, `edgeWay` | u32 | Whole-graph edge, node and way numbers |
+| `edgeLengthDm`, `edgeFlags`, `edgeSteps`, `edgePark`, `edgeVenue`, `edgeBuilding`, `edgeClimbDm`, `edgeDescentDm` | u16, u8, u16… | As in `graph.bin` |
+| `edgeGeomLen`, `geom` | u32, u8 | Each edge's geometry length, and the bytes, as in `graph.bin` |
+| `wayGlobal`, `wayOsmId`, `wayTagset`, `wayName`, `wayOpeningHours` | u32, f64, u16, u32, u32 | Whole-graph way number and the way's fields |
+
+`app/src/graph/tiles.ts` writes and reads tiles; `assemble` joins the loaded ones into one graph numbered in whole-graph order.

@@ -1,9 +1,16 @@
 /**
  * Per-graph feature index, built once: what's a trail, where the staircases, parks and passages
  * are, and a good waypoint for visiting each. Modes and the cost-of-fun stats both read it.
+ *
+ * The feature lists (staircases, parks, trails...) are worked out over the whole area. On the
+ * whole graph that happens here; for a tiled graph (part of the area loaded) the build exports
+ * them (`exportFeatures`) and they're mapped onto what's loaded, so the lists, their order and
+ * their numbering are the same however much is loaded. A feature whose edges aren't all loaded
+ * keeps its place but is unusable (no path, or dirEdge -1); it's outside any region a request
+ * can reach, so no planner would have used it.
  */
 import type { CrawlKind, SnackKind } from "../graph/format";
-import type { Graph } from "../graph/graph";
+import type { Graph, LonLat } from "../graph/graph";
 import type { CrawlTheme } from "./options";
 
 const UNPAVED = new Set([
@@ -34,11 +41,12 @@ export function isPavedRoadTags(tags: Readonly<Record<string, string>>): boolean
 export const MIN_STAIRCASE_STEPS = 5;
 
 export interface Staircase {
+  /** Way index, or -1 when the way isn't loaded. */
   way: number;
   edges: number[];
   steps: number;
-  /** Directed edges climbing the whole staircase (its longest connected run), bottom to top. */
-  climbPath: number[];
+  /** Directed edges climbing the whole staircase (its longest connected run), bottom to top; null if not all loaded. */
+  climbPath: number[] | null;
   climbM: number;
   name: string;
 }
@@ -46,10 +54,24 @@ export interface Staircase {
 export interface ParkInfo {
   area: number;
   name: string;
-  /** A park path edge near the middle of the park's paths, as a directed edge: the waypoint. */
+  /** A park path edge near the middle of the park's paths, as a directed edge: the waypoint (-1 if not loaded). */
   dirEdge: number;
+  /** Where that edge's middle is, for pins. */
+  at: LonLat;
   pathLengthM: number;
 }
+
+/** A way that climbs at least MIN_HILL_CLIMB_M, as an uphill walking path. Steps are left to stairs. */
+export interface Hill {
+  /** Way index, or -1 when the way isn't loaded. */
+  way: number;
+  /** Null if not all loaded. */
+  path: number[] | null;
+  climbM: number;
+}
+
+/** A hill worth a detour climbs at least this much along one way. */
+export const MIN_HILL_CLIMB_M = 6;
 
 export interface PassageInfo {
   /** Index into meta.areas of the building passed through. */
@@ -62,11 +84,26 @@ export interface PassageInfo {
 }
 
 export interface TrailStretch {
+  /** Way index, or -1 when the way isn't loaded. */
   way: number;
   edges: number[];
   lengthM: number;
-  /** Directed edges walking the stretch end to end (its longest connected run). */
-  path: number[];
+  /** Directed edges walking the stretch end to end (its longest connected run); null if not all loaded. */
+  path: number[] | null;
+}
+
+/**
+ * The feature lists over the whole area, with edges and ways in the whole graph's numbering, as
+ * the build exports them for tiled loading.
+ */
+export interface ExportedFeatures {
+  staircases: Staircase[];
+  parks: ParkInfo[];
+  passages: PassageInfo[];
+  trails: TrailStretch[];
+  snacks: SnackStop[];
+  crawlStops: CrawlStop[];
+  hills: Hill[];
 }
 
 export const SNACK_KINDS: ReadonlySet<string> = new Set(["bakery", "pastry", "chocolate", "ice_cream", "cafe"]);
@@ -118,6 +155,8 @@ export class FeatureIndex {
   readonly trails: TrailStretch[] = [];
   readonly snacks: SnackStop[] = [];
   readonly crawlStops: CrawlStop[] = [];
+  /** Set from exported lists on a tiled graph; otherwise worked out on first use (only workouts need them). */
+  private hillList: Hill[] | null = null;
   /** 1 on primary, secondary, tertiary and trunk roads (and links). */
   readonly isBusy: Uint8Array;
   /** 1 where a node touches a busy road. */
@@ -127,7 +166,8 @@ export class FeatureIndex {
   /** Edge -> snack stops on it. */
   readonly snacksOnEdge = new Map<number, number[]>();
 
-  constructor(readonly g: Graph) {
+  /** On the whole graph, works out the feature lists; on a tiled graph, maps the exported ones. */
+  constructor(readonly g: Graph, exported?: ExportedFeatures) {
     const E = g.edgeCount;
     this.isTrail = new Uint8Array(E);
     this.isPavedRoad = new Uint8Array(E);
@@ -186,6 +226,11 @@ export class FeatureIndex {
       }
     }
 
+    if (exported) {
+      this.mapExported(exported);
+      return;
+    }
+
     for (const [way, edges] of stairEdges) {
       const steps = edges.reduce((s, e) => s + g.s.edge_steps[e]!, 0);
       if (steps < MIN_STAIRCASE_STEPS) continue;
@@ -223,7 +268,8 @@ export class FeatureIndex {
       }
       const dirEdge = g.allowedDirs[bestEdge]! & 1 ? bestEdge * 2 : bestEdge * 2 + 1;
       const ref = g.area(area);
-      this.parks.push({ area, name: ref?.name ?? "an unnamed park", dirEdge, pathLengthM: total });
+      const at: LonLat = [this.midLon[bestEdge]!, this.midLat[bestEdge]!];
+      this.parks.push({ area, name: ref?.name ?? "an unnamed park", dirEdge, at, pathLengthM: total });
     }
 
     for (const [area, best] of passageBest) {
@@ -253,6 +299,69 @@ export class FeatureIndex {
       if (lengthM < 100) continue;
       this.trails.push({ way, edges, lengthM, path });
     }
+  }
+
+  /** Hills for workouts: ways (not steps) that climb at least MIN_HILL_CLIMB_M. */
+  get hills(): Hill[] {
+    if (this.hillList) return this.hillList;
+    const g = this.g;
+    const hillEdges = new Map<number, number[]>();
+    for (let e = 0; e < g.edgeCount; e++) {
+      if (!g.allowedDirs[e] || g.s.edge_steps[e]! > 0) continue;
+      push(hillEdges, g.s.edge_way[e]!, e);
+    }
+    const out: Hill[] = [];
+    for (const [way, edges] of hillEdges) {
+      const net = edges.reduce((s, e) => {
+        const c = g.climb(e, true);
+        return s + (c ? c[0] - c[1] : 0);
+      }, 0);
+      if (Math.abs(net) < MIN_HILL_CLIMB_M) continue;
+      const path = this.chain(edges, net > 0);
+      if (!path) continue;
+      const climbM = path.reduce((s, d) => s + (g.climb(d >>> 1, (d & 1) === 0)?.[0] ?? 0), 0);
+      if (climbM >= MIN_HILL_CLIMB_M) out.push({ way, path, climbM });
+    }
+    return (this.hillList = out);
+  }
+
+  /** Map the whole area's feature lists onto the loaded part of a tiled graph. */
+  private mapExported(x: ExportedFeatures): void {
+    const g = this.g;
+    const way = (w: number) => g.localWay(w);
+    const dir = (d: number) => {
+      const e = g.localEdge(d >>> 1);
+      return e < 0 ? -1 : e * 2 + (d & 1);
+    };
+    const path = (p: number[] | null): number[] | null => {
+      if (!p) return null;
+      const out = p.map(dir);
+      return out.includes(-1) ? null : out;
+    };
+    const edges = (list: number[]) => list.map((e) => g.localEdge(e)).filter((e) => e >= 0);
+    for (const s of x.staircases) {
+      const index = this.staircases.length;
+      const w = way(s.way);
+      this.staircases.push({ ...s, way: w, edges: edges(s.edges), climbPath: path(s.climbPath) });
+      if (w >= 0) this.staircaseOfWay.set(w, index);
+    }
+    for (const p of x.parks) this.parks.push({ ...p, dirEdge: dir(p.dirEdge) });
+    for (const p of x.passages) this.passages.push({ ...p, dirEdge: dir(p.dirEdge) });
+    for (const t of x.trails) this.trails.push({ ...t, way: way(t.way), edges: edges(t.edges), path: path(t.path) });
+    this.hillList = x.hills.map((h) => ({ ...h, way: way(h.way), path: path(h.path) }));
+    for (const s of x.snacks) {
+      const edge = g.localEdge(s.edge);
+      this.snacks.push({ ...s, edge, dirEdge: dir(s.dirEdge) });
+      if (edge >= 0) push(this.snacksOnEdge, edge, s.index);
+    }
+    for (const c of x.crawlStops) this.crawlStops.push({ ...c, edge: g.localEdge(c.edge), dirEdge: dir(c.dirEdge) });
+  }
+
+  /** The feature lists, for the build to export (whole graph only). */
+  exportFeatures(): ExportedFeatures {
+    if (this.g.tiled) throw new Error("export features from the whole graph, not a tiled one");
+    const { staircases, parks, passages, trails, snacks, crawlStops, hills } = this;
+    return { staircases, parks, passages, trails, snacks, crawlStops, hills };
   }
 
   /**

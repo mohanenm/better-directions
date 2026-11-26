@@ -10,8 +10,9 @@ import type { ModeId } from "./modes";
 import type { CostOfFun } from "./stats";
 import { DETOUR } from "../safety/limits";
 
-function choose(options: string[], seed: number, route: Route): string {
-  const key = route.dirEdges.reduce((h, d) => (Math.imul(h, 31) + d) >>> 0, route.dirEdges.length);
+function choose(options: string[], seed: number, route: Route, g: FeatureIndex["g"]): string {
+  // Hash whole-graph edge numbers, so a tiled graph names the route the same way.
+  const key = route.dirEdges.reduce((h, d) => (Math.imul(h, 31) + (g.globalEdge(d >>> 1) * 2 + (d & 1))) >>> 0, route.dirEdges.length);
   return options[Math.floor(hashUnit(seed, key) * options.length)]!;
 }
 
@@ -67,16 +68,17 @@ export type SameAsNormal = "too-long" | "already" | "nothing-here" | "no-detour"
  * normal walk already fills the time limit; it already does what the mode asks; there's none of
  * the mode's feature within reach; or no detour fits. Null when there's a real detour.
  */
-export function sameAsNormalReason(p: { mode: ModeId; normal: Route; better: Route; normalStats: CostOfFun; betterStats: CostOfFun }): SameAsNormal | null {
+export function sameAsNormalReason(p: { mode: ModeId; normal: Route; better: Route; normalStats: CostOfFun; betterStats: CostOfFun; capSeconds: number }): SameAsNormal | null {
   if (p.better.timeS - p.normal.timeS >= 60) return null;
-  if (p.normal.timeS >= DETOUR.maxSeconds - 60) return "too-long";
+  // The cap is set by the walk's own length once that reaches the hour (or hour and a half).
+  if (p.normal.timeS >= DETOUR.maxSeconds - 60 && p.capSeconds - p.normal.timeS < 60) return "too-long";
   if (p.mode === "no-right" && p.normalStats.rightTurns === 0) return "already";
   if (MODE_FEATURE[p.mode] && !deliversMode(p.mode, p.betterStats)) return "nothing-here";
   return "no-detour";
 }
 
 export function routeName(fi: FeatureIndex, mode: ModeId, stats: CostOfFun, route: Route, seed: number, normal?: CostOfFun): string {
-  const pick = (options: string[]) => choose(options, seed, route);
+  const pick = (options: string[]) => choose(options, seed, route, fi.g);
   // Don't name a route for something it doesn't have.
   if (!deliversMode(mode, stats)) return pick(["A Different Way Round", "The Long Way, Plainly"]);
   switch (mode) {

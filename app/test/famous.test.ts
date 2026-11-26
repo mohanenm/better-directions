@@ -11,7 +11,7 @@ import { NodeIndex } from "../src/router/snap";
 import { FAMOUS } from "../src/ui/famous";
 
 function load(area: string) {
-  const buf = readFileSync(new URL(`../public/data/${area}/graph.bin`, import.meta.url));
+  const buf = readFileSync(new URL(`../../data/${area}/graph.bin`, import.meta.url));
   const g = Graph.fromBuffer(buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength));
   return { router: new Router(g), fi: new FeatureIndex(g), index: new NodeIndex(g) };
 }

@@ -9,12 +9,12 @@ GPS art finds a walk whose trace draws a shape: a heart, star, circle, square or
 The code is in `app/src/art/`.
 
 1. Each template is a polyline in a unit box (`shapes.ts`).
-2. You pick a walk of about 25, 40 or 55 minutes, and the shape is scaled so its outline, plus a typical 25% for street detours, takes that long at 1.3 m/s. Sizing by time rather than distance matters: sized in metres, most shapes overshot the one-hour limit.
+2. You pick a walk of about 25, 40, 55 or 75 minutes, and the shape is scaled so its outline, plus a typical 25% for street detours, takes that long at 1.3 m/s. Sizing by time rather than distance matters: sized in metres, most shapes overshot the one-hour limit.
 3. The shape's first point is anchored at your start. The search tries 75 placements (5 rotations, 3 sizes, 5 small offsets) and scores each by how close its outline runs to the street network, using a precomputed cloud of points every 20 m along every walkable edge.
-4. For the four best placements, it routes corner to corner with a corridor cost (walking time, multiplied the further a street strays from the ideal line), trims dead-end spurs, and keeps the best trace under 60 minutes.
+4. For the four best placements, it routes corner to corner with a corridor cost (walking time, multiplied the further a street strays from the ideal line), trims dead-end spurs, and keeps the best trace within the cap: an hour, or an hour and a half for the 75-minute option.
 5. Likeness compares the walk with the shape: the mean distance between them in both directions, sampled every 20 m, relative to the shape's width. 80% or more reads clearly, around 70% is recognisable, and under 60% needs squinting.
 
-Every leg is an ordinary router search, so the safety rules apply as they do to any route. Each drawing is checked by `assertRouteSafe` with a 60-minute limit, and the safety property test draws random shapes from random starts.
+Every leg is an ordinary router search, so the safety rules apply as they do to any route. Each drawing is checked by `assertRouteSafe` with its cap, and the safety property test draws random shapes from random starts.
 
 ## Results on Lyon
 

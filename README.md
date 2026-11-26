@@ -30,9 +30,9 @@ A crawl visits a few artworks, pubs or wine bars in a sensible order, looping ba
 
 <img src="docs/images/dc-crawl.jpg" alt="An art crawl from U Street station in DC, in dark mode: six murals and sculptures as numbered pins, 44 minutes" width="640">
 
-A workout is a 20, 30 or 45-minute loop from your start, collecting staircases, hills or both. It shows the staircases, steps and metres climbed, and notes any stretch tagged as unlit. It makes no claims about calories.
+A workout is a loop from your start of 20 minutes to an hour, or an hour and a half, collecting staircases, hills or both. It shows the staircases, steps and metres climbed, and notes any stretch tagged as unlit. It makes no claims about calories.
 
-There's also an experimental Draw a shape section that finds a walk drawing a heart, star, square or one-stroke letter with real streets, and scores the likeness. Spell a word does the same for a name of up to ten letters, with dotted walks between strokes. Grids work much better than Lyon's old town. See [docs/GPS_ART.md](docs/GPS_ART.md).
+There's also an experimental Draw a shape section that finds a walk drawing a heart, star, square or one-stroke letter with real streets, and scores the likeness. Spell a word does the same for a word or initials of up to six letters, with dotted walks between strokes. Grids work much better than Lyon's old town. See [docs/GPS_ART.md](docs/GPS_ART.md).
 
 <img src="docs/images/spell.jpg" alt="The letters DC walked on Capitol Hill's grid: 80% readable, 31 minutes" width="480"> <img src="docs/images/heart.jpg" alt="A heart walked through Guillotière in Lyon: 85% likeness, 46 minutes" width="480">
 
@@ -46,7 +46,7 @@ These rules are hard-coded, and no mode or setting can change them:
 - "Through a building" means a mapped passage (`tunnel=building_passage`, `covered=yes`, `highway=corridor` or `indoor=corridor`) and only where it's plausibly public: through a shop, mall or station, or with public access tags, a street name, or a confirmation against the city's list. Passages and corridors through flats, offices, campuses and hospitals are left out.
 - Streets that run under a building without a mapped tunnel are kept, but the directions say so.
 - Passages, corridors and parks that may close are flagged, with their hours where mapped. Late at night there's an extra warning.
-- A better route takes at most four times the normal walking time, and never more than an hour unless the normal walk is longer. Routes through stops you pick are measured against the normal route through the same stops. Shapes, crawls and workouts are limited to an hour.
+- A better route takes at most four times the normal walking time, and never more than an hour unless the normal walk is longer, or an hour and a half if you tick "Longer walk". Routes through stops you pick are measured against the normal route through the same stops. Shapes, crawls and workouts are limited to the length you pick: up to an hour, or the 1 h 15 and 1 h 30 options. Nothing goes past an hour and a half unless the normal walk itself is longer, and walks over an hour say roughly when you'd finish.
 
 The rules run when the graph is built, again when the page loads, during the search, and on every finished route. The Python build and the TypeScript router pass the same cases in [safety/cases.json](safety/cases.json). A property test plans random routes, loops, crawls and drawings in every area and checks each one independently; before this release it ran about 83,000 of them. Details are in [docs/SECURITY.md](docs/SECURITY.md).
 
@@ -58,25 +58,35 @@ The page talks to no one but its own site: tiles, fonts, data and code are all s
 
 A word you spell stays on your device unless you choose to put it in a link. Your location is used only if you tap "My location" or "Nearest to me". It stays on your device, and it's snapped to the nearest path before it goes into a link. Shared links and images do show your start and end points; the page says so next to the share buttons.
 
+## What's unusual about it
+
+- **No routing server.** Route planners usually send your trip to a server. This one ships each area's walking graph to the page and plans on your phone, in a background thread. The site is plain static files, so there's no API bill, no per-request cost and nobody who sees your trips.
+- **It loads only what a route can reach, exactly.** DC and Chicago are cut into tiles about a kilometre square. Every route has a time cap and nobody walks faster than 6 km/h, so a trip can only reach points inside an ellipse around its start and end (a circle for loops and drawings). The page fetches just the tiles that ellipse touches. That follows from the geometry; it isn't a guess. A test plans random requests of every kind on the whole graph and on tiles, and requires identical routes, names and directions. DC's first route went from 16 seconds to 9.
+- **Safety rules written twice.** They're in Python for the build and TypeScript for the page, and both must give the same answers on a shared list of cases. The page re-audits the graph when it loads and re-checks every finished route, and a property test plans tens of thousands of random walks and checks each one independently.
+- **The same link gives the same route.** Random detours and route names come from a seed and the trip itself, so a shared link reproduces the walk exactly, whichever tiles happen to be loaded.
+- **Private by construction.** There's no backend to send anything to. A strict Content-Security-Policy blocks third-party requests, nothing is stored, and share images are drawn on the device.
+
 ## Performance
 
-Measured on an emulated low-end phone (6× slower CPU, slow 4G, empty cache), the first route on a first visit is ready in 3 to 16 seconds depending on the area, mostly downloading its walking graph once:
+Measured on an emulated low-end phone (6× slower CPU, slow 4G, empty cache), the first route on a first visit is ready in 4 to 10 seconds depending on the area, mostly spent downloading the walking graph. Timings vary by about half a second from run to run.
 
 | Area | Download | First route |
 |---|---:|---:|
-| Washington, DC | 6.6 MB | 15.9 s |
-| Chicago | 4.2 MB | 10.3 s |
-| Arlington and Alexandria | 3.2 MB | 9.3 s |
-| Lyon | 3.3 MB | 8.7 s |
-| Copenhagen | 1.8 MB | 7.8 s |
-| Silver Spring and Bethesda | 1.4 MB | 5.8 s |
-| Baltimore | 1.9 MB | 5.8 s |
-| Richmond | 1.7 MB | 5.3 s |
-| Malmö | 1.0 MB | 3.9 s |
-| Newberg | 0.6 MB | 3.4 s |
-| Dundee | 0.4 MB | 3.0 s |
+| Lyon | 3.3 MB | 9.5 s |
+| Arlington and Alexandria | 3.2 MB | 9.2 s |
+| Washington, DC | 2.9 MB* | 8.9 s |
+| Chicago | 2.7 MB* | 8.0 s |
+| Baltimore | 2.0 MB | 7.2 s |
+| Copenhagen | 1.8 MB | 6.6 s |
+| Richmond | 1.7 MB | 6.3 s |
+| Silver Spring and Bethesda | 1.4 MB | 5.6 s |
+| Malmö | 1.0 MB | 5.0 s |
+| Newberg | 0.6 MB | 4.0 s |
+| Dundee | 0.4 MB | 3.7 s |
 
-After that, a new route takes about a quarter of a second. The page and planner use under 20 MB of JavaScript heap, plus the graph itself.
+\* DC and Chicago load in tiles, so this is what the first route needed; their whole graphs would be 5.5 and 3.4 MB, and took 16 and 11 seconds.
+
+After that, a new route takes about a quarter of a second. In DC and Chicago, a route somewhere new first fetches the tiles it can reach; tiles already loaded aren't fetched again. The page and planner use under 20 MB of JavaScript heap, plus the graph itself.
 
 ## Known issues
 
@@ -111,6 +121,7 @@ python3.12 -m venv .venv && .venv/bin/pip install -r requirements-dev.txt
 PYTHONPATH=pipeline .venv/bin/python -m bdgraph.fetch   cities/lyon.json
 PYTHONPATH=pipeline .venv/bin/python -m bdgraph.terrain cities/lyon.json
 PYTHONPATH=pipeline .venv/bin/python -m bdgraph.build   cities/lyon.json
+npm run tiles -- lyon     # what the page loads: the whole graph, or tiles for big areas (build and dev run this too)
 PYTHONPATH=pipeline .venv/bin/python -m bdgraph.tiles   cities/lyon.json --build 20261123
 PYTHONPATH=pipeline .venv/bin/python -m bdgraph.places  cities/lyon.json
 .venv/bin/python -m pytest

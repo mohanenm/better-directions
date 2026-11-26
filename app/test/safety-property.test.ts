@@ -27,7 +27,9 @@ import { haversineM, turnAngleDeg } from "../src/router/geometry";
 import { plan } from "../src/router/planner";
 import { hashUnit } from "../src/router/rng";
 import { NodeIndex } from "../src/router/snap";
-import { detourCapSeconds, GPS_ART_MAX_SECONDS, LOOP_MAX_SECONDS } from "../src/safety/limits";
+import { detourCapSeconds, LOOP_MAX_SECONDS, loopCapSeconds } from "../src/safety/limits";
+import { artCapSeconds } from "../src/art/fit";
+import { ART_LENGTHS } from "../src/ui/url";
 import { footDirections, nodeExclusion, passageExclusion, PUBLIC_AREA_KINDS, wayExclusion } from "../src/safety/rules";
 
 const RUNS = Number(process.env["PROPERTY_RUNS"] ?? 300);
@@ -37,7 +39,7 @@ const MAX_PAIR_DISTANCE_M = 5000; // city walks; longer pairs only cost CI time
 const AREAS_UNDER_TEST = (process.env["PROPERTY_AREAS"] ?? "lyon").split(",").map((a) => a.trim()).filter(Boolean);
 
 function readArea(area: string): ArrayBuffer {
-  const buf = readFileSync(new URL(`../public/data/${area}/graph.bin`, import.meta.url));
+  const buf = readFileSync(new URL(`../../data/${area}/graph.bin`, import.meta.url));
   return buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength);
 }
 
@@ -162,12 +164,12 @@ describe.each(AREAS_UNDER_TEST)("safety property: random routes on %s", (area) =
   for (const mode of MODE_IDS) {
     it(`mode ${mode}: every route is safe, connected and within the detour cap, for any seed`, () => {
       fc.assert(
-        fc.property(pair(graph), fc.nat({ max: 2 ** 31 - 1 }), ([a, b], seed) => {
-          const p = planMode(router, features, a, b, mode, seed);
+        fc.property(pair(graph), fc.nat({ max: 2 ** 31 - 1 }), fc.boolean(), ([a, b], seed, long) => {
+          const p = planMode(router, features, a, b, mode, seed, undefined, long);
           expect(p).not.toBeNull();
           checkRoute(graph, p!.normal.dirEdges, p!.normal.nodes);
           checkRoute(graph, p!.better.dirEdges, p!.better.nodes);
-          expect(p!.better.timeS).toBeLessThanOrEqual(detourCapSeconds(p!.normal.timeS) + 1e-6);
+          expect(p!.better.timeS).toBeLessThanOrEqual(detourCapSeconds(p!.normal.timeS, long) + 1e-6);
           if (mode === "inconvenient") {
             // Inconvenient, not riskier.
             expect(busyCrossings(graph, p!.better.dirEdges)).toBeLessThanOrEqual(busyCrossings(graph, p!.normal.dirEdges));
@@ -178,18 +180,18 @@ describe.each(AREAS_UNDER_TEST)("safety property: random routes on %s", (area) =
     });
   }
 
-  it("GPS art: every drawing is safe, connected and at most an hour, for any start, shape and length", () => {
+  it("GPS art: every drawing is safe, connected and within its cap, for any start, shape and length", () => {
     const index = new NodeIndex(graph);
     fc.assert(
       fc.property(
         fc.nat({ max: graph.nodeCount - 1 }),
         fc.constantFrom(...SHAPE_IDS),
-        fc.constantFrom(25, 40, 55),
+        fc.constantFrom(...ART_LENGTHS),
         (node, shape, minutes) => {
           const r = drawShape(router, features, index, { shape, start: graph.nodeLonLat(node), minutes });
           if (!r) return; // some places can't fit a shape; that's allowed
           checkRoute(graph, r.route.dirEdges, r.route.nodes);
-          expect(r.route.timeS).toBeLessThanOrEqual(GPS_ART_MAX_SECONDS);
+          expect(r.route.timeS).toBeLessThanOrEqual(artCapSeconds(minutes)); // an hour; 90 minutes for 75
         },
       ),
       { numRuns: Math.ceil(RUNS / 5), seed: 20261127 },
@@ -233,7 +235,7 @@ describe.each(AREAS_UNDER_TEST)("safety property: random routes on %s", (area) =
         if (!w) return; // a dead end with nowhere to loop is allowed to fail
         checkRoute(graph, w.route.dirEdges, w.route.nodes);
         expect(w.route.nodes.at(-1)).toBe(node);
-        expect(w.route.timeS).toBeLessThanOrEqual(Math.min(minutes * 60, LOOP_MAX_SECONDS) + 1e-6);
+        expect(w.route.timeS).toBeLessThanOrEqual(loopCapSeconds(minutes) + 1e-6);
       }),
       { numRuns: Math.ceil(RUNS / 5), seed: 20261129 },
     );
@@ -251,7 +253,7 @@ describe.each(AREAS_UNDER_TEST)("safety property: random routes on %s", (area) =
           const c = planCrawl(router, features, { theme, stops, minutes, start, end });
           if (!c) return; // not enough stops nearby is allowed
           checkRoute(graph, c.route.dirEdges, c.route.nodes);
-          expect(c.route.timeS).toBeLessThanOrEqual(Math.min(minutes * 60, LOOP_MAX_SECONDS) + 1e-6);
+          expect(c.route.timeS).toBeLessThanOrEqual(loopCapSeconds(minutes) + 1e-6);
           expect(c.route.nodes.at(-1)).toBe(end ?? start);
           for (const s of c.stops) expect(c.route.nodes).toContain(graph.tail(s.dirEdge));
           expect(c.stops.length).toBeLessThanOrEqual(theme === "art" ? 8 : 6);

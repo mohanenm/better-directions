@@ -8,6 +8,7 @@
  */
 import { NORMAL, type CostModel, type Route, type Router } from "../router/astar";
 import { haversineM } from "../router/geometry";
+import { pathInRegion, restSeconds, tripRegion } from "../router/region";
 import { FLAT_SPEED_MS } from "../router/time";
 import type { FeatureIndex } from "./features";
 import type { Collectible, Mode } from "./modes";
@@ -71,8 +72,13 @@ export function collectRoute(
   const budgetM = (capSeconds * FLAT_SPEED_MS) / DETOUR_FACTOR;
   const startPt = pt(start);
   const goalPt = pt(goal);
+  // Only candidates the cap can reach at all (every node inside the region; see router/region.ts),
+  // then a rough budget on the straight-line detour.
+  const region = tripRegion([startPt, goalPt], capSeconds);
+  const nodesOf = (path: number[]) => [g.tail(path[0]!), ...path.map((d) => g.head(d))];
   const candidates = collect
     .candidates(fi)
+    .filter((c) => pathInRegion(region, pt, nodesOf(c.path)))
     .filter((c) => haversineM(startPt, pt(enterOf(c))) + haversineM(pt(exitOf(c)), goalPt) <= budgetM);
   const rejected = new Set<string>();
   let seen = visited();
@@ -138,7 +144,9 @@ export function retraceShare(router: Router, route: Route): number {
 /** Two legs a -> b and c -> d whose total time fits the budget, or null. */
 function routeLegs(router: Router, m: CostModel, a: number, b: number, c: number, d: number, budget: number): [Route, Route] | null {
   if (budget <= 0) return null;
-  const first = router.route(a, b, m, { maxTimeS: budget });
+  // The first leg leaves room for the second (at least the straight line from c to d).
+  const g = router.g;
+  const first = router.route(a, b, m, { maxTimeS: budget - restSeconds([g.nodeLonLat(c), g.nodeLonLat(d)], 0) });
   if (!first) return null;
   const second = router.route(c, d, m, { maxTimeS: budget - first.timeS });
   if (!second || first.timeS + second.timeS > budget) return null;
@@ -169,11 +177,14 @@ function assemble(router: Router, stops: Stop[], legs: Route[]): Route {
  */
 export function viaRoute(router: Router, start: number, vias: number[], goal: number, model: CostModel, capSeconds: number): Route | null {
   const points = [start, ...vias, goal];
+  const at = points.map((n) => router.g.nodeLonLat(n));
   const legs: Route[] = [];
   const used = new Set<number>();
   let spent = 0;
   for (let i = 0; i < points.length - 1; i++) {
-    const leg = router.route(points[i]!, points[i + 1]!, avoidReuse(model, used), { maxTimeS: capSeconds - spent });
+    // Leave room for the legs after this one (see restSeconds).
+    const maxTimeS = capSeconds - spent - restSeconds(at, i + 1);
+    const leg = router.route(points[i]!, points[i + 1]!, avoidReuse(model, used), { maxTimeS });
     if (!leg) return null;
     spent += leg.timeS;
     if (spent > capSeconds) return null;

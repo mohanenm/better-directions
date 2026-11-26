@@ -12,9 +12,9 @@ export interface ReadyInfo {
   attribution: string;
   terrainAttribution: string;
   dataAsOf: string;
-  violations: number;
   /** Milliseconds spent loading in the worker (for performance checks). */
-  timings: { fetchMs: number; decodeAuditMs: number; indexMs: number; graphBytes: number };
+  /** Loading the area: the whole graph, or a tiled area's base file (its tiles load per request). */
+  timings: { loadMs: number; tiled: boolean };
 }
 
 export interface PlanRequest {
@@ -28,6 +28,8 @@ export interface PlanRequest {
   seed: number;
   /** Points the route must pass through, in order. */
   stops: [number, number][];
+  /** A longer walk: detours may take up to 90 minutes instead of an hour. */
+  long: boolean;
 }
 
 export interface WorkoutRequest {
@@ -150,6 +152,8 @@ export interface PlanResult {
    * there's none of the mode's feature within reach; or no detour fits.
    */
   sameAsNormal: SameAsNormal | null;
+  /** Whether the walker asked for a longer walk (detours up to 90 minutes). */
+  long: boolean;
   /** What the mode looks for, when the route found none of it ("staircases"), else null. */
   missingFeature: string | null;
   /** Parks along or near the better route. */

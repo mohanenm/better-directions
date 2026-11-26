@@ -5,10 +5,10 @@
  */
 import type { CostModel, Route, Router } from "../router/astar";
 import { assertRouteSafe } from "../router/verify";
-import { LOOP_MAX_SECONDS } from "../safety/limits";
+import { loopCapSeconds } from "../safety/limits";
 import { collectRoute } from "./collect";
 import type { FeatureIndex } from "./features";
-import { MODES, type Collectible, type Mode } from "./modes";
+import { hasClimbPath, hasPath, MODES, wayKey, type Collectible, type Mode } from "./modes";
 import { chaosWaypointRoute } from "./plan-mode";
 import { costOfFun, type CostOfFun } from "./stats";
 
@@ -16,55 +16,16 @@ import type { WorkoutFocus } from "./options";
 export { WORKOUT_FOCUSES, WORKOUT_MINUTES, type WorkoutFocus } from "./options";
 /** Loops at least this long prefer lit streets. */
 const LIT_FROM_MINUTES = 30;
-/** A hill worth a detour climbs at least this much along one way. */
-const MIN_HILL_CLIMB_M = 6;
 /** Loops may double back more than point-to-point routes: you often come down the way you went up. */
 const LOOP_RETRACE_SHARE = 0.35;
 
-interface Hill {
-  way: number;
-  path: number[];
-  climbM: number;
-}
-
-const hillCache = new WeakMap<FeatureIndex, Hill[]>();
-
-/** Ways that climb at least MIN_HILL_CLIMB_M, as uphill walking paths. Steps are left to stairs. */
-export function hills(fi: FeatureIndex): Hill[] {
-  const cached = hillCache.get(fi);
-  if (cached) return cached;
-  const g = fi.g;
-  const byWay = new Map<number, number[]>();
-  for (let e = 0; e < g.edgeCount; e++) {
-    if (!g.allowedDirs[e] || g.s.edge_steps[e]! > 0) continue;
-    const way = g.s.edge_way[e]!;
-    const list = byWay.get(way);
-    if (list) list.push(e);
-    else byWay.set(way, [e]);
-  }
-  const out: Hill[] = [];
-  for (const [way, edges] of byWay) {
-    const net = edges.reduce((s, e) => {
-      const c = g.climb(e, true);
-      return s + (c ? c[0] - c[1] : 0);
-    }, 0);
-    if (Math.abs(net) < MIN_HILL_CLIMB_M) continue;
-    const path = fi.chain(edges, net > 0);
-    if (!path) continue;
-    const climbM = path.reduce((s, d) => s + (g.climb(d >>> 1, (d & 1) === 0)?.[0] ?? 0), 0);
-    if (climbM >= MIN_HILL_CLIMB_M) out.push({ way, path, climbM });
-  }
-  hillCache.set(fi, out);
-  return out;
-}
-
 function workoutMode(fi: FeatureIndex, focus: WorkoutFocus): Mode {
   const stairs = MODES.stairs;
-  const hillList = hills(fi);
+  const hillList = fi.hills.filter(hasPath);
   const hillOfWay = new Map(hillList.map((h) => [h.way, h]));
   const stairCandidates = (): Collectible[] =>
-    fi.staircases.map((s) => ({ key: `s:${s.way}`, path: s.climbPath, value: s.climbM * 1.5 + s.steps / 20 }));
-  const hillCandidates = (): Collectible[] => hillList.map((h) => ({ key: `h:${h.way}`, path: h.path, value: h.climbM }));
+    fi.staircases.filter(hasClimbPath).map((s) => ({ key: `s:${wayKey(fi, s.way)}`, path: s.climbPath, value: s.climbM * 1.5 + s.steps / 20 }));
+  const hillCandidates = (): Collectible[] => hillList.map((h) => ({ key: `h:${wayKey(fi, h.way)}`, path: h.path, value: h.climbM }));
   return {
     id: "stairs",
     name: "Workout",
@@ -75,9 +36,9 @@ function workoutMode(fi: FeatureIndex, focus: WorkoutFocus): Mode {
       keysOf: (_fi, d) => {
         const way = fi.g.s.edge_way[d >>> 1]!;
         const keys: string[] = [];
-        if (fi.staircaseOfWay.has(way)) keys.push(`s:${way}`);
+        if (fi.staircaseOfWay.has(way)) keys.push(`s:${wayKey(fi, way)}`);
         const hill = hillOfWay.get(way);
-        if (hill && hill.path.includes(d)) keys.push(`h:${way}`);
+        if (hill && hill.path.includes(d)) keys.push(`h:${wayKey(fi, way)}`);
         return keys;
       },
     },
@@ -115,7 +76,7 @@ export interface WorkoutPlan {
 }
 
 export function planWorkout(router: Router, fi: FeatureIndex, start: number, minutes: number, focus: WorkoutFocus): WorkoutPlan | null {
-  const capSeconds = Math.min(minutes * 60, LOOP_MAX_SECONDS);
+  const capSeconds = loopCapSeconds(minutes);
   const model = workoutModel(fi, focus, minutes);
   let route = collectRoute(router, fi, start, start, workoutMode(fi, focus), model, capSeconds, { maxRetraceShare: LOOP_RETRACE_SHARE });
   // How much of the workout a loop gives: staircases, climb, or both.
@@ -129,7 +90,7 @@ export function planWorkout(router: Router, fi: FeatureIndex, start: number, min
   if (!route || route.timeS < capSeconds * 0.6) {
     let best = route ? worth(route) : -1;
     for (let k = 0; k < 6; k++) {
-      const wander = chaosWaypointRoute(router, fi, start, start, model, capSeconds, start * 13 + minutes + k);
+      const wander = chaosWaypointRoute(router, fi, start, start, model, capSeconds, router.g.globalNode(start) * 13 + minutes + k);
       if (!wander || wander.timeS > capSeconds) continue;
       const w = worth(wander);
       if (w > best || (w === best && wander.timeS > (route?.timeS ?? 0))) {

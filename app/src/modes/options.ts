@@ -3,10 +3,10 @@ export type CrawlTheme = "art" | "pub" | "wine";
 export type WorkoutFocus = "stairs" | "hills" | "mixed";
 
 export const CRAWL_THEMES: readonly CrawlTheme[] = ["art", "pub", "wine"];
-export const CRAWL_MINUTES = [30, 45, 60] as const;
+export const CRAWL_MINUTES = [30, 45, 60, 90] as const; // 90 is a long walk, chosen deliberately
 export const MIN_STOPS = 3;
 /** Drinking crawls are capped lower than art crawls. */
 export const MAX_STOPS: Readonly<Record<CrawlTheme, number>> = { art: 8, pub: 6, wine: 6 };
 
 export const WORKOUT_FOCUSES: readonly WorkoutFocus[] = ["stairs", "hills", "mixed"];
-export const WORKOUT_MINUTES = [20, 30, 45] as const;
+export const WORKOUT_MINUTES = [20, 30, 45, 60, 90] as const;

@@ -15,7 +15,7 @@ const cache = new Map<string, { router: Router; fi: FeatureIndex; index: NodeInd
 function area(id: string) {
   let a = cache.get(id);
   if (!a) {
-    const buf = readFileSync(new URL(`../public/data/${id}/graph.bin`, import.meta.url));
+    const buf = readFileSync(new URL(`../../data/${id}/graph.bin`, import.meta.url));
     const g = Graph.fromBuffer(buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength));
     a = { router: new Router(g), fi: new FeatureIndex(g), index: new NodeIndex(g) };
     cache.set(id, a);

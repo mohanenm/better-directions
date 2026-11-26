@@ -6,7 +6,7 @@ import { Graph } from "../src/graph/graph";
 import { FeatureIndex } from "../src/modes/features";
 import { Router } from "../src/router/astar";
 import { NodeIndex } from "../src/router/snap";
-import { GPS_ART_MAX_SECONDS } from "../src/safety/limits";
+import { DETOUR } from "../src/safety/limits";
 
 describe("GPS art building blocks", () => {
   it("closed shapes end where they start; every shape fits the unit box", () => {
@@ -42,7 +42,7 @@ describe("GPS art building blocks", () => {
 });
 
 describe("GPS art on Lyon", () => {
-  const buf = readFileSync(new URL("../public/data/lyon/graph.bin", import.meta.url));
+  const buf = readFileSync(new URL("../../data/lyon/graph.bin", import.meta.url));
   const lyon = Graph.fromBuffer(buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength));
   const router = new Router(lyon);
   const fi = new FeatureIndex(lyon);
@@ -52,7 +52,7 @@ describe("GPS art on Lyon", () => {
     const req = { shape: "square" as const, start: [4.845, 45.751] as [number, number], minutes: 40 };
     const a = drawShape(router, fi, index, req)!;
     expect(a.likeness).toBeGreaterThanOrEqual(70);
-    expect(a.route.timeS).toBeLessThanOrEqual(GPS_ART_MAX_SECONDS);
+    expect(a.route.timeS).toBeLessThanOrEqual(DETOUR.maxSeconds);
     const b = drawShape(router, fi, index, req)!;
     expect(b.route.dirEdges).toEqual(a.route.dirEdges);
   });

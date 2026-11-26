@@ -37,10 +37,11 @@ export function planMode(
   modeId: ModeId,
   seed = 1,
   capSeconds?: number,
+  long = false,
 ): ModePlan | null {
   const mode = MODES[modeId];
   const model = mode.cost(fi, seed);
-  const base = plan(router, start, goal, model, capSeconds);
+  const base = plan(router, start, goal, model, capSeconds, long);
   if (!base) return null;
 
   let better = base.better;
@@ -91,7 +92,7 @@ export function planMode(
     // Inconvenient, not riskier: raise the crossing penalty until it crosses no more than normal.
     let fixed = false;
     for (const penalty of CROSSING_PENALTIES_S.slice(1)) {
-      const strict = plan(router, start, goal, inconvenientModel(fi, penalty), base.capSeconds);
+      const strict = plan(router, start, goal, inconvenientModel(fi, penalty), base.capSeconds, long);
       if (!strict) break;
       const stats = costOfFun(fi, strict.better);
       if (stats.busyCrossings <= normalStats.busyCrossings) {
@@ -157,8 +158,9 @@ export function planModeVia(
   points: number[],
   modeId: ModeId,
   seed = 1,
+  long = false,
 ): ModePlan | null {
-  if (points.length === 2) return planMode(router, fi, points[0]!, points[1]!, modeId, seed);
+  if (points.length === 2) return planMode(router, fi, points[0]!, points[1]!, modeId, seed, undefined, long);
   const normals: Route[] = [];
   for (let i = 0; i < points.length - 1; i++) {
     const leg = router.route(points[i]!, points[i + 1]!, NORMAL);
@@ -166,11 +168,11 @@ export function planModeVia(
     normals.push(leg);
   }
   const normal = joinRoutes(normals);
-  const capSeconds = detourCapSeconds(normal.timeS);
+  const capSeconds = detourCapSeconds(normal.timeS, long);
   const legs: ModePlan[] = [];
   for (let i = 0; i < normals.length; i++) {
     const share = normal.timeS > 0 ? normals[i]!.timeS / normal.timeS : 1 / normals.length;
-    const leg = planMode(router, fi, points[i]!, points[i + 1]!, modeId, seed + i, capSeconds * share);
+    const leg = planMode(router, fi, points[i]!, points[i + 1]!, modeId, seed + i, capSeconds * share, long);
     if (!leg) return null;
     legs.push(leg);
   }
@@ -208,7 +210,8 @@ export function chaosWaypointRoute(
   seed: number,
 ): Route | null {
   const g = router.g;
-  const rand = mulberry32(Math.floor(hashUnit(seed, start * 7919 + goal) * 2 ** 32));
+  // Seeded by whole-graph node numbers, so a tiled graph draws the same waypoints.
+  const rand = mulberry32(Math.floor(hashUnit(seed, g.globalNode(start) * 7919 + g.globalNode(goal)) * 2 ** 32));
   const s = g.nodeLonLat(start);
   const t = g.nodeLonLat(goal);
   const direct = haversineM(s, t);
@@ -222,12 +225,16 @@ export function chaosWaypointRoute(
     for (let k = 0; k < count; k++) {
       const target = (0.5 + 0.4 * rand()) * tame; // share of the spare budget to use
       for (let tries = 0; tries < 400; tries++) {
-        const e = Math.floor(rand() * g.edgeCount);
-        if (!g.allowedDirs[e]) continue;
-        const m: [number, number] = [fi.midLon[e]!, fi.midLat[e]!];
+        // Draw from the whole graph's edge numbers, so a tiled graph draws the same ones; an edge
+        // that isn't loaded is outside anything this cap can reach, so it would fail anyway.
+        const e = g.localEdge(Math.floor(rand() * g.globalEdgeCount));
+        if (e < 0 || !g.allowedDirs[e]) continue;
+        // Judge the waypoint itself (the edge's first node), not the edge's middle.
+        const node = g.s.edge_from[e]!;
+        const m = g.nodeLonLat(node);
         const via = haversineM(s, m) + haversineM(m, t);
         if (via > direct + spare * target || via < direct + spare * 0.25 * tame) continue;
-        vias.push({ node: g.s.edge_from[e]!, along: haversineM(s, m) / via });
+        vias.push({ node, along: haversineM(s, m) / via });
         break;
       }
     }

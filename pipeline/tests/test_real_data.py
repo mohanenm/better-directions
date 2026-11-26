@@ -16,7 +16,7 @@ from bdgraph.encode import encode_graph
 ROOT = Path(__file__).parents[2]
 CITY = load_city(ROOT / "cities" / "lyon.json")
 OSM = ROOT / "data" / "raw" / "lyon.osm.pbf"
-COMMITTED = ROOT / "app" / "public" / "data" / "lyon" / "graph.bin"
+COMMITTED = ROOT / "data" / "lyon" / "graph.bin"
 
 # Mapped tram crossings count as crossings, so ~95% of the network is one component.
 MIN_COMPONENT_SHARE = 0.93
@@ -68,4 +68,6 @@ def test_lyon_build_is_deterministic(built):
 @pytest.mark.skipif(not COMMITTED.exists(), reason="no graph.bin built yet")
 def test_committed_graph_is_up_to_date(built):
     _, blob = built
-    assert COMMITTED.read_bytes() == blob, "rebuild with: python -m bdgraph.build cities/lyon.json"
+    assert COMMITTED.read_bytes() == blob, (
+        "rebuild with: python -m bdgraph.build cities/lyon.json, then npm run tiles -- lyon"
+    )

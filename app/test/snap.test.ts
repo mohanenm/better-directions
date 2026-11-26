@@ -6,7 +6,7 @@ import { haversineM } from "../src/router/geometry";
 import { NodeIndex } from "../src/router/snap";
 
 function load(area: string): Graph {
-  const buf = readFileSync(new URL(`../public/data/${area}/graph.bin`, import.meta.url));
+  const buf = readFileSync(new URL(`../../data/${area}/graph.bin`, import.meta.url));
   return Graph.fromBuffer(buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength));
 }
 

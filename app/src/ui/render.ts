@@ -1,5 +1,6 @@
 /** Renders a planned route as text: summary, stats, notes and step-by-step directions. */
 import { CITY } from "../city";
+import { DETOUR } from "../safety/limits";
 import type { CostOfFun } from "../modes/stats";
 import type { Step } from "../modes/directions";
 import type { ArtResultMsg, PlanResult, SpellResultMsg, TourResult } from "./protocol";
@@ -89,8 +90,12 @@ export function sameRouteNote(r: PlanResult): string | null {
   const minutes = Math.max(1, Math.round(r.normalStats.timeS / 60));
   const stops = r.strategy === "via-stops";
   switch (r.sameAsNormal) {
-    case "too-long":
-      return `This walk${stops ? " with its stops" : ""} already takes ${minutes} minutes and detours are capped at an hour, so the better route is the normal one. ${stops ? "Drop a stop, or pick" : "Pick"} places closer together, or plan a loop from your start.`;
+    case "too-long": {
+      const cap = r.long ? "an hour and a half" : "an hour";
+      // Offer the longer walk when it would actually leave room for a detour.
+      const offer = !r.long && minutes < DETOUR.longMaxSeconds / 60 - 5 ? ` Tick "Longer walk" to allow up to 1 h 30, or ${stops ? "drop a stop" : "pick places closer together"}.` : ` ${stops ? "Drop a stop, or pick" : "Pick"} places closer together, or plan a loop from your start.`;
+      return `This walk${stops ? " with its stops" : ""} already takes ${minutes} minutes and detours are capped at ${cap}, so the better route is the normal one.${offer}`;
+    }
     case "already":
       return "The normal route already has no right turns, so it's the better route too.";
     case "nothing-here":
@@ -100,6 +105,16 @@ export function sameRouteNote(r: PlanResult): string | null {
     default:
       return null;
   }
+}
+
+/** For walks over an hour: roughly when you'd finish if you set off now (the device's clock). */
+export function finishNote(seconds: number, now = new Date()): string | null {
+  if (seconds <= 60 * 60) return null;
+  const total = Math.round(seconds / 60);
+  const end = new Date(now.getTime() + seconds * 1000);
+  const at = end.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+  const late = isLate(end) || isLate(now);
+  return `About ${Math.floor(total / 60)} h ${String(total % 60).padStart(2, "0")} of walking: set off now and you'd finish around ${at}.${late ? " That's late: it may be dark, and parks and passages may be shut." : " Check you'll have daylight."}`;
 }
 
 /** The card's title: the route's own name, unless it's really just the normal route. */
@@ -113,12 +128,14 @@ export function renderResult(r: PlanResult, onStep: (at: [number, number]) => vo
     ...(same ? [same] : []),
     ...(!same && r.missingFeature ? [`This route doesn't pass any ${r.missingFeature}: there are none within reach, so it's just a different way round.`] : []),
     ...(r.strategy === "via-stops" ? ["Goes through the stops you picked, in order."] : []),
+    ...[finishNote(r.betterStats.timeS)].filter((n): n is string => n !== null),
   ];
   renderCard(planTitle(r), r.summary, statItems(r), r.betterStats, notes, r.steps, ["Better route", "Normal route"], onStep);
 }
 
 export function renderTour(r: TourResult, onStep: (at: [number, number]) => void): void {
-  renderCard(r.name, r.summary, r.statItems, r.stats, r.notes, r.steps, [r.kind === "crawl" ? "The crawl" : "The loop", ""], onStep);
+  const finish = finishNote(r.stats.timeS);
+  renderCard(r.name, r.summary, r.statItems, r.stats, finish ? [...r.notes, finish] : r.notes, r.steps, [r.kind === "crawl" ? "The crawl" : "The loop", ""], onStep);
 }
 
 export function tourCard(r: TourResult): ShareCard {
@@ -144,6 +161,8 @@ function artStats(r: ArtResultMsg): [string, string][] {
 export function renderArt(r: ArtResultMsg, onStep: (at: [number, number]) => void): void {
   const notes = ["Experimental: streets rarely match a shape exactly, so expect wobbles. The dashed line is the ideal shape."];
   if (r.likeness < 60) notes.unshift("The streets here don't follow this shape well, so it may be hard to make out. Try another start point.");
+  const finish = finishNote(r.stats.timeS);
+  if (finish) notes.push(finish);
   renderCard(artName(r), artSummary(r), artStats(r), r.stats, notes, r.steps, ["Your walk", "Ideal shape"], onStep);
 }
 

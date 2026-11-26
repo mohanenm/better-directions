@@ -18,3 +18,6 @@ dist/
 
 # Local working notes (not published)
 notes/
+
+# Generated from data/<area>/graph.bin by npm run tiles (run by build and dev)
+app/public/data/*/graph/

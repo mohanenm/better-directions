@@ -8,10 +8,12 @@
 - Elevation for the US areas from the USGS 3D Elevation Program, so climbs and steps up are known there too.
 - Most inconvenient mode: many turns, needless ups and downs, no straight lines, and never more busy-road crossings than the normal route.
 - Crawls: art, pub and wine crawls through a chosen number of stops, looping back or ending at your To point. Stops are numbered pins you can swap or skip.
-- Workouts: 20, 30 or 45-minute loops collecting staircases, hills or both, preferring lit streets for longer loops.
+- Workouts: loops of 20 minutes to an hour collecting staircases, hills or both, preferring lit streets for longer loops.
 - Park pins: parks along or near a route, with their hours. Tap one to add it as a stop; up to three stops, in order.
-- Spell a word: a walk whose trace spells 2 to 10 letters or digits, scored for readability per letter. The word stays on the device unless you choose to include it in a link.
+- Spell a word: a walk whose trace spells 2 to 6 letters or digits, scored for readability per letter. The word stays on the device unless you choose to include it in a link.
 - Famous routes for the new mode, a crawl and a workout.
+- Longer walks: tick "Longer walk" to let a detour run to an hour and a half, or pick the 1 h 30 crawls and workouts or the 1 h 15 shapes. The default stays an hour, and walks over an hour say roughly when you'd finish.
+- Big areas load faster: DC's and Chicago's walking graphs are cut into tiles, and the page loads only the part a request can reach. On an emulated slow phone, DC's first route takes about 9 seconds instead of 16, and Chicago's about 8 instead of 11; and the routes are exactly those the whole graph would give. Planning also skips candidates that could never fit the time cap, which changes a few routes slightly.
 - Dark mode, with a dark basemap. It follows the system setting, and a switch in the header changes it for the visit (nothing is stored).
 
 ### Changed

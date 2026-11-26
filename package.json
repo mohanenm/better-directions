@@ -16,14 +16,15 @@
     "check": "npm run typecheck && npm run lint && npm run test",
     "bench": "vitest run --config vitest.bench.config.ts app/bench/route.bench.ts --silent=false --disableConsoleIntercept",
     "samples": "vitest run --config vitest.bench.config.ts app/bench/samples.bench.ts",
-    "dev": "vite",
-    "build": "vite build",
+    "dev": "node scripts/tile-graph.mjs && vite",
+    "build": "node scripts/tile-graph.mjs && vite build",
     "preview": "vite preview",
     "smoke": "node scripts/smoke.mjs",
     "perf": "node scripts/perf.mjs",
     "notices": "node scripts/notices.mjs",
-    "pages:local": "vite build && vite preview",
-    "pages:gz": "vite build && node scripts/serve-gz.mjs dist"
+    "tiles": "node scripts/tile-graph.mjs",
+    "pages:local": "npm run build && vite preview",
+    "pages:gz": "npm run build && node scripts/serve-gz.mjs dist"
   },
   "devDependencies": {
     "@eslint/js": "10.0.1",

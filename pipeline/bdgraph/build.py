@@ -858,7 +858,8 @@ def main(argv: list[str] | None = None) -> None:
 
     city = load_city(args.city_config)
     osm = args.osm or Path("data/raw") / f"{city.id}.osm.pbf"
-    out = args.out or Path("app/public/data") / city.id
+    # The whole graph is a build input: the page loads tiles cut from it (npm run tiles).
+    out = args.out or Path("data") / city.id
     out.mkdir(parents=True, exist_ok=True)
 
     graph = build_graph(city, osm)
