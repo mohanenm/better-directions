@@ -60,19 +60,19 @@ A word you spell stays on your device unless you choose to put it in a link. You
 
 ## Performance
 
-Measured on an emulated low-end phone (6× slower CPU, slow 4G, empty cache), the first route on a first visit is ready in 3 to 10 seconds depending on the area, mostly downloading its walking graph once:
+Measured on an emulated low-end phone (6× slower CPU, slow 4G, empty cache), the first route on a first visit is ready in 3 to 16 seconds depending on the area, mostly downloading its walking graph once:
 
 | Area | Download | First route |
 |---|---:|---:|
+| Washington, DC | 6.6 MB | 15.9 s |
 | Chicago | 4.2 MB | 10.3 s |
+| Arlington and Alexandria | 3.2 MB | 9.3 s |
 | Lyon | 3.3 MB | 8.7 s |
-| Washington, DC | 3.4 MB | 8.6 s |
 | Copenhagen | 1.8 MB | 7.8 s |
-| Arlington and Alexandria | 2.5 MB | 7.0 s |
+| Silver Spring and Bethesda | 1.4 MB | 5.8 s |
 | Baltimore | 1.9 MB | 5.8 s |
 | Richmond | 1.7 MB | 5.3 s |
 | Malmö | 1.0 MB | 3.9 s |
-| Silver Spring and Bethesda | 1.1 MB | 3.4 s |
 | Newberg | 0.6 MB | 3.4 s |
 | Dundee | 0.4 MB | 3.0 s |
 
