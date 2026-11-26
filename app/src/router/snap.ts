@@ -24,7 +24,10 @@ export class NodeIndex {
     const cy = Math.floor(point[1] / CELL_DEG);
     let best = -1;
     let bestD = Infinity;
-    const reach = Math.ceil(maxDistanceM / 150);
+    // Cells are narrower east to west further from the equator (125 m in Copenhagen), so reach
+    // far enough at this latitude to cover the whole radius.
+    const cellM = CELL_DEG * 111_320 * Math.cos((point[1] * Math.PI) / 180);
+    const reach = Math.ceil(maxDistanceM / cellM);
     for (let r = 0; r <= reach; r++) {
       for (let i = cx - r; i <= cx + r; i++) {
         for (let j = cy - r; j <= cy + r; j++) {
