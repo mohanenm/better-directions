@@ -1,0 +1,35 @@
+{
+  "id": "newberg",
+  "name": "Newberg",
+  "extract": {
+    "provider": "Geofabrik",
+    "url": "https://download.geofabrik.de/north-america/us/oregon-latest.osm.pbf",
+    "licence": "ODbL 1.0",
+    "attribution": "© OpenStreetMap contributors"
+  },
+  "bbox": {
+    "west": -122.995,
+    "south": 45.28,
+    "east": -122.92,
+    "north": 45.335
+  },
+  "center": {
+    "lon": -122.9718,
+    "lat": 45.3006
+  },
+  "default_zoom": 13,
+  "places": {
+    "square_name_prefixes": [],
+    "square_name_suffixes": [
+      " Circle",
+      " Square",
+      " Plaza"
+    ]
+  },
+  "confirmed_passages": [],
+  "terrain": {
+    "provider": "usgs-3dep",
+    "licence": "Public domain (USGS): https://www.usgs.gov/information-policies-and-instructions/copyrights-and-credits",
+    "attribution": "Elevation: USGS 3DEP"
+  }
+}

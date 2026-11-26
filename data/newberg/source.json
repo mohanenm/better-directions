@@ -1,0 +1,8 @@
+{
+  "provider": "Geofabrik",
+  "dated_url": "https://download.geofabrik.de/north-america/us/oregon/oregon-261124.osm.pbf",
+  "data_as_of": "2026-11-24T21:21:23Z",
+  "licence": "ODbL 1.0",
+  "attribution": "\u00a9 OpenStreetMap contributors",
+  "cropped_sha256": "f33cae242465780ea863fce0fdb3574871a93716b500db076b3e20a4c602286f"
+}

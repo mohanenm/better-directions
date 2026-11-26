@@ -118,13 +118,23 @@ export function planWorkout(router: Router, fi: FeatureIndex, start: number, min
   const capSeconds = Math.min(minutes * 60, LOOP_MAX_SECONDS);
   const model = workoutModel(fi, focus, minutes);
   let route = collectRoute(router, fi, start, start, workoutMode(fi, focus), model, capSeconds, { maxRetraceShare: LOOP_RETRACE_SHARE });
-  // Nothing to collect nearby, or a short loop: wander instead, keeping the longest that fits.
+  // How much of the workout a loop gives: staircases, climb, or both.
+  const worth = (r: Route): number => {
+    const s = costOfFun(fi, r);
+    return focus === "stairs" ? s.staircases : focus === "hills" ? Math.round(s.climbM) : s.staircases * 10 + Math.round(s.climbM);
+  };
+  // Nothing to collect nearby, or a short loop: try wandering, but only swap for a loop that
+  // has at least as much of the workout (then the longer one), never one with less.
   let wandered = false;
   if (!route || route.timeS < capSeconds * 0.6) {
+    let best = route ? worth(route) : -1;
     for (let k = 0; k < 6; k++) {
       const wander = chaosWaypointRoute(router, fi, start, start, model, capSeconds, start * 13 + minutes + k);
-      if (wander && wander.timeS <= capSeconds && (!route || wander.timeS > route.timeS)) {
+      if (!wander || wander.timeS > capSeconds) continue;
+      const w = worth(wander);
+      if (w > best || (w === best && wander.timeS > (route?.timeS ?? 0))) {
         route = wander;
+        best = w;
         wandered = true;
       }
     }
@@ -148,7 +158,8 @@ export function planWorkout(router: Router, fi: FeatureIndex, start: number, min
     focus,
     minutes,
     summary: `A ${Math.max(1, Math.round(stats.timeS / 60))}-minute loop: ${bits.join(", ")}.`,
-    name: workoutName(stats, focus, minutes),
+    // Named for the loop's real length (to the nearest 5 minutes), not the length asked for.
+    name: workoutName(stats, focus, Math.max(5, Math.round(stats.timeS / 300) * 5)),
     notes,
   };
 }

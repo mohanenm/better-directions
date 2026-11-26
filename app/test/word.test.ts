@@ -24,8 +24,8 @@ describe("the walking font", () => {
   it("normalises names and limits their length", () => {
     expect(normaliseWord("  Zoë  O'Brien! ")).toBe("ZOE OBRIEN");
     expect(isSpellable("A")).toBe(false);
-    expect(isSpellable("ABCDEFGHIJK")).toBe(false);
-    expect(isSpellable("ADA 1815")).toBe(true);
+    expect(isSpellable("ABCDEFG")).toBe(false);
+    expect(isSpellable("ADA 18")).toBe(true);
     expect(initials("ADA LOVELACE")).toBe("AL");
     expect(layout("AB").width).toBeCloseTo(0.6 + 0.3 + 0.6);
   });

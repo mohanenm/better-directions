@@ -28,7 +28,8 @@ describe.each(Object.entries(FAMOUS))("famous routes: %s", (area, routes) => {
       }
       if (f.kind === "workout") {
         const w = planWorkout(router, fi, index.nearest(f.from)!, f.minutes, f.focus)!;
-        expect(w.stats.staircases).toBeGreaterThanOrEqual(5);
+        if (f.focus === "hills") expect(w.stats.climbM).toBeGreaterThanOrEqual(30);
+        else expect(w.stats.staircases).toBeGreaterThanOrEqual(5);
         console.log(`${f.title}: "${w.name}". ${w.summary}`);
         return;
       }

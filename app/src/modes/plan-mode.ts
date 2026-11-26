@@ -128,7 +128,7 @@ export function planMode(
     capSeconds: base.capSeconds,
     strategy,
     summary: summarise(normalStats, betterStats, extras),
-    name: routeName(fi, modeId, betterStats, better, seed),
+    name: routeName(fi, modeId, betterStats, better, seed, normalStats),
   };
 }
 
@@ -189,7 +189,7 @@ export function planModeVia(
     capSeconds,
     strategy: legs.every((l) => l.strategy === "normal") ? "normal" : "via-stops",
     summary: summarise(normalStats, betterStats, extras),
-    name: routeName(fi, modeId, betterStats, better, seed),
+    name: routeName(fi, modeId, betterStats, better, seed, normalStats),
   };
 }
 

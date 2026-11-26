@@ -4,7 +4,7 @@
 
 ### Added
 
-- New areas: Washington DC, Arlington and Alexandria, Silver Spring and Bethesda, Richmond, Baltimore and Chicago (from Chinatown and Pilsen up to Rogers Park), each loaded only when picked, with an area picker and "nearest to me". Famous routes for each.
+- New areas: Washington DC, Arlington and Alexandria, Silver Spring and Bethesda, Richmond, Baltimore, Chicago (from Chinatown and Pilsen up to Rogers Park), Newberg and Dundee in Oregon, Copenhagen (with Amager) and Malmö (with Limhamn), each loaded only when picked, with an area picker and "nearest to me". Famous routes for each.
 - Elevation for the US areas from the USGS 3D Elevation Program, so climbs and steps up are known there too.
 - Most inconvenient mode: many turns, needless ups and downs, no straight lines, and never more busy-road crossings than the normal route.
 - Crawls: art, pub and wine crawls through a chosen number of stops, looping back or ending at your To point. Stops are numbered pins you can swap or skip.
@@ -27,6 +27,12 @@
 
 ### Fixed
 
+- The map sometimes kept showing the previous route after a new one was planned.
+- Errors appeared below all the panel's sections, out of sight; they now show near the top, and the old route is cleared.
+- A walk already over an hour, or with nothing for the chosen mode within reach, now says why the better route is the normal one, and routes are no longer named for features they don't have.
+- Shared links could reopen a slightly different route; park stops from an earlier route carried over into later ones; the dark share image's title was unreadable; the share image could crop a sliver of map.
+- A stairs workout could drop the staircases it found; crawls short of stops now say so; Spell a word no longer offers 10 letters when about 5 fit, or suggests chopped words.
+- Smaller fixes from an audit of the planner and the page: search feedback and duplicates, wording in directions, tap targets on small phones, snapping range in the Nordic areas.
 - Scrolling the side panel no longer scrolls the whole page, moves the map, or leaves a blank gap under the footer, on desktop or mobile.
 - Small tap targets (step-by-step buttons, walk-length options, the Download link) are now at least 24 px.
 

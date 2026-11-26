@@ -1,0 +1,32 @@
+{
+  "id": "malmo",
+  "name": "Malmö",
+  "extract": {
+    "provider": "Geofabrik",
+    "url": "https://download.geofabrik.de/europe/sweden-latest.osm.pbf",
+    "licence": "ODbL 1.0",
+    "attribution": "© OpenStreetMap contributors"
+  },
+  "bbox": {
+    "west": 12.9,
+    "south": 55.565,
+    "east": 13.04,
+    "north": 55.62
+  },
+  "center": {
+    "lon": 13.0007,
+    "lat": 55.605
+  },
+  "default_zoom": 13,
+  "places": {
+    "square_name_prefixes": [],
+    "square_name_suffixes": [
+      "torg",
+      "torget",
+      "Torg",
+      "plats",
+      "platsen"
+    ]
+  },
+  "confirmed_passages": []
+}

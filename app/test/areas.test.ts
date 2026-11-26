@@ -12,7 +12,8 @@ describe.each(AREAS.map((a) => [a.id, a] as const))("area %s", (id, area) => {
     const g = Graph.fromBuffer(buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength));
     expect(g.violations).toEqual([]);
     expect(g.meta.city.id).toBe(id);
-    expect(JSON.parse(readFileSync(file(`data/${id}/places.json`), "utf8")).length).toBeGreaterThan(100);
+    // Small towns have few named places (Dundee has 8); this catches an empty or broken list.
+    expect(JSON.parse(readFileSync(file(`data/${id}/places.json`), "utf8")).length).toBeGreaterThanOrEqual(5);
     expect(existsSync(file(`tiles/${id}/0/0/0.mvt`))).toBe(true);
   });
   it("matches its city config", () => {
@@ -29,5 +30,9 @@ describe("nearest area", () => {
     expect(nearestArea(4.8, 45.7).id).toBe("lyon");
     expect(nearestArea(-77.45, 37.55).id).toBe("richmond");
     expect(nearestArea(-87.67, 42.0).id).toBe("chicago");
+    expect(nearestArea(-122.97, 45.3).id).toBe("newberg");
+    expect(nearestArea(-123.01, 45.278).id).toBe("dundee");
+    expect(nearestArea(12.59, 55.68).id).toBe("copenhagen");
+    expect(nearestArea(13.0, 55.6).id).toBe("malmo");
   });
 });

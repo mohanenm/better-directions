@@ -19,7 +19,7 @@ const MAX_DRINK_GAP_M = 600;
 const DETOUR = 1.3;
 const SPEED_MS = 1.3;
 
-export const DRINK_NOTE = "Drink responsibly: drink water, eat something, and don't drive. The legal drinking age applies (18 in France, 21 in the US).";
+export const DRINK_NOTE = "Drink responsibly: drink water, eat something, and don't drive. The local legal drinking age applies.";
 export const HOURS_NOTE = "Opening hours come from OpenStreetMap and may be out of date.";
 
 export interface CrawlOptions {
@@ -202,6 +202,7 @@ export function planCrawl(router: Router, fi: FeatureIndex, opts: CrawlOptions):
   if (stopNotes.some(Boolean)) notes.push(HOURS_NOTE);
   const noun = { art: ["artwork", "artworks"], pub: ["pub", "pubs"], wine: ["wine stop", "wine stops"] }[opts.theme];
   const n = best.stops.length;
+  if (n < count) notes.unshift(`Only ${n} of the ${count} stops you asked for fit within ${minutes} minutes from here.`);
   return {
     theme: opts.theme,
     route,

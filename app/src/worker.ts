@@ -16,6 +16,7 @@ import { planWorkout, WORKOUT_FOCUSES, WORKOUT_MINUTES } from "./modes/workout";
 import { haversineM } from "./router/geometry";
 import { Router, type Route } from "./router/astar";
 import { NodeIndex } from "./router/snap";
+import { deliversMode, MODE_FEATURE, sameAsNormalReason } from "./modes/names";
 import { costOfFun } from "./modes/stats";
 import type { ArtRequestMsg, CrawlRequest, FromWorker, Pin, PlanRequest, SpellRequest, ToWorker, WorkoutRequest } from "./ui/protocol";
 
@@ -99,6 +100,9 @@ function plan(req: PlanRequest): void {
   if (points.length < 2) throw new Error("Start and end are the same spot. Pick somewhere further away.");
   const p = planModeVia(router, fi, points, req.mode, req.seed);
   if (!p) throw new Error("No walking route found between those points.");
+  const sameAsNormal = sameAsNormalReason(p);
+  const feature = MODE_FEATURE[p.mode] ?? null;
+  const delivered = deliversMode(p.mode, p.betterStats);
   post({
     type: "plan",
     id: req.id,
@@ -116,6 +120,8 @@ function plan(req: PlanRequest): void {
       name: p.name,
       steps: directions(fi, p, req.fromName, req.toName),
       strategy: p.strategy,
+      sameAsNormal,
+      missingFeature: feature && !delivered ? feature : null,
       pins: parkPins(p.better),
       ms: Math.round(performance.now() - t0),
     },
@@ -130,6 +136,7 @@ function art(req: ArtRequestMsg): void {
   const minutes = Math.max(15, Math.min(55, req.minutes));
   const r = drawShape(router, fi, index, { shape: req.shape, start: req.start as LonLat, minutes });
   if (!r) throw new Error("Couldn't fit that shape around here. Try another start point, shape or length.");
+  if (r.likeness < MIN_RECOGNISABLE) throw new Error("The streets here don't follow that shape well enough to draw it. Try another start point, shape or length.");
   const shape = SHAPES[req.shape];
   post({
     type: "art",
@@ -161,6 +168,9 @@ function workout(req: WorkoutRequest): void {
   const { g, router, fi } = state;
   const t0 = performance.now();
   if (!WORKOUT_FOCUSES.includes(req.focus) || !(WORKOUT_MINUTES as readonly number[]).includes(req.minutes)) throw new Error("Unknown workout.");
+  // Without elevation data, hills can't be found and climbs can't be counted.
+  const hasTerrain = Boolean(g.meta.terrain.attribution);
+  if (!hasTerrain && req.focus !== "stairs") throw new Error("There's no elevation data for this area yet, so hill and mixed workouts aren't available. Try Stairs.");
   const start = snap(req.start, "start");
   const w = planWorkout(router, fi, start, req.minutes, req.focus);
   if (!w) throw new Error("Couldn't make a loop from here. Try another start.");
@@ -168,8 +178,7 @@ function workout(req: WorkoutRequest): void {
   const statItems: [string, string][] = [
     ["Walk", `${Math.max(1, Math.round(s.timeS / 60))} min · ${(s.lengthM / 1000).toFixed(1)} km`],
     ["Staircases", String(s.staircases)],
-    ["Steps up", s.stepsUp ? String(s.stepsUp) : "0"],
-    ["Climb", `${Math.round(s.climbM)} m`],
+    ...(hasTerrain ? ([["Steps up", String(s.stepsUp)], ["Climb", `${Math.round(s.climbM)} m`]] as [string, string][]) : []),
   ];
   post({
     type: "tour",
@@ -244,19 +253,20 @@ function crawl(req: CrawlRequest): void {
   });
 }
 
+/** Below this likeness a drawing or word isn't recognisable, so it's refused rather than shown. */
+const MIN_RECOGNISABLE = 20;
+
 class SpellError extends Error {
   constructor(message: string, readonly suggestion?: string) {
     super(message);
   }
 }
 
-/** The longest prefix of initials (or letters) that fits an hour, as a suggestion. */
+/** For a name of several words, its initials if they fit an hour. A chopped word isn't offered. */
 function shorterWord(word: string): string | undefined {
-  for (let n = 4; n >= 2; n--) {
-    const s = initials(word, n);
-    if (isSpellable(s) && heightFor(s) !== null && s !== word) return s;
-  }
-  return undefined;
+  if (!word.includes(" ")) return undefined;
+  const s = initials(word);
+  return isSpellable(s) && heightFor(s) !== null && s !== word ? s : undefined;
 }
 
 function spell(req: SpellRequest): void {
@@ -264,16 +274,17 @@ function spell(req: SpellRequest): void {
   const { g, router, fi, index } = state;
   const t0 = performance.now();
   const word = normaliseWord(req.word);
-  if (!isSpellable(word)) throw new SpellError("Use 2 to 10 letters or digits.");
+  if (!isSpellable(word)) throw new SpellError(`Use 2 to 6 letters or digits; 4 or 5 is usually the most that fits an hour's walk.${word.includes(" ") && shorterWord(word) ? ` Try ${shorterWord(word)}.` : ""}`, shorterWord(word));
   const out = spellWord(router, fi, index, word, req.start as LonLat);
   if (!out.ok) {
     if (out.reason === "too-long") {
       const s = shorterWord(word);
-      throw new SpellError(`That's too long to walk in an hour${s ? `. Try ${s}` : ""}.`, s);
+      throw new SpellError(`That's too long to walk in an hour. Short words fit best, usually 4 or 5 letters${s ? `; try ${s}` : ""}.`, s);
     }
     throw new SpellError("Couldn't fit that word around here. Try another start, or fewer letters.", shorterWord(word));
   }
   const r = out.result;
+  if (r.likeness < MIN_RECOGNISABLE) throw new SpellError("The streets here can't spell that recognisably. A neighbourhood with a regular grid, or a shorter word, works better.", shorterWord(word));
   post({
     type: "spell",
     id: req.id,

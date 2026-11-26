@@ -8,7 +8,7 @@
     <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
     <meta name="theme-color" content="#121826" media="(prefers-color-scheme: dark)">
     <title>Better Directions: the long way round, on purpose</title>
-    <meta name="description" content="A walking router that takes the long way round on purpose: up the staircases, through the passages, across the parks. Lyon, Washington DC, Virginia, Maryland and Chicago. For fun.">
+    <meta name="description" content="A walking router that takes the long way round on purpose: up the staircases, through the passages, across the parks. Lyon, Washington DC, Virginia, Maryland, Chicago, Oregon, Copenhagen and Malmö. For fun.">
     <link rel="icon" href="/favicon.svg" type="image/svg+xml">
     <script type="module" src="/src/main.ts"></script>
   </head>
@@ -36,6 +36,9 @@
           <span class="select-pill"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s-7-6.2-7-12a7 7 0 0 1 14 0c0 5.8-7 12-7 12z"/><circle cx="12" cy="9" r="2.5"/></svg><select id="area"></select></span>
           <button type="button" class="chip" id="nearest-area">Nearest to me</button>
         </div>
+        <p class="help area-note" id="area-note" hidden></p>
+        <!-- Near the top, and sticky, so errors and progress are seen wherever the panel is scrolled. -->
+        <div id="status" class="status" role="status" aria-live="polite"></div>
         <div class="sections">
           <section class="section" data-section="plan">
             <h2 class="section-head">
@@ -152,7 +155,7 @@
             </h2>
             <div id="spell-body" class="section-body" role="region" aria-labelledby="spell-head" hidden>
               <form id="spell-form" class="tool-form" novalidate>
-                <p class="help">Starts from your From point. 2 to 10 letters or digits, within an hour's walk. The word stays on your device.</p>
+                <p class="help">Starts from your From point. Up to 6 letters or digits, within an hour's walk; 4 or 5 is usually the most that fits. The word stays on your device.</p>
                 <label for="spell-word">Word or name</label>
                 <input id="spell-word" type="text" maxlength="24" autocomplete="off" autocapitalize="characters" spellcheck="false">
                 <label class="check"><input type="checkbox" id="spell-in-link"> Include the word in shared links</label>
@@ -180,6 +183,7 @@
                   <label><input type="radio" name="workout-focus" value="hills"> Hills: as much climbing as fits</label>
                   <label><input type="radio" name="workout-focus" value="mixed"> Mixed</label>
                 </fieldset>
+                <p class="help" id="workout-terrain-note" hidden>Hills and Mixed need elevation data, which this area doesn't have yet.</p>
                 <fieldset class="choice segmented">
                   <legend>Length</legend>
                   <label><input type="radio" name="workout-len" value="20"> 20 min</label>
@@ -218,7 +222,6 @@
           </section>
         </div>
 
-        <div id="status" class="status" role="status" aria-live="polite"></div>
         <div id="announcer" class="visually-hidden" aria-live="polite"></div>
 
         <section id="result" class="result" aria-labelledby="result-title" hidden tabindex="-1">

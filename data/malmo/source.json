@@ -1,0 +1,8 @@
+{
+  "provider": "Geofabrik",
+  "dated_url": "https://download.geofabrik.de/europe/sweden/sweden-261124.osm.pbf",
+  "data_as_of": "2026-11-24T21:21:23Z",
+  "licence": "ODbL 1.0",
+  "attribution": "\u00a9 OpenStreetMap contributors",
+  "cropped_sha256": "78f9d04b05ff406f091e0c945e7becb1b384e12d669e083f8f0a0a1fe6cd686f"
+}

@@ -1,0 +1,32 @@
+{
+  "id": "copenhagen",
+  "name": "Copenhagen",
+  "extract": {
+    "provider": "Geofabrik",
+    "url": "https://download.geofabrik.de/europe/denmark-latest.osm.pbf",
+    "licence": "ODbL 1.0",
+    "attribution": "© OpenStreetMap contributors"
+  },
+  "bbox": {
+    "west": 12.5,
+    "south": 55.62,
+    "east": 12.66,
+    "north": 55.725
+  },
+  "center": {
+    "lon": 12.5683,
+    "lat": 55.6761
+  },
+  "default_zoom": 13,
+  "places": {
+    "square_name_prefixes": [],
+    "square_name_suffixes": [
+      "torv",
+      "Torv",
+      "plads",
+      "Plads",
+      "pladsen"
+    ]
+  },
+  "confirmed_passages": []
+}

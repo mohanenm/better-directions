@@ -1,6 +1,6 @@
 # Better Directions
 
-A walking router that takes the long way round on purpose, for Lyon, Washington DC, Arlington and Alexandria, Silver Spring and Bethesda, Richmond, Baltimore and Chicago. Pick a start, an end and a mode, and it finds the *better* route: up every staircase, through the traboules, along the dirt paths, past the bakeries. The normal route is drawn next to it, with the cost:
+A walking router that takes the long way round on purpose, for Lyon, Washington DC, Arlington and Alexandria, Silver Spring and Bethesda, Richmond, Baltimore, Chicago, Newberg and Dundee in Oregon, Copenhagen and Malmö. Pick a start, an end and a mode, and it finds the *better* route: up every staircase, through the traboules, along the dirt paths, past the bakeries. The normal route is drawn next to it, with the cost:
 
 > Normal: 23 min. Better: 33 min, 10 staircases, 591 steps up.
 > *(Cathédrale Saint-Jean to the Basilique de Fourvière, Stairs mode)*
@@ -67,10 +67,14 @@ Measured on an emulated low-end phone (6× slower CPU, slow 4G, empty cache), th
 | Chicago | 4.2 MB | 10.3 s |
 | Lyon | 3.3 MB | 8.7 s |
 | Washington, DC | 3.4 MB | 8.6 s |
+| Copenhagen | 1.8 MB | 7.8 s |
 | Arlington and Alexandria | 2.5 MB | 7.0 s |
 | Baltimore | 1.9 MB | 5.8 s |
 | Richmond | 1.7 MB | 5.3 s |
+| Malmö | 1.0 MB | 3.9 s |
 | Silver Spring and Bethesda | 1.1 MB | 3.4 s |
+| Newberg | 0.6 MB | 3.4 s |
+| Dundee | 0.4 MB | 3.0 s |
 
 After that, a new route takes about a quarter of a second. The page and planner use under 20 MB of JavaScript heap, plus the graph itself.
 
@@ -78,12 +82,14 @@ After that, a new route takes about a quarter of a second. The page and planner 
 
 - Opening hours are shown but not checked against the clock, so a route can send you towards a park that has already shut. The late-night warning is the only hint.
 - It hasn't been tested on a real low-end phone, only emulated.
+- Copenhagen and Malmö have no elevation data yet, so climbs, steps up and hill workouts aren't available there; staircases are still counted. The page says so under the area picker, on every result and in the footer.
+- Kastellet in Copenhagen is tagged as military land in OpenStreetMap, so routes never enter it, although it's open to the public by day.
 - Wine bars are rarely tagged as such in OpenStreetMap, so wine crawls are thin, especially in the US.
 - Traboules in Lyon are private buildings opened to the public by agreement with the city. The list of agreed ones changes, and the app relies on OpenStreetMap tags and names rather than that list.
 
 ## Data and licences
 
-The code is [MIT](LICENSE). Map data is © [OpenStreetMap contributors](https://www.openstreetmap.org/copyright), under the [ODbL](https://opendatacommons.org/licenses/odbl/1-0/); Lyon's extract is dated 2026-11-23 ([data/lyon/SOURCE.md](data/lyon/SOURCE.md)). The US extracts are dated 2026-11-24 (`data/<area>/SOURCE.md`). Elevation for Lyon is IGN RGE ALTI®, under the [Licence Ouverte 2.0](https://www.etalab.gouv.fr/licence-ouverte-open-licence/); for the US areas it's the USGS 3D Elevation Program (public domain). The basemap is from [Protomaps](https://protomaps.com), built from OpenStreetMap, with Noto Sans fonts (SIL OFL) and icons from tangrams/icons (MIT). Licences for the software in the page are in `licenses.txt`, linked from the footer.
+The code is [MIT](LICENSE). Map data is © [OpenStreetMap contributors](https://www.openstreetmap.org/copyright), under the [ODbL](https://opendatacommons.org/licenses/odbl/1-0/); Lyon's extract is dated 2026-11-23 ([data/lyon/SOURCE.md](data/lyon/SOURCE.md)). The US, Danish and Swedish extracts are dated 2026-11-24 (`data/<area>/SOURCE.md`). Elevation for Lyon is IGN RGE ALTI®, under the [Licence Ouverte 2.0](https://www.etalab.gouv.fr/licence-ouverte-open-licence/); for the US areas it's the USGS 3D Elevation Program (public domain). The basemap is from [Protomaps](https://protomaps.com), built from OpenStreetMap, with Noto Sans fonts (SIL OFL) and icons from tangrams/icons (MIT). Licences for the software in the page are in `licenses.txt`, linked from the footer.
 
 ## Running it locally
 
@@ -92,9 +98,8 @@ You need Python 3.12 and Node 22 or newer. The committed Lyon data is enough to 
 ```sh
 npm ci
 npm run check          # typecheck, lint and all tests, including the safety property test
-npm run pages:local    # build and serve at http://localhost:4173/better-directions/
-npm run smoke          # browser checks against that preview (needs a local Chromium-based browser)
-npm run pages:gz &     # the same build served with gzip, like Pages, at port 4174
+npm run pages:gz &     # build and serve at http://localhost:4174/better-directions/, like Pages (gzip, real 404s)
+npm run smoke          # browser checks against it (needs a local Chromium-based browser)
 npm run perf           # low-end phone emulation against it
 npm run samples        # sample routes per mode, written to docs/SAMPLE_ROUTES.md
 ```

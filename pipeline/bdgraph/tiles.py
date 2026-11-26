@@ -62,7 +62,7 @@ ASSETS_RAW = f"https://raw.githubusercontent.com/protomaps/basemaps-assets/{ASSE
 FONTS = ("Noto Sans Regular", "Noto Sans Medium", "Noto Sans Italic")
 # Basic Latin + Latin-1 (French accents), Latin Extended-A (oe ligature), general punctuation
 # (curly quotes, dashes, ellipsis).
-GLYPH_RANGES = ("0-255", "256-511", "8192-8447")
+GLYPH_RANGES = ("0-255", "256-511", "512-767", "768-1023", "7680-7935", "8192-8447")
 SPRITES = tuple(
     f"{flavor}{suffix}"
     for flavor in ("light", "dark")

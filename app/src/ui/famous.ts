@@ -299,6 +299,147 @@ const CHICAGO: readonly FamousRoute[] = [
   },
 ];
 
+const COPENHAGEN: readonly FamousRoute[] = [
+  {
+    kind: "plan",
+    title: "City Hall to Østerport, by Parks",
+    pitch: "Rådhuspladsen to Østerport through Ørstedsparken, the Botanical Garden and the King's Garden.",
+    mode: "parks", seed: 1,
+    from: [12.5683, 55.6761], fromName: "Rådhuspladsen",
+    to: [12.5878, 55.6926], toName: "Østerport station",
+  },
+  {
+    kind: "plan",
+    title: "Through the Courtyards",
+    pitch: "Kongens Nytorv to Nørreport through the old town's passages and courtyards.",
+    mode: "buildings", seed: 1,
+    from: [12.5855, 55.6803], fromName: "Kongens Nytorv",
+    to: [12.5717, 55.6833], toName: "Nørreport station",
+  },
+  {
+    kind: "plan",
+    title: "Across Amager Fælled",
+    pitch: "Islands Brygge to Ørestad on the common's gravel and dirt paths.",
+    mode: "trail", seed: 1,
+    from: [12.5770, 55.6640], fromName: "Islands Brygge",
+    to: [12.5770, 55.6380], toName: "Ørestad",
+  },
+  {
+    kind: "plan",
+    title: "Nørrebro Pastries",
+    pitch: "Torvehallerne to Jægersborggade, past as many bakeries as fit.",
+    mode: "snacks", seed: 1,
+    from: [12.5697, 55.6836], fromName: "Torvehallerne",
+    to: [12.5463, 55.6935], toName: "Jægersborggade",
+  },
+  {
+    kind: "crawl",
+    title: "Old Town Art",
+    pitch: "Sculptures and galleries around the old town, back to Kongens Nytorv.",
+    theme: "art", count: 6, minutes: 45,
+    from: [12.5855, 55.6803], fromName: "Kongens Nytorv",
+  },
+  {
+    kind: "crawl",
+    title: "Kødbyen and Vesterbro Bars",
+    pitch: "A short evening loop from the Meatpacking District through Vesterbro's bars.",
+    theme: "pub", count: 4, minutes: 30,
+    from: [12.5605, 55.6691], fromName: "Kødbyen",
+  },
+  {
+    kind: "crawl",
+    title: "Nørrebro Wine",
+    pitch: "Wine bars and shops around Jægersborggade and the lakes.",
+    theme: "wine", count: 4, minutes: 45,
+    from: [12.5463, 55.6935], fromName: "Jægersborggade",
+  },
+];
+
+const MALMO: readonly FamousRoute[] = [
+  {
+    kind: "plan",
+    title: "Castle Parks to the Sea",
+    pitch: "Gustav Adolfs torg to the Ribersborg bathhouse through Kungsparken, Slottsparken and a string of smaller parks.",
+    mode: "parks", seed: 1,
+    from: [13.0011, 55.6022], fromName: "Gustav Adolfs torg",
+    to: [12.9790, 55.6060], toName: "Ribersborgs kallbadhus",
+  },
+  {
+    kind: "plan",
+    title: "Turning Torso to the Beach",
+    pitch: "Through Västra Hamnen to Ribersborg on the softest paths going.",
+    mode: "trail", seed: 1,
+    from: [12.9764, 55.6133], fromName: "Turning Torso",
+    to: [12.9645, 55.6010], toName: "Ribersborgsstranden",
+  },
+  {
+    kind: "plan",
+    title: "Fika Run",
+    pitch: "Malmö C to Möllevångstorget, past the cafés and bakeries.",
+    mode: "snacks", seed: 1,
+    from: [13.0006, 55.6091], fromName: "Malmö C",
+    to: [13.0105, 55.5905], toName: "Möllevångstorget",
+  },
+  {
+    kind: "crawl",
+    title: "Gamla staden Art",
+    pitch: "Public art around the old town, back to Stortorget.",
+    theme: "art", count: 5, minutes: 45,
+    from: [13.0010, 55.6058], fromName: "Stortorget",
+  },
+  {
+    kind: "crawl",
+    title: "Möllan Pubs",
+    pitch: "A short evening loop through the pubs around Möllevångstorget.",
+    theme: "pub", count: 4, minutes: 30,
+    from: [13.0105, 55.5905], fromName: "Möllevångstorget",
+  },
+];
+
+const NEWBERG: readonly FamousRoute[] = [
+  {
+    kind: "plan",
+    title: "Hoover Park to Spring Meadow",
+    pitch: "From downtown across Newberg through four of its parks.",
+    mode: "parks", seed: 1,
+    from: [-122.9718, 45.3006], fromName: "Downtown Newberg",
+    to: [-122.9375, 45.3108], toName: "Spring Meadow Park",
+  },
+  {
+    kind: "plan",
+    title: "George Fox by Stairs",
+    pitch: "Downtown up to George Fox University by the campus staircases.",
+    mode: "stairs", seed: 1,
+    from: [-122.9718, 45.3006], fromName: "Downtown Newberg",
+    to: [-122.9660, 45.3085], toName: "George Fox University",
+  },
+  {
+    kind: "workout",
+    title: "North Newberg Hills",
+    pitch: "A short loop up the slopes around George Fox.",
+    focus: "hills", minutes: 30,
+    from: [-122.9675, 45.3075], fromName: "George Fox University",
+  },
+];
+
+const DUNDEE: readonly FamousRoute[] = [
+  {
+    kind: "crawl",
+    title: "Dundee Tasting Rooms",
+    pitch: "A short loop through three of the tasting rooms and wine shops in town.",
+    theme: "wine", count: 3, minutes: 45,
+    from: [-123.0103, 45.2779], fromName: "Downtown Dundee",
+  },
+  {
+    kind: "workout",
+    title: "Into the Dundee Hills",
+    pitch: "A loop up the first slopes of the Dundee Hills and back.",
+    focus: "hills", minutes: 45,
+    from: [-123.0103, 45.2779], fromName: "Downtown Dundee",
+  },
+];
+
+
 /** Famous routes for each area id (areas without any show an empty list). */
 export const FAMOUS: Readonly<Record<string, readonly FamousRoute[]>> = {
   lyon: LYON,
@@ -308,6 +449,10 @@ export const FAMOUS: Readonly<Record<string, readonly FamousRoute[]>> = {
   richmond: RICHMOND,
   baltimore: BALTIMORE,
   chicago: CHICAGO,
+  newberg: NEWBERG,
+  dundee: DUNDEE,
+  copenhagen: COPENHAGEN,
+  malmo: MALMO,
 };
 
 /** Lyon's list, kept under its old name for tests and benches. */

@@ -98,7 +98,7 @@ export async function renderShareImage(map: MapLibreMap, r: ShareCard, box: Box)
     ctx.fillRect(0, 0, SHARE_W, MAP_H);
   }
   // Brand strip over the map.
-  ctx.fillStyle = "rgb(255 255 255 / 0.92)";
+  ctx.fillStyle = colour("surface"); // the theme's translucent card colour, so the title reads in dark too
   ctx.fillRect(0, 0, SHARE_W, 84);
   ctx.fillStyle = colour("ink");
   ctx.font = `700 40px ${FONT}`;
