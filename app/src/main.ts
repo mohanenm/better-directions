@@ -28,7 +28,7 @@ const goButton = $<HTMLButtonElement>("#go");
 
 const state: LinkState = {
   from: null, to: null, fromName: null, toName: null, mode: "stairs", seed: 1, art: null, artMinutes: 40,
-  open: [...DEFAULT_OPEN], stops: [], workout: null, crawl: null, spell: null, spellInLink: false,
+  open: [...DEFAULT_OPEN], stops: [], workout: null, crawl: null, spell: null, spellInLink: false, long: false,
 };
 /** Names for the stops the user picked (links carry only the points). */
 const stopNames: string[] = [];
@@ -248,6 +248,7 @@ function syncInputs(): void {
   });
   const radio = document.querySelector<HTMLInputElement>(`input[name="mode"][value="${state.mode}"]`);
   if (radio) radio.checked = true;
+  $<HTMLInputElement>("#long-walk").checked = state.long;
   updateSeedRow();
 }
 
@@ -375,6 +376,18 @@ $("#shuffle").addEventListener("click", () => {
   if (state.from && state.to) requestPlan();
 });
 
+// --- Longer walks ----------------------------------------------------------------------------------
+
+/** Opting in to a longer walk lets the detour run to 90 minutes instead of an hour. */
+$<HTMLInputElement>("#long-walk").addEventListener("change", (e) => {
+  state.long = (e.target as HTMLInputElement).checked;
+  writeLink();
+  if (state.from && state.to) {
+    scrollToNextResult = false;
+    requestPlan();
+  }
+});
+
 // --- Planning ------------------------------------------------------------------------------------
 
 $<HTMLFormElement>("#planner").addEventListener("submit", (e) => {
@@ -419,6 +432,7 @@ function requestPlan(): void {
     mode: state.mode,
     seed: state.seed,
     stops: state.stops,
+    long: state.long,
   });
 }
 

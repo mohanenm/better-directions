@@ -12,6 +12,7 @@
 - Park pins: parks along or near a route, with their hours. Tap one to add it as a stop; up to three stops, in order.
 - Spell a word: a walk whose trace spells 2 to 10 letters or digits, scored for readability per letter. The word stays on the device unless you choose to include it in a link.
 - Famous routes for the new mode, a crawl and a workout.
+- Longer walks: tick "Longer walk" to let a detour run to an hour and a half, or pick the 1 h 30 crawls and workouts or the 1 h 15 shapes. The default stays an hour, and walks over an hour say roughly when you'd finish.
 - Dark mode, with a dark basemap. It follows the system setting, and a switch in the header changes it for the visit (nothing is stored).
 
 ### Changed

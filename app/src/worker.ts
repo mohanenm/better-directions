@@ -110,7 +110,7 @@ function plan(req: PlanRequest): void {
   const stops = req.stops.slice(0, MAX_STOPS).map((p, i) => snap(p, `stop ${i + 1}`));
   const points = [start, ...stops, goal].filter((n, i, all) => i === 0 || n !== all[i - 1]);
   if (points.length < 2) throw new Error("Start and end are the same spot. Pick somewhere further away.");
-  const p = planModeVia(router, fi, points, req.mode, req.seed);
+  const p = planModeVia(router, fi, points, req.mode, req.seed, req.long === true);
   if (!p) throw new Error("No walking route found between those points.");
   const sameAsNormal = sameAsNormalReason(p);
   const feature = MODE_FEATURE[p.mode] ?? null;
@@ -134,6 +134,7 @@ function plan(req: PlanRequest): void {
       strategy: p.strategy,
       sameAsNormal,
       missingFeature: feature && !delivered ? feature : null,
+      long: req.long === true,
       pins: parkPins(p.better),
       ms: Math.round(performance.now() - t0),
     },
@@ -145,7 +146,7 @@ function art(req: ArtRequestMsg): void {
   const { g, router, fi, index } = state;
   const t0 = performance.now();
   if (!(req.shape in SHAPES)) throw new Error("Unknown shape.");
-  const minutes = Math.max(15, Math.min(55, req.minutes));
+  const minutes = Math.max(15, Math.min(75, req.minutes)); // 75 is the long option
   const r = drawShape(router, fi, index, { shape: req.shape, start: req.start as LonLat, minutes });
   if (!r) throw new Error("Couldn't fit that shape around here. Try another start point, shape or length.");
   if (r.likeness < MIN_RECOGNISABLE) throw new Error("The streets here don't follow that shape well enough to draw it. Try another start point, shape or length.");

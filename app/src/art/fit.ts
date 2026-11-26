@@ -9,14 +9,14 @@
  *    to the shape's size, reported as a likeness percentage.
  *
  * Every route is an ordinary router route, so the safety rules, audit and final check all apply,
- * and the walk is limited to the detour cap's maximum (60 minutes).
+ * and the walk is limited to the cap for the chosen length (an hour, or 90 minutes for a long one).
  */
 import type { Graph, LonLat } from "../graph/graph";
 import type { FeatureIndex } from "../modes/features";
 import type { CostModel, Route, Router } from "../router/astar";
 import type { NodeIndex } from "../router/snap";
 import { assertRouteSafe } from "../router/verify";
-import { GPS_ART_MAX_SECONDS } from "../safety/limits";
+import { GPS_ART_MAX_SECONDS, LOOP_MAX_SECONDS, loopCapSeconds } from "../safety/limits";
 import { SHAPES, type ShapeId } from "./shapes";
 
 type XY = [number, number];
@@ -198,7 +198,7 @@ export function trimSpurs(dirEdges: number[]): number[] {
   return out;
 }
 
-export function trace(router: Router, fi: FeatureIndex, index: NodeIndex, m: LocalMetres, pts: XY[], start: number): Route | null {
+export function trace(router: Router, fi: FeatureIndex, index: NodeIndex, m: LocalMetres, pts: XY[], start: number, capSeconds = LOOP_MAX_SECONDS): Route | null {
   const g = router.g;
   const nodes = pts.map((p, i) => (i === 0 ? start : index.nearest(m.lonLat(p), MISS_M)));
   if (nodes.some((n) => n === null)) return null;
@@ -208,7 +208,7 @@ export function trace(router: Router, fi: FeatureIndex, index: NodeIndex, m: Loc
     const a = nodes[i]!;
     const b = nodes[i + 1]!;
     if (a === b) continue;
-    const leg = router.route(a, b, corridor(m, fi, pts[i]!, pts[i + 1]!), { maxTimeS: GPS_ART_MAX_SECONDS - spent });
+    const leg = router.route(a, b, corridor(m, fi, pts[i]!, pts[i + 1]!), { maxTimeS: capSeconds - spent });
     if (!leg) return null;
     spent += leg.timeS;
     dirEdges.push(...leg.dirEdges);
@@ -264,6 +264,7 @@ export function drawShape(router: Router, fi: FeatureIndex, index: NodeIndex, re
   const m = cloud.m;
   const anchor = m.xy(req.start);
   const rotations = SHAPES[req.shape].closed ? SHAPE_ROTATIONS : LETTER_ROTATIONS;
+  const cap = Math.min(GPS_ART_MAX_SECONDS, loopCapSeconds(req.minutes));
 
   // 1. Cheap placement search.
   const placements: Placement[] = [];
@@ -285,8 +286,8 @@ export function drawShape(router: Router, fi: FeatureIndex, index: NodeIndex, re
   for (const p of placements.slice(0, FULL_TRACES)) {
     const start = index.nearest(m.lonLat(p.points[0]!), MISS_M);
     if (start === null) continue;
-    const route = trace(router, fi, index, m, p.points, start);
-    if (!route || route.timeS > GPS_ART_MAX_SECONDS) continue;
+    const route = trace(router, fi, index, m, p.points, start, cap);
+    if (!route || route.timeS > cap) continue;
     const s = score(g, m, route, p.points, p.sizeM);
     if (!best || s.likeness > best.likeness) {
       best = {
@@ -302,6 +303,6 @@ export function drawShape(router: Router, fi: FeatureIndex, index: NodeIndex, re
       };
     }
   }
-  if (best) assertRouteSafe(g, best.route, GPS_ART_MAX_SECONDS);
+  if (best) assertRouteSafe(g, best.route, cap);
   return best;
 }

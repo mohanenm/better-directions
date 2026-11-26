@@ -83,6 +83,8 @@
                   <div class="mode-list" id="mode-list"></div>
                 </fieldset>
 
+                <label class="check"><input type="checkbox" id="long-walk"> Longer walk: allow up to 1 h 30</label>
+
                 <div class="seed-row" id="seed-row" hidden>
                   <span>Seed <output id="seed-value" for="shuffle">1</output></span>
                   <button type="button" id="shuffle" class="secondary">New seed</button>
@@ -115,7 +117,8 @@
                   <legend>Walking time, about</legend>
                   <label><input type="radio" name="crawl-len" value="30"> 30 min</label>
                   <label><input type="radio" name="crawl-len" value="45" checked> 45 min</label>
-                  <label><input type="radio" name="crawl-len" value="60"> An hour</label>
+                  <label><input type="radio" name="crawl-len" value="60"> 1 h</label>
+                  <label><input type="radio" name="crawl-len" value="90"> 1 h 30</label>
                 </fieldset>
                 <label class="check"><input type="checkbox" id="crawl-end"> Finish at the To point instead of looping back</label>
                 <button type="submit" class="secondary">Plan the crawl</button>
@@ -137,9 +140,10 @@
                 <select id="art-shape"></select>
                 <fieldset class="choice segmented">
                   <legend>Walk length</legend>
-                  <label><input type="radio" name="art-len" value="25"> Short, 25 min</label>
-                  <label><input type="radio" name="art-len" value="40" checked> Medium, 40 min</label>
-                  <label><input type="radio" name="art-len" value="55"> Long, 55 min</label>
+                  <label><input type="radio" name="art-len" value="25"> 25 min</label>
+                  <label><input type="radio" name="art-len" value="40" checked> 40 min</label>
+                  <label><input type="radio" name="art-len" value="55"> 55 min</label>
+                  <label><input type="radio" name="art-len" value="75"> 1 h 15</label>
                 </fieldset>
                 <button type="submit" class="secondary">Draw it</button>
               </form>
@@ -189,6 +193,8 @@
                   <label><input type="radio" name="workout-len" value="20"> 20 min</label>
                   <label><input type="radio" name="workout-len" value="30" checked> 30 min</label>
                   <label><input type="radio" name="workout-len" value="45"> 45 min</label>
+                  <label><input type="radio" name="workout-len" value="60"> 1 h</label>
+                  <label><input type="radio" name="workout-len" value="90"> 1 h 30</label>
                 </fieldset>
                 <button type="submit" class="secondary">Plan the loop</button>
               </form>

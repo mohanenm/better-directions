@@ -37,10 +37,11 @@ export function planMode(
   modeId: ModeId,
   seed = 1,
   capSeconds?: number,
+  long = false,
 ): ModePlan | null {
   const mode = MODES[modeId];
   const model = mode.cost(fi, seed);
-  const base = plan(router, start, goal, model, capSeconds);
+  const base = plan(router, start, goal, model, capSeconds, long);
   if (!base) return null;
 
   let better = base.better;
@@ -157,8 +158,9 @@ export function planModeVia(
   points: number[],
   modeId: ModeId,
   seed = 1,
+  long = false,
 ): ModePlan | null {
-  if (points.length === 2) return planMode(router, fi, points[0]!, points[1]!, modeId, seed);
+  if (points.length === 2) return planMode(router, fi, points[0]!, points[1]!, modeId, seed, undefined, long);
   const normals: Route[] = [];
   for (let i = 0; i < points.length - 1; i++) {
     const leg = router.route(points[i]!, points[i + 1]!, NORMAL);
@@ -166,11 +168,11 @@ export function planModeVia(
     normals.push(leg);
   }
   const normal = joinRoutes(normals);
-  const capSeconds = detourCapSeconds(normal.timeS);
+  const capSeconds = detourCapSeconds(normal.timeS, long);
   const legs: ModePlan[] = [];
   for (let i = 0; i < normals.length; i++) {
     const share = normal.timeS > 0 ? normals[i]!.timeS / normal.timeS : 1 / normals.length;
-    const leg = planMode(router, fi, points[i]!, points[i + 1]!, modeId, seed + i, capSeconds * share);
+    const leg = planMode(router, fi, points[i]!, points[i + 1]!, modeId, seed + i, capSeconds * share, long);
     if (!leg) return null;
     legs.push(leg);
   }

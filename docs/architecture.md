@@ -38,7 +38,7 @@ Some checks need geometry rather than tags. The build drops a path that crosses 
 
 In the browser the rules run three more times: a load-time audit disables any edge, node or direction that breaks a rule; the search only uses what the audit allowed; and every finished route goes through `assertRouteSafe`, which re-checks it from raw tags, along with connectivity and the detour cap. The property test adds its own independent check on top.
 
-The detour cap is `max(normal, min(4 × normal, 60 min))`. GPS art, which has no normal route, is capped at 60 minutes.
+The detour cap is `max(normal, min(4 × normal, 60 min))`, or 90 minutes instead of 60 when the walker ticks "Longer walk" (`long=1` in links). Loops, which have no normal route, are capped by the length chosen: 60 minutes, or 90 for the long options (crawls and workouts of 1 h 30, shapes of 1 h 15). Spelled words stay within an hour. Nothing exceeds 90 minutes unless the normal route itself does.
 
 ## Router
 

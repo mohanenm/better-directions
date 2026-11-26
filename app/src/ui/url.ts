@@ -22,6 +22,8 @@ export interface LinkState {
   toName: string | null;
   mode: ModeId;
   seed: number;
+  /** A longer walk (detours up to 90 minutes), chosen with the planner's checkbox. */
+  long: boolean;
   /** GPS art: the shape to draw from `from`, and the walk length in minutes. */
   art: ShapeId | null;
   artMinutes: number;
@@ -53,7 +55,7 @@ function serializeOpen(q: URLSearchParams, open: SectionId[], fallback: SectionI
   if (sorted.join(",") !== fallback.join(",")) q.set("open", sorted.join(","));
 }
 
-export const ART_LENGTHS = [25, 40, 55] as const;
+export const ART_LENGTHS = [25, 40, 55, 75] as const; // 75 is a long walk, chosen deliberately
 
 export const DEFAULT_MODE: ModeId = "stairs";
 const MAX_NAME = 80;
@@ -109,6 +111,7 @@ export function parseLink(search: string, bbox: Bbox): LinkState {
     toName: parseName(q.get("toName")),
     mode: (MODE_IDS as string[]).includes(mode ?? "") ? (mode as ModeId) : DEFAULT_MODE,
     seed: Number.isInteger(seed) && seed > 0 && seed < 2 ** 31 ? seed : 1,
+    long: q.get("long") === "1",
     art: spell ? null : art,
     artMinutes: (ART_LENGTHS as readonly number[]).includes(Number(q.get("len"))) ? Number(q.get("len")) : 40,
     open: parseOpen(q.get("open"), fallbackOpen),
@@ -171,6 +174,7 @@ export function serializeLink(state: LinkState): string {
   if (state.stops.length) q.set("via", state.stops.map(fmt).join(";"));
   q.set("mode", state.mode);
   if (state.mode === "chaos") q.set("seed", String(state.seed));
+  if (state.long) q.set("long", "1");
   serializeOpen(q, state.open, DEFAULT_OPEN);
   return `?${q.toString()}`;
 }

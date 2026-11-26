@@ -5,7 +5,7 @@
  */
 import type { CostModel, Route, Router } from "../router/astar";
 import { assertRouteSafe } from "../router/verify";
-import { LOOP_MAX_SECONDS } from "../safety/limits";
+import { loopCapSeconds } from "../safety/limits";
 import { collectRoute } from "./collect";
 import type { FeatureIndex } from "./features";
 import { MODES, type Collectible, type Mode } from "./modes";
@@ -115,7 +115,7 @@ export interface WorkoutPlan {
 }
 
 export function planWorkout(router: Router, fi: FeatureIndex, start: number, minutes: number, focus: WorkoutFocus): WorkoutPlan | null {
-  const capSeconds = Math.min(minutes * 60, LOOP_MAX_SECONDS);
+  const capSeconds = loopCapSeconds(minutes);
   const model = workoutModel(fi, focus, minutes);
   let route = collectRoute(router, fi, start, start, workoutMode(fi, focus), model, capSeconds, { maxRetraceShare: LOOP_RETRACE_SHARE });
   // How much of the workout a loop gives: staircases, climb, or both.

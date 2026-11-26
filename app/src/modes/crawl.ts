@@ -7,7 +7,7 @@
 import type { CostModel, Route, Router } from "../router/astar";
 import { haversineM } from "../router/geometry";
 import { assertRouteSafe } from "../router/verify";
-import { LOOP_MAX_SECONDS } from "../safety/limits";
+import { loopCapSeconds } from "../safety/limits";
 import type { CrawlStop, FeatureIndex } from "./features";
 import { MAX_STOPS, MIN_STOPS, type CrawlTheme } from "./options";
 import { joinRoutes } from "./plan-mode";
@@ -149,8 +149,8 @@ export function eveningNote(openingHours: string, theme: CrawlTheme): string {
 export function planCrawl(router: Router, fi: FeatureIndex, opts: CrawlOptions): CrawlPlan | null {
   const g = fi.g;
   const count = Math.max(MIN_STOPS, Math.min(MAX_STOPS[opts.theme], Math.round(opts.stops)));
-  const minutes = Math.max(15, Math.min(60, opts.minutes));
-  const capSeconds = Math.min(minutes * 60, LOOP_MAX_SECONDS);
+  const minutes = Math.max(15, Math.min(90, opts.minutes));
+  const capSeconds = loopCapSeconds(minutes);
   const startNode = opts.start;
   const endNode = opts.end ?? opts.start;
   const start = g.nodeLonLat(startNode);

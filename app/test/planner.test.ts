@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import type { CostModel } from "../src/router/astar";
 import { Router } from "../src/router/astar";
 import { plan } from "../src/router/planner";
-import { DETOUR, detourCapSeconds } from "../src/safety/limits";
+import { DETOUR, detourCapSeconds, loopCapSeconds } from "../src/safety/limits";
 import { loadFixture, nodeAt } from "./helpers";
 
 const grid = loadFixture("grid.bin");
@@ -14,6 +14,16 @@ describe("detour cap", () => {
     expect(detourCapSeconds(1800)).toBe(3600);
     expect(detourCapSeconds(5000)).toBe(5000);
     expect(Object.isFrozen(DETOUR)).toBe(true);
+  });
+
+  it("is at most 90 minutes for a longer walk, and never more", () => {
+    expect(detourCapSeconds(300, true)).toBe(1200); // the 4x rule still applies
+    expect(detourCapSeconds(1800, true)).toBe(5400);
+    expect(detourCapSeconds(5000, true)).toBe(5400);
+    expect(detourCapSeconds(6000, true)).toBe(6000); // only a longer normal route goes past it
+    expect(loopCapSeconds(45)).toBe(2700);
+    expect(loopCapSeconds(90)).toBe(5400);
+    expect(loopCapSeconds(240)).toBe(5400);
   });
 
   it("a mode that loves detours stays within the cap", () => {
