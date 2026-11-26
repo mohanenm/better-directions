@@ -59,3 +59,13 @@ Each section is a typed array: `{ "name", "type", "count" }`, where type is one 
 - Only walkable things are in the file. Every way's tagset passes `way_exclusion`, every node passes `node_exclusion` with its context bits, and every edge through a building passes `passage_exclusion` with its building and venue. Tests check this on the built file, and the browser re-checks it when the file loads.
 - Every node can reach every other node: the graph is one strongly connected component, respecting one-way flags.
 - The same extract and the same code give the same bytes.
+
+## What the page loads
+
+`graph.bin` is a build input (`data/<area>/graph.bin`). `npm run tiles` turns it into what the page loads, in `app/public/data/<area>/graph/`:
+
+- `base.json`: the graph's meta (without `sections` and `pois`), the tile grid, the list of tiles with their sizes, `whole`, and, for tiled areas, the feature lists worked out over the whole area (`features`: staircases, parks, passages, trails, snack and crawl stops, workout hills, in whole-graph numbering).
+- Areas under 10 MB (`TILED_FROM_BYTES`): `whole: true` and `whole.bin`, which is `graph.bin` unchanged.
+- Bigger areas (DC, Chicago): one `<col>_<row>.bin` per tile of the grid, about 1 km square (`TILE_DEG_LAT` = 0.009°, width scaled to the area's latitude, origin at the area's south-west corner).
+
+A tile holds the nodes inside it, every edge whose bounding box touches it, and those edges' ways and far-end nodes, all with their whole-graph numbers. Its layout is `"BDT1"`, a u32 version (1), a u32 length and a JSON header `{nodes, edges, ways, geom}`, then these arrays, each starting on an 8-byte boundary: node number, lat, lon (u32, i32, i32), node tag set (u16), context (u8), owned (u8: 1 if the node is inside this tile); edge number, from, to, way (u32 each, whole-graph numbers), length (u16 dm), flags (u8), steps, park, venue, building, climb, descent (u16), geometry length (u32), geometry bytes (u8, as in `geom`); way number (u32), OSM id (f64), tag set (u16), name and opening hours (u32). `app/src/graph/tiles.ts` writes and reads them; `assemble` joins loaded tiles into one graph numbered in whole-graph order.

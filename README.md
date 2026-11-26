@@ -111,6 +111,7 @@ python3.12 -m venv .venv && .venv/bin/pip install -r requirements-dev.txt
 PYTHONPATH=pipeline .venv/bin/python -m bdgraph.fetch   cities/lyon.json
 PYTHONPATH=pipeline .venv/bin/python -m bdgraph.terrain cities/lyon.json
 PYTHONPATH=pipeline .venv/bin/python -m bdgraph.build   cities/lyon.json
+npm run tiles -- lyon     # what the page loads: the whole graph, or tiles for big areas
 PYTHONPATH=pipeline .venv/bin/python -m bdgraph.tiles   cities/lyon.json --build 20261123
 PYTHONPATH=pipeline .venv/bin/python -m bdgraph.places  cities/lyon.json
 .venv/bin/python -m pytest

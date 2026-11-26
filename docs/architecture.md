@@ -1,9 +1,10 @@
 # Architecture
 
-Better Directions is a static site. A Python pipeline turns an OpenStreetMap extract into a compact walking graph and a set of map tiles for each area; the browser downloads the chosen area's files and plans every route locally, in a Web Worker. There is no server and no API. Areas are listed in `app/src/city.ts` and picked with `?area=`; switching area reloads the page, and the worker is named after the area so it loads the right graph.
+Better Directions is a static site. A Python pipeline turns an OpenStreetMap extract into a compact walking graph and a set of map tiles for each area; the browser downloads the parts of the chosen area's graph a request needs and plans every route locally, in a Web Worker. There is no server and no API. Areas are listed in `app/src/city.ts` and picked with `?area=`; switching area reloads the page, and the worker is named after the area so it loads the right graph.
 
 ```
-OSM extract ──► pipeline (Python) ──► graph.bin + tiles + places.json ──► static site
+OSM extract ──► pipeline (Python) ──► graph.bin ──► npm run tiles ──► graph tiles ─┐
+                                   └─► map tiles + places.json ─────────────────────┴─► static site
                     │                                                      │
              safety rules (py)  ◄── safety/cases.json ──►  safety rules (ts) + router
 ```
@@ -29,6 +30,14 @@ GitHub Pages compresses responses on the fly and applies byte ranges to the comp
 `graph.bin` is a JSON header followed by 8-byte-aligned typed arrays, so the browser reads it with zero-copy `TypedArray` views. Coordinates are microdegrees, edge shapes are delta-encoded varints, edge lengths are 16-bit decimetres, and tags are deduplicated into shared tag sets. Lyon's graph is 9.2 MB, 2.7 MB gzipped. Only junctions and rule-relevant points are nodes. The format is described in [GRAPH_FORMAT.md](GRAPH_FORMAT.md).
 
 The file keeps the raw tags the safety rules need, so the browser can re-run the same rules rather than trust the build.
+
+## Loading the graph
+
+Most areas load their whole graph, as built (`whole.bin`). The big ones (DC, Chicago; anything over 10 MB) are cut into tiles about a kilometre square by `npm run tiles`, and the worker loads only the tiles a request can reach.
+
+That's exact rather than a guess, because every route is capped in time and nobody walks faster than 6 km/h (`MAX_SPEED_MS`; edge times are never shorter than length over it). A route between two points can only pass points inside an ellipse with those points as foci, where the straight-line distances add up to at most cap × speed; a trip through stops, the union over its legs; a loop, a circle around its start (`router/region.ts`). The worker loads every tile that touches that region plus a margin for snapping and look-ups near the route; planners skip candidates outside it, and each leg of a multi-leg route is capped to leave room for the rest. A trip whose normal route runs past the cap is loaded out to the normal route's reach and checked again until it fits.
+
+Joined tiles are numbered in whole-graph order, so the router breaks ties the same way, and the feature lists (staircases, parks and so on) are worked out over the whole area at build time and mapped onto what's loaded. Anything seeded or hashed (route names, Random's waypoints) uses whole-graph numbers. `app/test/tiled.test.ts` plans random trips in every mode (with stops and longer walks), crawls, workouts, shapes and words on the whole graph and on tiles, and requires identical routes, names and summaries.
 
 ## Safety
 

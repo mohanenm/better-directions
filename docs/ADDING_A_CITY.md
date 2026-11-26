@@ -23,7 +23,8 @@ Copy `cities/lyon.json` and change:
 ```sh
 PYTHONPATH=pipeline .venv/bin/python -m bdgraph.fetch   cities/<id>.json                  # extract and crop
 PYTHONPATH=pipeline .venv/bin/python -m bdgraph.terrain cities/<id>.json                  # elevations, if configured
-PYTHONPATH=pipeline .venv/bin/python -m bdgraph.build   cities/<id>.json                  # graph.bin and stats
+PYTHONPATH=pipeline .venv/bin/python -m bdgraph.build   cities/<id>.json                  # data/<id>/graph.bin and stats
+npm run tiles -- <id>                                                                      # what the page loads (tiles if over 10 MB)
 PYTHONPATH=pipeline .venv/bin/python -m bdgraph.tiles   cities/<id>.json --build YYYYMMDD # basemap tiles
 PYTHONPATH=pipeline .venv/bin/python -m bdgraph.places  cities/<id>.json                  # search list
 ```
