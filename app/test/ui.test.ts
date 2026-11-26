@@ -60,8 +60,19 @@ describe("spelled words in links", () => {
     expect(parseLink(shown, BBOX)).toMatchObject({ spell: "ADA", spellInLink: true, open: ["spell"] });
   });
   it("cleans up words from links", () => {
-    expect(parseLink("?spell=z%C3%B6e%3Cscript%3E", BBOX).spell).toBe("ZOESCRIPT");
+    expect(parseLink("?spell=z%C3%B6%3Cb%3E", BBOX).spell).toBe("ZOB");
+    expect(parseLink("?spell=z%C3%B6e%3Cscript%3E", BBOX).spell).toBeNull(); // 9 letters: over the limit
     expect(parseLink("?spell=x", BBOX).spell).toBeNull();
+  });
+  it("uses the default stop count when a crawl link has none", () => {
+    expect(parseLink("?from=4.83,45.76&crawl=art", BBOX).crawl?.count).toBe(5);
+  });
+  it("keeps one tool per link, and opens its panel", () => {
+    expect(parseLink("?from=4.83,45.76&crawl=pub&workout=hills", BBOX)).toMatchObject({ crawl: null, workout: { focus: "hills" }, open: ["workout"] });
+    expect(parseLink("?from=4.83,45.76&spell=HI&art=heart", BBOX)).toMatchObject({ art: null, spell: "HI", open: ["spell"] });
+  });
+  it("drops invisible bidi and zero-width characters from names", () => {
+    expect(parseLink("?from=4.83,45.76&fromName=Gare%E2%80%AE%E2%80%8Bx", BBOX).fromName).toBe("Garex");
   });
 });
 

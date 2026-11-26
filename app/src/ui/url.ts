@@ -70,7 +70,9 @@ function parsePoint(value: string | null, bbox: Bbox): [number, number] | null {
 
 function parseName(value: string | null): string | null {
   if (!value) return null;
-  const printable = [...value].filter((c) => c.charCodeAt(0) >= 0x20 && c.charCodeAt(0) !== 0x7f).join("");
+  // Drop control characters and the invisible bidi and zero-width marks, which can make a name
+  // display differently from what it says.
+  const printable = [...value].filter((c) => c.charCodeAt(0) >= 0x20 && c.charCodeAt(0) !== 0x7f).join("").replace(/[\u200b-\u200f\u202a-\u202e\u2066-\u2069\ufeff]/g, "");
   const clean = printable.trim().slice(0, MAX_NAME);
   return clean || null;
 }
@@ -86,7 +88,8 @@ export function parseLink(search: string, bbox: Bbox): LinkState {
     ? { focus: focus as WorkoutFocus, minutes: (WORKOUT_MINUTES as readonly number[]).includes(len) ? len : 30 }
     : null;
   const theme = q.get("crawl");
-  const count = Number(q.get("count"));
+  const rawCount = q.get("count");
+  const count = rawCount === null ? NaN : Number(rawCount); // a missing count means the default, not 0
   const crawl = (CRAWL_THEMES as readonly string[]).includes(theme ?? "")
     ? {
         theme: theme as CrawlTheme,
@@ -97,7 +100,8 @@ export function parseLink(search: string, bbox: Bbox): LinkState {
     : null;
   const word = normaliseWord(q.get("spell") ?? "");
   const spell = isSpellable(word) ? word : null;
-  const fallbackOpen: SectionId[] = spell ? ["spell"] : art ? ["art"] : crawl ? ["crawl"] : workout ? ["workout"] : DEFAULT_OPEN;
+  // One tool at a time, in this order: spell, shape, workout, crawl. The open panel follows suit.
+  const fallbackOpen: SectionId[] = spell ? ["spell"] : art ? ["art"] : workout ? ["workout"] : crawl ? ["crawl"] : DEFAULT_OPEN;
   return {
     from: parsePoint(q.get("from"), bbox),
     to: parsePoint(q.get("to"), bbox),
@@ -105,7 +109,7 @@ export function parseLink(search: string, bbox: Bbox): LinkState {
     toName: parseName(q.get("toName")),
     mode: (MODE_IDS as string[]).includes(mode ?? "") ? (mode as ModeId) : DEFAULT_MODE,
     seed: Number.isInteger(seed) && seed > 0 && seed < 2 ** 31 ? seed : 1,
-    art,
+    art: spell ? null : art,
     artMinutes: (ART_LENGTHS as readonly number[]).includes(Number(q.get("len"))) ? Number(q.get("len")) : 40,
     open: parseOpen(q.get("open"), fallbackOpen),
     stops: (q.get("via") ?? "").split(";").map((v) => parsePoint(v, bbox)).filter((p): p is [number, number] => p !== null).slice(0, MAX_LINK_STOPS),
