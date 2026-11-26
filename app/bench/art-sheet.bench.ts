@@ -24,7 +24,7 @@ const CASES: [ShapeId, string, LonLat, number][] = [
 ];
 
 it("art contact sheet", () => {
-  const buf = readFileSync("app/public/data/lyon/graph.bin");
+  const buf = readFileSync("data/lyon/graph.bin");
   const g = Graph.fromBuffer(buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength));
   const router = new Router(g);
   const fi = new FeatureIndex(g);

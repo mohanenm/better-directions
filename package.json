@@ -22,6 +22,7 @@
     "smoke": "node scripts/smoke.mjs",
     "perf": "node scripts/perf.mjs",
     "notices": "node scripts/notices.mjs",
+    "tiles": "node scripts/tile-graph.mjs",
     "pages:local": "vite build && vite preview",
     "pages:gz": "vite build && node scripts/serve-gz.mjs dist"
   },

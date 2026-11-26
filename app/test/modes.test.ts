@@ -77,7 +77,7 @@ const TRIPS: [string, string][] = [
 ];
 
 describe("each mode is recognisably itself on Lyon sample trips", () => {
-  const buf = readFileSync(new URL("../public/data/lyon/graph.bin", import.meta.url));
+  const buf = readFileSync(new URL("../../data/lyon/graph.bin", import.meta.url));
   const lyon = Graph.fromBuffer(buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength));
   const router = new Router(lyon);
   const fi = new FeatureIndex(lyon);

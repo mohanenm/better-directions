@@ -6,7 +6,7 @@ import { FeatureIndex } from "../src/modes/features";
 import { Router } from "../src/router/astar";
 import { NodeIndex } from "../src/router/snap";
 
-const buf = readFileSync(new URL("../public/data/lyon/graph.bin", import.meta.url));
+const buf = readFileSync(new URL("../../data/lyon/graph.bin", import.meta.url));
 const lyon = Graph.fromBuffer(buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength));
 const router = new Router(lyon);
 const fi = new FeatureIndex(lyon);

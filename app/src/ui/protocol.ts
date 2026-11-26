@@ -12,9 +12,9 @@ export interface ReadyInfo {
   attribution: string;
   terrainAttribution: string;
   dataAsOf: string;
-  violations: number;
   /** Milliseconds spent loading in the worker (for performance checks). */
-  timings: { fetchMs: number; decodeAuditMs: number; indexMs: number; graphBytes: number };
+  /** Loading the area's base file; tiles load per request. */
+  timings: { fetchMs: number; baseBytes: number };
 }
 
 export interface PlanRequest {

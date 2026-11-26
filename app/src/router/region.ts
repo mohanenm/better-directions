@@ -31,7 +31,8 @@ export interface Region {
 
 const M_PER_DEG_LAT = 111_320;
 
-function grow(points: LonLat[], reachM: number, marginM: number): [number, number, number, number] {
+/** A box around points, grown by reachM + marginM, in degrees: [west, south, east, north]. */
+export function boxAround(points: LonLat[], reachM: number, marginM = 0): [number, number, number, number] {
   const dLat = (reachM + marginM) / M_PER_DEG_LAT;
   // A degree of longitude is shortest at the region's most polar point, so size it there.
   const maxAbsLat = Math.min(89, Math.max(...points.map((p) => Math.abs(p[1]))) + dLat);
@@ -66,7 +67,7 @@ export function tripRegion(points: LonLat[], capSeconds: number): Region {
       return false;
     },
     // Every reachable point is within `reach` of some point of the chain.
-    bbox: (marginM = 0) => grow(points, reach, marginM),
+    bbox: (marginM = 0) => boxAround(points, reach, marginM),
   };
 }
 
@@ -78,7 +79,7 @@ export function loopRegion(start: LonLat, capSeconds: number, closed: boolean): 
   const radius = (capSeconds * REACH_SPEED_MS) / (closed ? 2 : 1);
   return {
     contains: (p) => haversineM(start, p) <= radius,
-    bbox: (marginM = 0) => grow([start], radius, marginM),
+    bbox: (marginM = 0) => boxAround([start], radius, marginM),
   };
 }
 

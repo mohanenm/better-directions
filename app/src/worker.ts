@@ -7,47 +7,75 @@ import { drawShape } from "./art/fit";
 import { initials, isSpellable, normaliseWord } from "./art/font";
 import { heightFor, spellWord } from "./art/word";
 import { SHAPES } from "./art/shapes";
-import { Graph, type LonLat } from "./graph/graph";
+import type { Graph, LonLat } from "./graph/graph";
+import { TileSource, type Loaded } from "./graph/tiled-source";
+import type { BaseFile } from "./graph/tiles";
 import { describeRoute, directions } from "./modes/directions";
-import { FeatureIndex } from "./modes/features";
 import { planCrawl } from "./modes/crawl";
 import { planModeVia } from "./modes/plan-mode";
 import { planWorkout, WORKOUT_FOCUSES, WORKOUT_MINUTES } from "./modes/workout";
 import { haversineM } from "./router/geometry";
-import { Router, type Route } from "./router/astar";
-import { NodeIndex } from "./router/snap";
+import type { Route } from "./router/astar";
 import { deliversMode, MODE_FEATURE, sameAsNormalReason } from "./modes/names";
 import { costOfFun } from "./modes/stats";
+import { GPS_ART_MAX_SECONDS, LOOP_MAX_SECONDS, loopCapSeconds } from "./safety/limits";
 import type { ArtRequestMsg, CrawlRequest, FromWorker, Pin, PlanRequest, SpellRequest, ToWorker, WorkoutRequest } from "./ui/protocol";
 
 const SNAP_LIMIT_M = 300;
 
-let state: { g: Graph; router: Router; fi: FeatureIndex; index: NodeIndex } | null = null;
+/** The area's tiles, loaded as requests need them (see graph/tiled-source.ts). */
+let source: TileSource | null = null;
+/** The graph joined from what's loaded, for the request being planned. */
+let state: Loaded | null = null;
 const post = (msg: FromWorker) => self.postMessage(msg);
+/** Shapes and words start from a path near the template's first point, so load a wider margin. */
+const WIDE_MARGIN_M = 800;
 
 async function init(): Promise<void> {
   const t0 = performance.now();
-  const res = await fetch(cityData("graph.bin"));
+  const res = await fetch(cityData("graph/base.json"));
   if (!res.ok) throw new Error(`Couldn't load the map data (${res.status}).`);
-  const buffer = await res.arrayBuffer();
-  const t1 = performance.now();
-  const g = Graph.fromBuffer(buffer);
-  const t2 = performance.now();
-  state = { g, router: new Router(g), fi: new FeatureIndex(g), index: new NodeIndex(g) };
-  const t3 = performance.now();
-  const timings = { fetchMs: Math.round(t1 - t0), decodeAuditMs: Math.round(t2 - t1), indexMs: Math.round(t3 - t2), graphBytes: buffer.byteLength };
+  const text = await res.text();
+  const base = JSON.parse(text) as BaseFile;
+  source = new TileSource(base, async (id, fresh) => {
+    const tile = await fetch(cityData(`graph/${id}.bin`), fresh ? { cache: "no-store" } : {});
+    if (!tile.ok) throw new Error(`Couldn't load part of the map data (${tile.status}). Try again.`);
+    return tile.arrayBuffer();
+  });
+  await source.preloadIfWhole();
+  const meta = base.meta;
   post({
     type: "ready",
     info: {
-      city: g.meta.city.name,
-      bbox: g.meta.city.bbox,
-      attribution: g.meta.attribution,
-      terrainAttribution: g.meta.terrain.attribution ?? "",
-      dataAsOf: g.meta.source.data_as_of ?? "",
-      violations: g.violations.length,
-      timings,
+      city: meta.city.name,
+      bbox: meta.city.bbox,
+      attribution: meta.attribution,
+      terrainAttribution: meta.terrain.attribution ?? "",
+      dataAsOf: meta.source.data_as_of ?? "",
+      timings: { fetchMs: Math.round(performance.now() - t0), baseBytes: text.length },
     },
   });
+}
+
+/**
+ * Load the tiles a request can reach and make them the current graph. Each region matches what
+ * the planner itself allows (see router/region.ts), so the routes are the whole graph's.
+ */
+async function prepare(msg: ToWorker): Promise<void> {
+  if (!source) throw new Error("Still loading the map data.");
+  if (msg.type === "plan") {
+    state = await source.prepareTrip([msg.from, ...msg.stops.slice(0, MAX_STOPS), msg.to], msg.long === true);
+  } else if (msg.type === "crawl") {
+    const cap = loopCapSeconds(Math.max(15, Math.min(90, msg.minutes))); // as planCrawl clamps it
+    state = msg.end ? await source.prepareFixedTrip([msg.start, msg.end], cap) : await source.prepareLoop(msg.start, cap, true);
+  } else if (msg.type === "workout") {
+    state = await source.prepareLoop(msg.start, loopCapSeconds(msg.minutes), true);
+  } else if (msg.type === "art") {
+    const cap = Math.min(GPS_ART_MAX_SECONDS, loopCapSeconds(Math.max(15, Math.min(75, msg.minutes))));
+    state = await source.prepareLoop(msg.start, cap, false, WIDE_MARGIN_M);
+  } else {
+    state = await source.prepareLoop(msg.start, LOOP_MAX_SECONDS, false, WIDE_MARGIN_M);
+  }
 }
 
 function line(g: Graph, route: Route): [number, number][] {
@@ -325,17 +353,21 @@ function spell(req: SpellRequest): void {
 }
 
 self.addEventListener("message", (event: MessageEvent<ToWorker>) => {
-  try {
-    const msg = event.data;
-    if (msg.type === "art") art(msg);
-    else if (msg.type === "workout") workout(msg);
-    else if (msg.type === "crawl") crawl(msg);
-    else if (msg.type === "spell") spell(msg);
-    else plan(msg);
-  } catch (err) {
-    const suggestion = err instanceof SpellError ? err.suggestion : undefined;
-    post({ type: "error", id: event.data.id, message: err instanceof Error ? err.message : String(err), ...(suggestion ? { suggestion } : {}) });
-  }
+  const msg = event.data;
+  // Load what the request needs, then plan without awaiting again, so a request arriving
+  // meanwhile can't swap the graph under it.
+  prepare(msg)
+    .then(() => {
+      if (msg.type === "art") art(msg);
+      else if (msg.type === "workout") workout(msg);
+      else if (msg.type === "crawl") crawl(msg);
+      else if (msg.type === "spell") spell(msg);
+      else plan(msg);
+    })
+    .catch((err: unknown) => {
+      const suggestion = err instanceof SpellError ? err.suggestion : undefined;
+      post({ type: "error", id: msg.id, message: err instanceof Error ? err.message : String(err), ...(suggestion ? { suggestion } : {}) });
+    });
 });
 
 init().catch((err: unknown) => post({ type: "fatal", message: err instanceof Error ? err.message : String(err) }));

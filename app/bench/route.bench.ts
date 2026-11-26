@@ -8,7 +8,7 @@ import { plan } from "../src/router/planner";
 import { mulberry32 } from "../src/router/rng";
 
 it("routes Lyon", () => {
-const path = process.env["GRAPH"] ?? "app/public/data/lyon/graph.bin";
+const path = process.env["GRAPH"] ?? "data/lyon/graph.bin";
 const buf = readFileSync(path);
 let t0 = performance.now();
 const g = Graph.fromBuffer(buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength));

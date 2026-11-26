@@ -37,7 +37,7 @@ const MAX_PAIR_DISTANCE_M = 5000; // city walks; longer pairs only cost CI time
 const AREAS_UNDER_TEST = (process.env["PROPERTY_AREAS"] ?? "lyon").split(",").map((a) => a.trim()).filter(Boolean);
 
 function readArea(area: string): ArrayBuffer {
-  const buf = readFileSync(new URL(`../public/data/${area}/graph.bin`, import.meta.url));
+  const buf = readFileSync(new URL(`../../data/${area}/graph.bin`, import.meta.url));
   return buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength);
 }
 

@@ -155,7 +155,8 @@ export class FeatureIndex {
   readonly trails: TrailStretch[] = [];
   readonly snacks: SnackStop[] = [];
   readonly crawlStops: CrawlStop[] = [];
-  readonly hills: Hill[] = [];
+  /** Set from exported lists on a tiled graph; otherwise worked out on first use (only workouts need them). */
+  private hillList: Hill[] | null = null;
   /** 1 on primary, secondary, tertiary and trunk roads (and links). */
   readonly isBusy: Uint8Array;
   /** 1 where a node touches a busy road. */
@@ -298,13 +299,18 @@ export class FeatureIndex {
       if (lengthM < 100) continue;
       this.trails.push({ way, edges, lengthM, path });
     }
+  }
 
-    // Hills for workouts: ways (not steps) that climb at least MIN_HILL_CLIMB_M.
+  /** Hills for workouts: ways (not steps) that climb at least MIN_HILL_CLIMB_M. */
+  get hills(): Hill[] {
+    if (this.hillList) return this.hillList;
+    const g = this.g;
     const hillEdges = new Map<number, number[]>();
-    for (let e = 0; e < E; e++) {
+    for (let e = 0; e < g.edgeCount; e++) {
       if (!g.allowedDirs[e] || g.s.edge_steps[e]! > 0) continue;
       push(hillEdges, g.s.edge_way[e]!, e);
     }
+    const out: Hill[] = [];
     for (const [way, edges] of hillEdges) {
       const net = edges.reduce((s, e) => {
         const c = g.climb(e, true);
@@ -314,8 +320,9 @@ export class FeatureIndex {
       const path = this.chain(edges, net > 0);
       if (!path) continue;
       const climbM = path.reduce((s, d) => s + (g.climb(d >>> 1, (d & 1) === 0)?.[0] ?? 0), 0);
-      if (climbM >= MIN_HILL_CLIMB_M) this.hills.push({ way, path, climbM });
+      if (climbM >= MIN_HILL_CLIMB_M) out.push({ way, path, climbM });
     }
+    return (this.hillList = out);
   }
 
   /** Map the whole area's feature lists onto the loaded part of a tiled graph. */
@@ -341,7 +348,7 @@ export class FeatureIndex {
     for (const p of x.parks) this.parks.push({ ...p, dirEdge: dir(p.dirEdge) });
     for (const p of x.passages) this.passages.push({ ...p, dirEdge: dir(p.dirEdge) });
     for (const t of x.trails) this.trails.push({ ...t, way: way(t.way), edges: edges(t.edges), path: path(t.path) });
-    for (const h of x.hills) this.hills.push({ ...h, way: way(h.way), path: path(h.path) });
+    this.hillList = x.hills.map((h) => ({ ...h, way: way(h.way), path: path(h.path) }));
     for (const s of x.snacks) {
       const edge = g.localEdge(s.edge);
       this.snacks.push({ ...s, edge, dirEdge: dir(s.dirEdge) });

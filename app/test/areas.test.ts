@@ -1,17 +1,24 @@
-/** Every area has its data, its graph passes the load-time audit, and its config matches. */
+/** Every area has its data, its graph passes the load-time audit, its tiles match it, and its config matches. */
 import { existsSync, readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { AREAS, nearestArea } from "../src/city";
 import { Graph } from "../src/graph/graph";
+import type { BaseFile } from "../src/graph/tiles";
 
 const file = (path: string) => new URL(`../public/${path}`, import.meta.url);
 
 describe.each(AREAS.map((a) => [a.id, a] as const))("area %s", (id, area) => {
   it("has a graph that passes the audit, a places list and tiles", () => {
-    const buf = readFileSync(file(`data/${id}/graph.bin`));
+    const buf = readFileSync(new URL(`../../data/${id}/graph.bin`, import.meta.url));
     const g = Graph.fromBuffer(buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength));
     expect(g.violations).toEqual([]);
     expect(g.meta.city.id).toBe(id);
+    // The page loads graph tiles cut from it: they must be there and cut from this graph.
+    const base = JSON.parse(readFileSync(file(`data/${id}/graph/base.json`), "utf8")) as BaseFile;
+    expect(base.meta.counts).toEqual(g.meta.counts);
+    expect(base.meta.source).toEqual(g.meta.source);
+    if (base.whole) expect(readFileSync(file(`data/${id}/graph/whole.bin`)).equals(buf)).toBe(true);
+    else for (const tile of Object.keys(base.tiles)) expect(existsSync(file(`data/${id}/graph/${tile}.bin`)), tile).toBe(true);
     // Small towns have few named places (Dundee has 8); this catches an empty or broken list.
     expect(JSON.parse(readFileSync(file(`data/${id}/places.json`), "utf8")).length).toBeGreaterThanOrEqual(5);
     expect(existsSync(file(`tiles/${id}/0/0/0.mvt`))).toBe(true);

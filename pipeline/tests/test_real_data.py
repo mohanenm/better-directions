@@ -16,7 +16,7 @@ from bdgraph.encode import encode_graph
 ROOT = Path(__file__).parents[2]
 CITY = load_city(ROOT / "cities" / "lyon.json")
 OSM = ROOT / "data" / "raw" / "lyon.osm.pbf"
-COMMITTED = ROOT / "app" / "public" / "data" / "lyon" / "graph.bin"
+COMMITTED = ROOT / "data" / "lyon" / "graph.bin"
 
 # Mapped tram crossings count as crossings, so ~95% of the network is one component.
 MIN_COMPONENT_SHARE = 0.93
