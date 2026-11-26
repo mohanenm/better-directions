@@ -46,6 +46,40 @@ FAST_ROADS = frozenset({"motorway", "motorway_link", "trunk", "trunk_link"})
 FORBIDDEN_ACCESS = frozenset({"private", "no"})
 FORBIDDEN_FOOT = frozenset({"no", "private", "use_sidepath"})
 FOOT_PERMITTED = frozenset({"yes", "designated", "permissive"})
+# Access is an allow-list: any other value (permit, military, emergency, delivery, discouraged,
+# agricultural, unknown, a typo...) excludes the way unless foot access is explicitly given.
+# customers and destination are kept deliberately (shop corridors, residential streets).
+ACCESS_OK = frozenset({"yes", "permissive", "designated", "public", "destination", "customers"})
+# foot likewise: only these values (or none) are walkable.
+FOOT_OK = frozenset({"yes", "designated", "permissive", "official", "destination", "customers"})
+
+
+def tag_values(tags: Tags, key: str) -> list[str]:
+    """A tag's values, trimmed, lower-cased and split on ";" (each must pass: strictest wins)."""
+    raw = tags.get(key)
+    if raw is None:
+        return []
+    return [v.strip().lower() for v in raw.split(";") if v.strip()] or [""]
+
+
+def access_refused(tags: Tags) -> str | None:
+    """ "access" or "foot" if the way's or node's access tags rule out walking, else None.
+
+    access=private|no excludes whatever foot says; any other value outside ACCESS_OK excludes
+    unless foot is explicitly permitted. A foot value outside FOOT_OK always excludes.
+    """
+    foot = tag_values(tags, "foot")
+    if any(v not in FOOT_OK for v in foot):
+        return "foot"
+    access = tag_values(tags, "access")
+    if any(v in FORBIDDEN_ACCESS for v in access):
+        return "access"
+    foot_permitted = bool(foot) and all(v in FOOT_PERMITTED for v in foot)
+    if any(v not in ACCESS_OK for v in access) and not foot_permitted:
+        return "access"
+    return None
+
+
 SIDEWALK_PRESENT = frozenset({"both", "left", "right", "yes"})
 
 # Mountain-grade paths aren't city walks.
@@ -71,6 +105,16 @@ def sidewalks_mapped_separately(tags: Tags) -> bool:
     return tags.get("sidewalk:left") == "separate" and tags.get("sidewalk:right") == "separate"
 
 
+def no_sidewalk(tags: Tags) -> bool:
+    """No sidewalk on either side, however it's tagged."""
+    if tags.get("sidewalk") in ("no", "none") or tags.get("sidewalk:both") in ("no", "none"):
+        return True
+    return tags.get("sidewalk:left") in ("no", "none") and tags.get("sidewalk:right") in (
+        "no",
+        "none",
+    )
+
+
 def has_mapped_sidewalk(tags: Tags) -> bool:
     if tags.get("sidewalk") in SIDEWALK_PRESENT:
         return True
@@ -89,10 +133,18 @@ def way_exclusion(tags: Tags) -> str | None:
         return "railway"
     if hw in ("construction", "proposed") or "construction" in tags:
         return "construction"
-    if tags.get("access") in FORBIDDEN_ACCESS:
-        return "access"
-    if tags.get("foot") in FORBIDDEN_FOOT:
-        return "foot"
+    refused = access_refused(tags)
+    if refused:
+        return refused
+    if tags.get("motorroad") == "yes" and tags.get("foot") not in FOOT_PERMITTED:
+        return "motorroad"  # motorway rules: no pedestrians
+    if (
+        hw == "service"
+        and tags.get("service") == "driveway"
+        and tags.get("foot") not in FOOT_PERMITTED
+        and tags.get("access") not in WAY_PUBLIC_ACCESS
+    ):
+        return "driveway"  # leads onto private property
 
     if hw in FAST_ROADS:
         if not (tags.get("foot") == "yes" or has_mapped_sidewalk(tags)):
@@ -106,7 +158,7 @@ def way_exclusion(tags: Tags) -> str | None:
     if hw in BUSY_CARRIAGEWAYS and tags.get("foot") not in FOOT_PERMITTED:
         if sidewalks_mapped_separately(tags):
             return "sidewalk_separate"  # walk the mapped sidewalk, not the carriageway
-        if tags.get("sidewalk") in ("no", "none"):
+        if no_sidewalk(tags):
             return "no_sidewalk"
 
     indoor = tags.get("indoor")
@@ -174,9 +226,12 @@ def passage_exclusion(
     """Why a passage or corridor through `building` must not be used, or None.
 
     `building` is {"kind": area kind, "building": building tag} for the building the way runs
-    through, or None if it's not inside one. Covered ways (arcades) aren't affected.
+    through, or None if it's not inside one. Covered ways through a building count too: plenty
+    are walkways through flats, offices and hospitals.
     """
-    if building is None or not (is_building_passage(tags) or is_indoor_corridor(tags)):
+    if building is None or not (
+        is_building_passage(tags) or is_indoor_corridor(tags) or is_covered(tags)
+    ):
         return None
     if confirmed or in_public_venue:
         return None
@@ -191,30 +246,50 @@ def passage_exclusion(
     return "passage_not_public"
 
 
-# Ground the public can't enter. Military land is never walked, whatever its paths say. Other
-# areas tagged access=private|no (estates, gated grounds, secure government sites) only allow
-# ways that are explicitly public.
+# Ground the public can't enter. Military land is never walked, whatever its paths say. Prisons,
+# construction sites, power plants and substations, and areas whose access isn't open to the
+# public (private, no, permit, military, ...) only allow ways that are explicitly public. School
+# grounds and golf courses are left walkable, deliberately.
 WAY_PUBLIC_ACCESS = frozenset({"yes", "permissive"})
 WAY_PUBLIC_FOOT = frozenset({"yes", "designated", "permissive"})
+POWER_SITES = frozenset({"plant", "substation"})
+# Set by the build on areas a city config lists as closed (see City.closed_areas); never in OSM.
+CLOSED_SITE = "bd:closed"
 
 
 def is_military_area(tags: Tags) -> bool:
     return tags.get("landuse") == "military" or tags.get("military") not in (None, "no")
 
 
+def restricted_kind(tags: Tags) -> str | None:
+    """What kind of closed ground an area is, or None if it's open."""
+    if is_military_area(tags):
+        return "military_area"
+    if tags.get(CLOSED_SITE) == "yes":
+        return "closed_site"
+    if tags.get("amenity") == "prison":
+        return "prison_area"
+    if tags.get("landuse") == "construction":
+        return "construction_area"
+    if tags.get("power") in POWER_SITES:
+        return "power_area"
+    if any(v not in ACCESS_OK for v in tag_values(tags, "access")):
+        return "restricted_area"
+    return None
+
+
 def is_restricted_area(tags: Tags) -> bool:
-    return is_military_area(tags) or tags.get("access") in FORBIDDEN_ACCESS
+    return restricted_kind(tags) is not None
 
 
 def restricted_area_exclusion(way_tags: Tags, area_tags: Tags) -> str | None:
     """Why a way inside this area must not be walked, or None."""
-    if is_military_area(area_tags):
-        return "military_area"
-    if area_tags.get("access") in FORBIDDEN_ACCESS:
-        if way_tags.get("access") in WAY_PUBLIC_ACCESS or way_tags.get("foot") in WAY_PUBLIC_FOOT:
-            return None
-        return "restricted_area"
-    return None
+    kind = restricted_kind(area_tags)
+    if kind is None or kind == "military_area":
+        return kind
+    if way_tags.get("access") in WAY_PUBLIC_ACCESS or way_tags.get("foot") in WAY_PUBLIC_FOOT:
+        return None
+    return kind
 
 
 # Roads that may run under a building without a tunnel tag. Kept, but flagged and disclosed.
@@ -359,10 +434,11 @@ def node_exclusion(
     on_fast_road:      the node is shared with an excluded motorway/trunk way
     on_linear_barrier: the node is shared with a wall/fence/hedge-type way
     """
-    foot = tags.get("foot")
-    if foot in FORBIDDEN_FOOT:
+    foot = tag_values(tags, "foot")
+    if any(v not in FOOT_OK for v in foot):
         return "node_foot"
-    if tags.get("access") in FORBIDDEN_ACCESS and foot not in FOOT_PERMITTED:
+    foot_permitted = bool(foot) and all(v in FOOT_PERMITTED for v in foot)
+    if any(v not in ACCESS_OK for v in tag_values(tags, "access")) and not foot_permitted:
         return "node_access"
     if tags.get("locked") == "yes":
         return "node_locked"

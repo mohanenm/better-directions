@@ -33,6 +33,17 @@ class City:
     # Passages and corridors confirmed open to the public, by OSM way id. See
     # docs/ADDING_A_CITY.md: the build excludes unconfirmed ones through private-looking buildings.
     confirmed_passages: frozenset[int] = frozenset()
+    # Areas closed to the public that OpenStreetMap doesn't tag as such (a campus with ID checks
+    # at every gate, say), as ("w" or "r", OSM id). Inside them only explicitly public ways are
+    # walkable. Each entry in the config carries a note saying why.
+    closed_areas: frozenset[tuple[str, int]] = frozenset()
+
+
+def _area_ref(ref: str) -> tuple[str, int]:
+    """ "w42921793" -> ("w", 42921793)."""
+    if len(ref) < 2 or ref[0] not in "wr" or not ref[1:].isdigit():
+        raise ValueError(f"closed_areas: {ref!r} isn't an OSM way or relation like w123 or r456")
+    return ref[0], int(ref[1:])
 
 
 def extract_urls(city: City) -> tuple[str, ...]:
@@ -53,4 +64,5 @@ def load_city(path: Path) -> City:
         extract_attribution=ex["attribution"],
         extract_also=tuple(ex.get("also", [])),
         confirmed_passages=frozenset(int(p["way"]) for p in raw.get("confirmed_passages", [])),
+        closed_areas=frozenset(_area_ref(a["area"]) for a in raw.get("closed_areas", [])),
     )

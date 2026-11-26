@@ -1,53 +1,53 @@
 {
   "city": "dundee",
   "graph": {
-    "nodes": 902,
-    "edges": 1168,
-    "ways": 491,
-    "length_km": 70.4,
-    "bytes": 74460,
-    "gzip_bytes": 26466
+    "nodes": 831,
+    "edges": 1074,
+    "ways": 450,
+    "length_km": 65.6,
+    "bytes": 69808,
+    "gzip_bytes": 24484
   },
   "connectivity": {
-    "nodes_before": 1194,
-    "nodes_kept": 902,
-    "node_share": 0.7554,
-    "length_share": 0.7135
+    "nodes_before": 1040,
+    "nodes_kept": 831,
+    "node_share": 0.799,
+    "length_share": 0.7601
   },
   "terrain": {
     "source": "Elevation: USGS 3DEP",
     "edges_with_elevation_share": 1.0,
-    "edges_10pct_or_steeper": 61,
+    "edges_10pct_or_steeper": 50,
     "steepest_grade_pct": 24.3,
     "steepest_name": "Harvey Creek Trail"
   },
   "edges_by_highway": {
     "residential": {
-      "edges": 342,
+      "edges": 317,
       "km": 29.3
     },
-    "service": {
-      "edges": 314,
-      "km": 17.9
-    },
     "footway": {
-      "edges": 396,
-      "km": 16.9
+      "edges": 394,
+      "km": 16.8
+    },
+    "service": {
+      "edges": 254,
+      "km": 13.2
     },
     "path": {
       "edges": 26,
       "km": 2.1
     },
     "unclassified": {
-      "edges": 35,
+      "edges": 31,
       "km": 1.9
     },
     "primary": {
-      "edges": 42,
+      "edges": 40,
       "km": 1.5
     },
     "secondary": {
-      "edges": 11,
+      "edges": 10,
       "km": 0.9
     },
     "pedestrian": {
@@ -93,11 +93,11 @@
       "km": 1.89
     },
     "unpaved": {
-      "edges": 87,
-      "km": 10.15
+      "edges": 77,
+      "km": 9.54
     },
     "lit": {
-      "edges": 293,
+      "edges": 283,
       "km": 14.16
     },
     "informal": {
@@ -123,32 +123,33 @@
   "exclusions": {
     "ways_by_reason": {
       "access": 214,
+      "driveway": 88,
       "fast_road": 11,
       "foot": 10,
       "highway_kind": 2,
       "no_sidewalk": 11,
       "sidewalk_separate": 1,
-      "walkable": 639
+      "walkable": 551
     },
     "segments_dropped": {
+      "construction_area": 2,
       "node:barrier_no_opening": 2,
-      "node:fast_road_unmarked_crossing": 9,
+      "node:fast_road_unmarked_crossing": 5,
       "node:node_access": 2,
       "node:railway_unmapped_crossing": 2
     },
     "dropped_examples": {
+      "construction_area": [
+        1417845932
+      ],
       "node:barrier_no_opening": [
         1417756274
       ],
       "node:fast_road_unmarked_crossing": [
         5396504,
-        5399927,
         5404996,
-        409582611,
         778501810,
-        778517566,
-        788792220,
-        898328504
+        778517566
       ],
       "node:node_access": [
         1417770162,
@@ -160,7 +161,7 @@
     },
     "nodes_excluded": {
       "barrier_no_opening": 1,
-      "fast_road_unmarked_crossing": 8,
+      "fast_road_unmarked_crossing": 5,
       "node_access": 2,
       "railway_unmapped_crossing": 1
     }

@@ -35,5 +35,11 @@
     "provider": "usgs-3dep",
     "licence": "Public domain (USGS): https://www.usgs.gov/information-policies-and-instructions/copyrights-and-credits",
     "attribution": "Elevation: USGS 3DEP"
-  }
+  },
+  "closed_areas": [
+    {
+      "area": "w42921793",
+      "note": "National Institutes of Health campus, Bethesda: a federal site with ID screening at every vehicle and pedestrian gate. Its roads are tagged access=permit; the campus polygon and its footpaths aren't (2026-11-26)."
+    }
+  ]
 }

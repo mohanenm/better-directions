@@ -48,6 +48,8 @@ def test_every_way_reason_is_covered():
         "trail_visibility",
         "sidewalk_separate",
         "no_sidewalk",
+        "motorroad",
+        "driveway",
     }
     assert reasons == expected
 

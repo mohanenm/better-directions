@@ -1,58 +1,58 @@
 {
   "city": "newberg",
   "graph": {
-    "nodes": 9351,
-    "edges": 12203,
-    "ways": 5569,
-    "length_km": 425.7,
-    "bytes": 651132,
-    "gzip_bytes": 200039
+    "nodes": 8877,
+    "edges": 11499,
+    "ways": 5281,
+    "length_km": 399.1,
+    "bytes": 616684,
+    "gzip_bytes": 188987
   },
   "connectivity": {
-    "nodes_before": 10020,
-    "nodes_kept": 9351,
-    "node_share": 0.9332,
-    "length_share": 0.8918
+    "nodes_before": 9525,
+    "nodes_kept": 8877,
+    "node_share": 0.932,
+    "length_share": 0.8994
   },
   "terrain": {
     "source": "Elevation: USGS 3DEP",
     "edges_with_elevation_share": 1.0,
-    "edges_10pct_or_steeper": 34,
+    "edges_10pct_or_steeper": 32,
     "steepest_grade_pct": 20.6,
     "steepest_name": ""
   },
   "edges_by_highway": {
     "footway": {
-      "edges": 6858,
-      "km": 189.6
-    },
-    "service": {
-      "edges": 2469,
-      "km": 100.9
+      "edges": 6799,
+      "km": 186.4
     },
     "residential": {
-      "edges": 2016,
-      "km": 94.8
+      "edges": 1936,
+      "km": 92.7
+    },
+    "service": {
+      "edges": 1940,
+      "km": 80.6
     },
     "tertiary": {
-      "edges": 343,
-      "km": 12.3
+      "edges": 330,
+      "km": 11.9
     },
     "path": {
-      "edges": 110,
-      "km": 10.6
+      "edges": 107,
+      "km": 10.4
     },
     "primary": {
-      "edges": 173,
+      "edges": 171,
       "km": 7.7
     },
-    "secondary": {
-      "edges": 80,
+    "unclassified": {
+      "edges": 65,
       "km": 3.8
     },
-    "unclassified": {
-      "edges": 73,
-      "km": 3.8
+    "secondary": {
+      "edges": 70,
+      "km": 3.5
     },
     "cycleway": {
       "edges": 42,
@@ -85,40 +85,40 @@
       "km": 0
     },
     "covered": {
-      "edges": 7,
-      "km": 0.13
+      "edges": 3,
+      "km": 0.07
     },
     "through_building": {
-      "edges": 3,
-      "km": 0.04
+      "edges": 1,
+      "km": 0.01
     },
     "under_building": {
-      "edges": 0,
-      "km": 0
+      "edges": 6,
+      "km": 0.17
     },
     "may_close": {
-      "edges": 13,
-      "km": 0.99
+      "edges": 1,
+      "km": 0.01
     },
     "steps": {
       "edges": 22,
       "km": 0.14
     },
     "park_path": {
-      "edges": 240,
-      "km": 11.21
+      "edges": 214,
+      "km": 9.51
     },
     "unpaved": {
-      "edges": 121,
-      "km": 9.37
+      "edges": 106,
+      "km": 7.66
     },
     "lit": {
-      "edges": 337,
+      "edges": 330,
       "km": 12.32
     },
     "informal": {
-      "edges": 19,
-      "km": 0.7
+      "edges": 15,
+      "km": 0.42
     }
   },
   "steps": {
@@ -126,8 +126,8 @@
     "estimated_edges": 22
   },
   "distinct": {
-    "parks_on_paths": 18,
-    "buildings_passed_through": 3,
+    "parks_on_paths": 16,
+    "buildings_passed_through": 1,
     "venues": {},
     "stops": {
       "bakery": 2,
@@ -145,47 +145,56 @@
   },
   "exclusions": {
     "ways_by_reason": {
-      "access": 459,
+      "access": 460,
       "construction": 27,
+      "driveway": 275,
       "fast_road": 60,
-      "foot": 7,
+      "foot": 8,
       "highway_kind": 1,
       "no_foot_permission": 26,
       "no_sidewalk": 57,
       "sidewalk_separate": 107,
       "trail_visibility": 1,
-      "walkable": 5961
+      "walkable": 5684
     },
     "segments_dropped": {
-      "node:barrier_no_opening": 2,
-      "node:fast_road_unmarked_crossing": 45,
-      "node:node_access": 10,
+      "construction_area": 235,
+      "node:barrier_no_opening": 1,
+      "node:fast_road_unmarked_crossing": 33,
+      "node:node_access": 4,
       "node:node_crossing_no": 2,
       "node:railway_unmapped_crossing": 2,
-      "passage_not_public": 8,
-      "restricted_area": 108
+      "passage_not_public": 7,
+      "restricted_area": 94,
+      "through_building_unmapped": 5
     },
     "dropped_examples": {
+      "construction_area": [
+        5403190,
+        5404278,
+        834310398,
+        1295873514,
+        1421048050,
+        1421048051,
+        1421048053,
+        1423096975
+      ],
       "node:barrier_no_opening": [
-        1261362797,
-        1293300366
+        1261362797
       ],
       "node:fast_road_unmarked_crossing": [
-        5397947,
         5401784,
         5402707,
         5405632,
         32920301,
         127270363,
         127270367,
-        146260360
+        146260360,
+        146260400
       ],
       "node:node_access": [
         828885706,
-        1026016450,
-        1026016459,
-        1026016469,
-        1026016475
+        1026016469
       ],
       "node:node_crossing_no": [
         1294617338
@@ -201,8 +210,7 @@
         454787166,
         484380297,
         554709364,
-        768087335,
-        768140505
+        789779439
       ],
       "restricted_area": [
         146403084,
@@ -211,14 +219,20 @@
         146403089,
         146403090,
         146403092,
-        169383877,
-        169383879
+        169383879,
+        169383890
+      ],
+      "through_building_unmapped": [
+        1293536976,
+        1294595836,
+        1311610456,
+        1311615433
       ]
     },
     "nodes_excluded": {
-      "barrier_no_opening": 2,
-      "fast_road_unmarked_crossing": 42,
-      "node_access": 5,
+      "barrier_no_opening": 1,
+      "fast_road_unmarked_crossing": 31,
+      "node_access": 2,
       "node_crossing_no": 1,
       "railway_unmapped_crossing": 1
     }

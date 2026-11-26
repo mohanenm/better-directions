@@ -1,18 +1,18 @@
 {
   "city": "malmo",
   "graph": {
-    "nodes": 28148,
-    "edges": 39519,
-    "ways": 15614,
-    "length_km": 1339.1,
-    "bytes": 2069568,
-    "gzip_bytes": 599985
+    "nodes": 27309,
+    "edges": 38367,
+    "ways": 15132,
+    "length_km": 1315.0,
+    "bytes": 2016872,
+    "gzip_bytes": 584233
   },
   "connectivity": {
-    "nodes_before": 28677,
-    "nodes_kept": 28148,
-    "node_share": 0.9816,
-    "length_share": 0.9861
+    "nodes_before": 27942,
+    "nodes_kept": 27309,
+    "node_share": 0.9773,
+    "length_share": 0.9856
   },
   "terrain": {
     "source": "none",
@@ -23,68 +23,60 @@
   },
   "edges_by_highway": {
     "footway": {
-      "edges": 15873,
-      "km": 466.9
+      "edges": 15752,
+      "km": 464.8
     },
     "residential": {
-      "edges": 6388,
-      "km": 282.4
+      "edges": 6177,
+      "km": 281.5
     },
     "cycleway": {
-      "edges": 3942,
-      "km": 137.8
-    },
-    "service": {
-      "edges": 4027,
-      "km": 126.7
+      "edges": 3936,
+      "km": 137.7
     },
     "path": {
-      "edges": 3143,
-      "km": 119.6
+      "edges": 3123,
+      "km": 118.9
+    },
+    "service": {
+      "edges": 3355,
+      "km": 108.1
     },
     "tertiary": {
-      "edges": 1700,
+      "edges": 1658,
       "km": 57.0
     },
     "secondary": {
-      "edges": 1273,
+      "edges": 1267,
       "km": 52.0
     },
     "unclassified": {
-      "edges": 902,
-      "km": 40.8
+      "edges": 860,
+      "km": 40.7
     },
     "pedestrian": {
-      "edges": 686,
-      "km": 24.8
+      "edges": 678,
+      "km": 24.6
     },
     "platform": {
-      "edges": 930,
+      "edges": 928,
       "km": 15.1
     },
     "living_street": {
-      "edges": 236,
-      "km": 8.2
+      "edges": 231,
+      "km": 8.1
     },
     "track": {
       "edges": 44,
       "km": 2.7
     },
     "steps": {
-      "edges": 292,
-      "km": 2.2
+      "edges": 288,
+      "km": 2.1
     },
     "secondary_link": {
       "edges": 59,
       "km": 1.5
-    },
-    "primary_link": {
-      "edges": 12,
-      "km": 1.2
-    },
-    "primary": {
-      "edges": 2,
-      "km": 0.1
     },
     "tertiary_link": {
       "edges": 7,
@@ -93,6 +85,10 @@
     "corridor": {
       "edges": 3,
       "km": 0.1
+    },
+    "primary_link": {
+      "edges": 1,
+      "km": 0.0
     }
   },
   "features": {
@@ -105,36 +101,36 @@
       "km": 0.07
     },
     "covered": {
-      "edges": 110,
-      "km": 2.1
+      "edges": 77,
+      "km": 1.47
     },
     "through_building": {
-      "edges": 49,
-      "km": 0.8
+      "edges": 29,
+      "km": 0.5
     },
     "under_building": {
-      "edges": 13,
-      "km": 0.32
+      "edges": 33,
+      "km": 1.0
     },
     "may_close": {
-      "edges": 848,
-      "km": 23.03
+      "edges": 821,
+      "km": 22.49
     },
     "steps": {
-      "edges": 292,
-      "km": 2.16
+      "edges": 288,
+      "km": 2.13
     },
     "park_path": {
-      "edges": 4168,
-      "km": 139.51
+      "edges": 4156,
+      "km": 139.13
     },
     "unpaved": {
-      "edges": 2934,
-      "km": 113.28
+      "edges": 2906,
+      "km": 112.41
     },
     "lit": {
-      "edges": 13200,
-      "km": 484.74
+      "edges": 12995,
+      "km": 482.38
     },
     "informal": {
       "edges": 110,
@@ -142,12 +138,12 @@
     }
   },
   "steps": {
-    "total_steps": 5629,
-    "estimated_edges": 151
+    "total_steps": 5539,
+    "estimated_edges": 147
   },
   "distinct": {
     "parks_on_paths": 143,
-    "buildings_passed_through": 29,
+    "buildings_passed_through": 20,
     "venues": {
       "mall": 2
     },
@@ -169,42 +165,56 @@
   },
   "exclusions": {
     "ways_by_reason": {
-      "access": 237,
+      "access": 241,
       "construction": 26,
+      "driveway": 359,
       "escalator_direction_unknown": 4,
-      "fast_road": 109,
-      "foot": 121,
+      "fast_road": 108,
+      "foot": 122,
       "highway_kind": 23,
       "indoor_not_corridor": 45,
+      "motorroad": 15,
       "no_foot_permission": 310,
-      "no_sidewalk": 37,
+      "no_sidewalk": 42,
       "railway": 5,
       "sidewalk_separate": 108,
-      "walkable": 16245
+      "walkable": 15862
     },
     "segments_dropped": {
-      "node:barrier_no_opening": 101,
+      "construction_area": 400,
+      "node:barrier_no_opening": 100,
       "node:fast_road_unmarked_crossing": 15,
-      "node:node_access": 157,
+      "node:node_access": 154,
       "node:node_crossing_no": 4,
       "node:node_foot": 15,
-      "node:node_locked": 32,
+      "node:node_locked": 30,
       "node:railway_unmapped_crossing": 167,
-      "passage_not_public": 34,
-      "railway_crossing_geometry": 59,
-      "restricted_area": 387,
-      "through_building_unmapped": 62
+      "passage_not_public": 60,
+      "power_area": 8,
+      "railway_crossing_geometry": 57,
+      "restricted_area": 425,
+      "through_building_unmapped": 95
     },
     "dropped_examples": {
+      "construction_area": [
+        437865662,
+        739008324,
+        775589254,
+        930768362,
+        930768364,
+        930768365,
+        930768366,
+        930768367
+      ],
       "node:barrier_no_opening": [
         189255176,
         189255181,
-        231757992,
         231757994,
         295558474,
         390183387,
         570522463,
-        952733491
+        952733491,
+        977165838
       ],
       "node:fast_road_unmarked_crossing": [
         89356749,
@@ -263,12 +273,15 @@
       "passage_not_public": [
         155329977,
         231737026,
+        232419156,
         260627872,
+        336068962,
         368524198,
         375457414,
-        611374714,
-        681254740,
-        681254742
+        394893796
+      ],
+      "power_area": [
+        1065850125
       ],
       "railway_crossing_geometry": [
         24557226,
@@ -291,23 +304,23 @@
         28535699
       ],
       "through_building_unmapped": [
+        4642573,
+        87314059,
+        102217252,
+        102217254,
         157823828,
         157823831,
         157823842,
-        159843169,
-        166574118,
-        232639035,
-        232639036,
-        415262008
+        159843169
       ]
     },
     "nodes_excluded": {
-      "barrier_no_opening": 80,
+      "barrier_no_opening": 79,
       "fast_road_unmarked_crossing": 11,
-      "node_access": 131,
+      "node_access": 129,
       "node_crossing_no": 1,
       "node_foot": 7,
-      "node_locked": 17,
+      "node_locked": 16,
       "railway_unmapped_crossing": 105
     }
   }
