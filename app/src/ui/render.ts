@@ -62,6 +62,7 @@ export function setAreaNotes(notes: string[]): void {
 
 function renderCard(name: string, summary: string, stats: [string, string][], b: CostOfFun, info: string[], warnings: string[], steps: Step[], legend: [string, string], onStep: (at: [number, number]) => void): void {
   get("route-name").textContent = name;
+  get("same-note").hidden = true;
   get("summary").textContent = summary;
   get("legend-better").textContent = legend[0];
   get("legend-normal").textContent = legend[1];
@@ -98,7 +99,7 @@ export function sameRouteNote(r: PlanResult): string | null {
       const cap = r.long ? "an hour and a half" : "an hour";
       // Offer the longer walk when it would actually leave room for a detour.
       const offer = !r.long && minutes < DETOUR.longMaxSeconds / 60 - 5 ? ` Tick "Longer walk" to allow up to 1 h 30, or ${stops ? "drop a stop" : "pick places closer together"}.` : ` ${stops ? "Drop a stop, or pick" : "Pick"} places closer together, or plan a loop from your start.`;
-      return `This walk${stops ? " with its stops" : ""} already takes ${minutes} minutes and detours are capped at ${cap}, so the better route is the normal one.${offer}`;
+      return `This walk${stops ? " with its stops" : ""} already takes ${minutes} minutes and detours are capped at ${cap}, so every mode gives the normal route.${offer}`;
     }
     case "already":
       return "The normal route already has no right turns, so it's the better route too.";
@@ -129,13 +130,15 @@ export function planTitle(r: PlanResult): string {
 export function renderResult(r: PlanResult, onStep: (at: [number, number]) => void): void {
   const same = sameRouteNote(r);
   const info = [
-    ...(same ? [same] : []),
     ...(!same && r.missingFeature ? [`This route doesn't pass any ${r.missingFeature}: there are none within reach, so it's just a different way round.`] : []),
     ...(r.strategy === "via-stops" ? ["Goes through the stops you picked, in order. The normal route goes through them too."] : []),
-    ...(r.pins.some((p) => p.kind === "park") ? [`Tap a green park pin on the map to add it as a stop (up to ${MAX_LINK_STOPS}).`] : []),
+    ...(r.sameAsNormal !== "too-long" && r.pins.some((p) => p.kind === "park") ? [`Tap a green park pin on the map to add it as a stop (up to ${MAX_LINK_STOPS}).`] : []),
   ];
   const finish = finishNote(r.betterStats.timeS);
   renderCard(planTitle(r), r.summary, statItems(r), r.betterStats, info, finish ? [finish] : [], r.steps, ["Better route", "Normal route"], onStep);
+  // Why it's just the normal route goes straight under the name, where it can't be missed.
+  get("same-note").textContent = same ?? "";
+  get("same-note").hidden = !same;
 }
 
 export function renderTour(r: TourResult, onStep: (at: [number, number]) => void): void {

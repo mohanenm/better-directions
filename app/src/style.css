@@ -410,6 +410,7 @@ button.secondary:disabled { background: var(--wash); color: var(--ink-soft); cur
 .mode-chips { display: flex; gap: 0.35rem; overflow-x: auto; padding: 0.15rem 0 0.5rem; margin-bottom: 0.25rem; scrollbar-width: none; }
 .mode-chips .chip[aria-pressed="true"] { border-color: var(--accent); background: var(--accent-tint); color: var(--accent); }
 .result h2.route-name { margin: 0.2rem 0 0.1rem; font-size: 1.35rem; line-height: 1.2; color: var(--ink); letter-spacing: -0.02em; }
+.callout { margin: 0.35rem 0; padding: 0.55rem 0.75rem; border-radius: var(--radius-sm); background: var(--accent-tint); color: var(--ink); font-size: 0.9rem; }
 .summary { font-size: 0.95rem; color: var(--ink); margin: 0.2rem 0 0.4rem; }
 .legend { display: flex; align-items: center; flex-wrap: wrap; gap: 0.4rem; font-size: 0.8rem; color: var(--ink-soft); margin-bottom: 0.5rem; }
 .swatch { display: inline-block; width: 1.6rem; height: 0.35rem; border-radius: 3px; }

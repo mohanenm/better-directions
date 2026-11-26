@@ -217,8 +217,8 @@ async function runCase(c) {
     if (!seen.error || !seen.onScreen || !seen.uncovered) problems.push(`error not visible: ${JSON.stringify(seen)}`);
   }
   if (c.tooLong) {
-    const seen = JSON.parse(await evaluate("JSON.stringify({ title: document.getElementById('route-name').textContent, notes: document.getElementById('info').textContent })"));
-    if (seen.title !== "Just the Normal Route" || !/capped at an hour/.test(seen.notes)) problems.push(`too long: not explained (${JSON.stringify(seen)})`);
+    const seen = JSON.parse(await evaluate("JSON.stringify({ title: document.getElementById('route-name').textContent, notes: document.getElementById('same-note').textContent, chips: document.getElementById('mode-chips').hidden })"));
+    if (seen.title !== "Just the Normal Route" || !/capped at an hour/.test(seen.notes) || !seen.chips) problems.push(`too long: not explained (${JSON.stringify(seen)})`);
   }
   if (c.noTerrain) {
     // An area without elevation data says so: under the area picker, in the result and the footer.

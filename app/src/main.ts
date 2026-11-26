@@ -520,7 +520,8 @@ function onPlan(result: PlanResult): void {
   drawRoutes(result.normal, result.better);
   routeMap?.setPins(result.pins, parkActions);
   renderResult(result, (at) => routeMap?.flyTo(at));
-  showResult(`${state.fromName ?? "Your start"} to ${state.toName ?? "your end"}`, true);
+  // When the walk already fills the time limit, every mode gives the same route: no chips to try.
+  showResult(`${state.fromName ?? "Your start"} to ${state.toName ?? "your end"}`, result.sameAsNormal !== "too-long");
   // Screen readers hear the result; sighted users see it in the card.
   const same = sameRouteNote(result);
   $("#announcer").textContent = `Route ready. ${same ?? result.summary} Directions follow the notes.`;
