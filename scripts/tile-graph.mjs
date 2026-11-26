@@ -3,9 +3,9 @@
  * Makes what the page loads of each area's walking graph, in app/public/data/<area>/graph/
  * (generated, not committed; npm run build and npm run dev run this first):
  *
- * - areas under TILED_FROM_BYTES: base.json saying so, and whole.bin, the graph as built;
- * - bigger areas: base.json (meta, tile grid, feature lists worked out over the whole area) and
- *   one .bin per tile (see app/src/graph/tiles.ts).
+ * - most areas: whole.bin, the graph as built;
+ * - areas marked `tiled` in app/src/city.ts (the big ones): base.json (meta, tile grid, feature
+ *   lists worked out over the whole area) and one .bin per tile (see app/src/graph/tiles.ts).
  *
  *   npm run tiles              # every area with a data/<area>/graph.bin
  *   npm run tiles -- dc lyon   # just these
@@ -22,7 +22,8 @@ const server = await createServer({ root, configFile: false, logLevel: "error", 
 try {
   const { Graph } = await server.ssrLoadModule("/app/src/graph/graph.ts");
   const { FeatureIndex } = await server.ssrLoadModule("/app/src/modes/features.ts");
-  const { tileGraph, wholeBase, TILED_FROM_BYTES, WHOLE_FILE } = await server.ssrLoadModule("/app/src/graph/tiles.ts");
+  const { tileGraph, WHOLE_FILE } = await server.ssrLoadModule("/app/src/graph/tiles.ts");
+  const { AREAS } = await server.ssrLoadModule("/app/src/city.ts");
 
   const wanted = process.argv.slice(2);
   const areas = (wanted.length ? wanted : readdirSync(join(root, "data"))).filter((a) => existsSync(join(root, "data", a, "graph.bin")));
@@ -34,8 +35,7 @@ try {
     const out = join(root, "app", "public", "data", area, "graph");
     rmSync(out, { recursive: true, force: true });
     mkdirSync(out, { recursive: true });
-    if (bytes.length < TILED_FROM_BYTES) {
-      writeFileSync(join(out, "base.json"), JSON.stringify(wholeBase()));
+    if (!AREAS.find((a) => a.id === area)?.tiled) {
       writeFileSync(join(out, `${WHOLE_FILE}.bin`), bytes);
       console.log(`${area}: whole graph, ${(bytes.length / 1e6).toFixed(1)} MB`);
       continue;

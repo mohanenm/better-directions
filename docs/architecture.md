@@ -1,6 +1,6 @@
 # Architecture
 
-Better Directions is a static site. A Python pipeline turns an OpenStreetMap extract into a compact walking graph and a set of map tiles for each area; the browser downloads the parts of the chosen area's graph a request needs and plans every route locally, in a Web Worker. There is no server and no API. Areas are listed in `app/src/city.ts` and picked with `?area=`; switching area reloads the page, and the worker is named after the area so it loads the right graph.
+Better Directions is a static site. A Python pipeline turns an OpenStreetMap extract into a compact walking graph and a set of map tiles for each area; the browser downloads the chosen area's graph (for the biggest areas, only the parts a request can reach) and plans every route locally, in a Web Worker. There is no server and no API. Areas are listed in `app/src/city.ts` and picked with `?area=`; switching area reloads the page, and the worker is named after the area so it loads the right graph.
 
 ```
 OSM extract ──► pipeline (Python) ──► graph.bin ──► npm run tiles ──► graph tiles ─┐
@@ -27,17 +27,19 @@ GitHub Pages compresses responses on the fly and applies byte ranges to the comp
 
 ## The graph file
 
-`graph.bin` is a JSON header followed by 8-byte-aligned typed arrays, so the browser reads it with zero-copy `TypedArray` views. Coordinates are microdegrees, edge shapes are delta-encoded varints, edge lengths are 16-bit decimetres, and tags are deduplicated into shared tag sets. Lyon's graph is 9.2 MB, 2.7 MB gzipped. Only junctions and rule-relevant points are nodes. The format is described in [GRAPH_FORMAT.md](GRAPH_FORMAT.md).
+`graph.bin` is a JSON header followed by 8-byte-aligned typed arrays, so the browser reads it with zero-copy `TypedArray` views. Coordinates are microdegrees, edge shapes are delta-encoded varints, edge lengths are 16-bit decimetres, and tags are deduplicated into shared tag sets. Lyon's graph is 9.0 MB, 2.6 MB gzipped. Only junctions and rule-relevant points are nodes. The format is described in [GRAPH_FORMAT.md](GRAPH_FORMAT.md).
 
 The file keeps the raw tags the safety rules need, so the browser can re-run the same rules rather than trust the build.
 
 ## Loading the graph
 
-Most areas load their whole graph, as built (`whole.bin`). The big ones (DC, Chicago; anything over 10 MB) are cut into tiles about a kilometre square by `npm run tiles`, and the worker loads only the tiles a request can reach.
+Most areas load their whole graph, as built (`whole.bin`). The big ones, DC and Chicago, are marked `tiled` in `app/src/city.ts` (a test requires it of any graph of 10 MB or more). `npm run tiles`, which the build runs first, cuts their graphs into tiles about a kilometre square, and the worker loads only the tiles a request can reach. Because the page knows from `city.ts` which kind of area it's in, it fetches the right files straight away, with no index to read first. Smaller graphs stay whole because one download beats the extra round trips of loading parts; tiling every area made the medium ones slower on the emulated phone.
 
 That's exact rather than a guess, because every route is capped in time and nobody walks faster than 6 km/h (`MAX_SPEED_MS`; edge times are never shorter than length over it). A route between two points can only pass points inside an ellipse with those points as foci, where the straight-line distances add up to at most cap × speed; a trip through stops, the union over its legs; a loop, a circle around its start (`router/region.ts`). The worker loads every tile that touches that region plus a margin for snapping and look-ups near the route; planners skip candidates outside it, and each leg of a multi-leg route is capped to leave room for the rest. A trip whose normal route runs past the cap is loaded out to the normal route's reach and checked again until it fits.
 
-Joined tiles are numbered in whole-graph order, so the router breaks ties the same way, and the feature lists (staircases, parks and so on) are worked out over the whole area at build time and mapped onto what's loaded. Anything seeded or hashed (route names, Random's waypoints) uses whole-graph numbers. `app/test/tiled.test.ts` plans random trips in every mode (with stops and longer walks), crawls, workouts, shapes and words on the whole graph and on tiles, and requires identical routes, names and summaries.
+Joined tiles are numbered in whole-graph order, so the router breaks ties the same way, and the feature lists (staircases, parks and so on) are worked out over the whole area at build time and mapped onto what's loaded. Anything seeded or hashed (route names, Random's waypoints) uses whole-graph numbers. `app/test/tiled.test.ts` plans random trips in every mode (with stops and longer walks), crawls, workouts, shapes and words on the whole graph and on tiles, and requires identical routes, names and summaries. Each request is checked twice: on a fresh loader, and on one already holding another request's tiles, so an answer can't depend on what happens to be loaded.
+
+In the worker, each request goes through two steps in `app/src/requests.ts`: `prepareRequest` loads the tiles its kind of walk can reach (a trip, a crawl, a loop, a drawing), and `handle` plans it on the result, with nothing awaited in between. For a whole area the first step is a no-op. The test calls the same two functions.
 
 ## Safety
 
@@ -47,7 +49,7 @@ Some checks need geometry rather than tags. The build drops a path that crosses 
 
 In the browser the rules run three more times: a load-time audit disables any edge, node or direction that breaks a rule; the search only uses what the audit allowed; and every finished route goes through `assertRouteSafe`, which re-checks it from raw tags, along with connectivity and the detour cap. The property test adds its own independent check on top.
 
-The detour cap is `max(normal, min(4 × normal, 60 min))`, or 90 minutes instead of 60 when the walker ticks "Longer walk" (`long=1` in links). Loops, which have no normal route, are capped by the length chosen: 60 minutes, or 90 for the long options (crawls and workouts of 1 h 30, shapes of 1 h 15). Spelled words stay within an hour. Nothing exceeds 90 minutes unless the normal route itself does.
+The detour cap is `max(normal, min(4 × normal, 60 min))`, or 90 minutes instead of 60 when the walker ticks "Longer walk" (`long=1` in links). Loops, which have no normal route, are capped by the length chosen: up to 60 minutes, or 90 for the 1 h 30 crawls and workouts. Shapes may take up to an hour, or an hour and a half for the 75-minute option. Spelled words stay within an hour. Nothing exceeds 90 minutes unless the normal route itself does.
 
 ## Router
 
@@ -79,4 +81,4 @@ The production build adds a strict Content-Security-Policy as a meta tag: every 
 
 The site is built for GitHub Pages under `/better-directions/`. CI runs the pipeline tests and the app's typecheck, lint, build and tests on every push. The deploy workflow runs the same checks again, then deploys on every merge to `main`. Actions are pinned to commit SHAs, and only the deploy job can write to Pages.
 
-The built graph is committed, because rebuilding needs a 550 MB download. A pipeline test, run locally where the extract is available, checks that the committed file matches a fresh build byte for byte.
+Each area's built graph (`data/<area>/graph.bin`) is committed, because rebuilding needs a 550 MB download; what the page loads is generated from it at build time. A pipeline test, run locally where the extract is available, checks that the committed Lyon file matches a fresh build byte for byte.

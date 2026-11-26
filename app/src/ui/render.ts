@@ -1,5 +1,6 @@
 /** Renders a planned route as text: summary, stats, notes and step-by-step directions. */
 import { CITY } from "../city";
+import { DETOUR } from "../safety/limits";
 import type { CostOfFun } from "../modes/stats";
 import type { Step } from "../modes/directions";
 import type { ArtResultMsg, PlanResult, SpellResultMsg, TourResult } from "./protocol";
@@ -92,7 +93,7 @@ export function sameRouteNote(r: PlanResult): string | null {
     case "too-long": {
       const cap = r.long ? "an hour and a half" : "an hour";
       // Offer the longer walk when it would actually leave room for a detour.
-      const offer = !r.long && minutes < 85 ? ` Tick "Longer walk" to allow up to 1 h 30, or ${stops ? "drop a stop" : "pick places closer together"}.` : ` ${stops ? "Drop a stop, or pick" : "Pick"} places closer together, or plan a loop from your start.`;
+      const offer = !r.long && minutes < DETOUR.longMaxSeconds / 60 - 5 ? ` Tick "Longer walk" to allow up to 1 h 30, or ${stops ? "drop a stop" : "pick places closer together"}.` : ` ${stops ? "Drop a stop, or pick" : "Pick"} places closer together, or plan a loop from your start.`;
       return `This walk${stops ? " with its stops" : ""} already takes ${minutes} minutes and detours are capped at ${cap}, so the better route is the normal one.${offer}`;
     }
     case "already":

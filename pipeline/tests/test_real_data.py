@@ -68,4 +68,6 @@ def test_lyon_build_is_deterministic(built):
 @pytest.mark.skipif(not COMMITTED.exists(), reason="no graph.bin built yet")
 def test_committed_graph_is_up_to_date(built):
     _, blob = built
-    assert COMMITTED.read_bytes() == blob, "rebuild with: python -m bdgraph.build cities/lyon.json"
+    assert COMMITTED.read_bytes() == blob, (
+        "rebuild with: python -m bdgraph.build cities/lyon.json, then npm run tiles -- lyon"
+    )

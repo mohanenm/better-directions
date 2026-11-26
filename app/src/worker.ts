@@ -3,10 +3,10 @@
  * can reach) and answers requests (see requests.ts). Runs off the main thread so the page never
  * freezes. Everything happens on the device; nothing is sent anywhere.
  */
-import { cityData } from "./city";
+import { CITY, cityData } from "./city";
 import { Graph } from "./graph/graph";
 import { TileSource, type Loaded } from "./graph/tiled-source";
-import { WHOLE_FILE, type BaseFile } from "./graph/tiles";
+import { WHOLE_FILE, type TiledBase } from "./graph/tiles";
 import { FeatureIndex } from "./modes/features";
 import { handle, prepareRequest, SpellError } from "./requests";
 import { Router } from "./router/astar";
@@ -27,15 +27,16 @@ async function fetchData(file: string, fresh = false): Promise<Response> {
 
 async function init(): Promise<void> {
   const t0 = performance.now();
-  const base = (await (await fetchData("base.json")).json()) as BaseFile;
   let meta;
-  if (base.whole) {
+  // Knowing up front which kind of area this is saves a round trip before the first download.
+  if (CITY.tiled) {
+    const base = (await (await fetchData("base.json")).json()) as TiledBase;
+    source = new TileSource(base, async (id, fresh) => (await fetchData(`${id}.bin`, fresh)).arrayBuffer());
+    meta = base.meta;
+  } else {
     const g = Graph.fromBuffer(await (await fetchData(`${WHOLE_FILE}.bin`)).arrayBuffer());
     whole = { g, fi: new FeatureIndex(g), index: new NodeIndex(g), router: new Router(g) };
     meta = g.meta;
-  } else {
-    source = new TileSource(base, async (id, fresh) => (await fetchData(`${id}.bin`, fresh)).arrayBuffer());
-    meta = base.meta;
   }
   post({
     type: "ready",
@@ -45,7 +46,7 @@ async function init(): Promise<void> {
       attribution: meta.attribution,
       terrainAttribution: meta.terrain.attribution ?? "",
       dataAsOf: meta.source.data_as_of ?? "",
-      timings: { loadMs: Math.round(performance.now() - t0), tiled: !base.whole },
+      timings: { loadMs: Math.round(performance.now() - t0), tiled: !!CITY.tiled },
     },
   });
 }

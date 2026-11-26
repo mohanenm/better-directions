@@ -1,16 +1,16 @@
 /**
  * Hard limits. Like the rules in rules.ts, these are not settings: no mode or URL parameter can
  * go beyond them. A walk is an hour at most unless someone asks for a longer one, and an hour
- * and a half at most even then. The app sends people the long way into streets they may not
- * know; the cap keeps that a detour, not a trek, and limits the chance of finishing after dark
- * or finding parks and passages shut.
+ * and a half at most even then, unless the normal walk itself is longer. The app sends people
+ * the long way into streets they may not know; the cap keeps that a detour, not a trek, and
+ * limits the chance of finishing after dark or finding parks and passages shut.
  */
 export const DETOUR = Object.freeze({
   /** A "better" route may take at most this multiple of the normal route's walking time... */
   maxMultiple: 4,
   /** ...and never more than this in total (unless the normal route itself is longer)... */
   maxSeconds: 60 * 60,
-  /** ...or this, when the walker asks for a longer walk. Nothing goes beyond it. */
+  /** ...or this, when the walker asks for a longer walk (again unless the normal route is longer). */
   longMaxSeconds: 90 * 60,
 });
 

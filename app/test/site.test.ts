@@ -48,7 +48,7 @@ describe.skipIf(!built)("built site", () => {
 
   it("ships the graph, places, tiles, fonts and sprites", () => {
     // Lyon is loaded whole; DC is big enough to be cut into graph tiles.
-    for (const f of ["data/lyon/graph/base.json", "data/lyon/graph/whole.bin", "data/dc/graph/base.json", "data/lyon/places.json", "basemap/sprites/light.json", "basemap/fonts/OFL.txt", "basemap/fonts/Noto Sans Regular/0-255.pbf"]) {
+    for (const f of ["data/lyon/graph/whole.bin", "data/dc/graph/base.json", "data/lyon/places.json", "basemap/sprites/light.json", "basemap/fonts/OFL.txt", "basemap/fonts/Noto Sans Regular/0-255.pbf"]) {
       expect(existsSync(join(DIST, f)), f).toBe(true);
     }
     expect(walk(join(DIST, "data", "dc", "graph")).filter((f) => f.endsWith(".bin")).length).toBeGreaterThan(100);

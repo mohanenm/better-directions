@@ -3,6 +3,7 @@ import { existsSync, readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { AREAS, nearestArea } from "../src/city";
 import { Graph } from "../src/graph/graph";
+import { TILED_FROM_BYTES } from "../src/graph/tiles";
 
 const file = (path: string) => new URL(`../public/${path}`, import.meta.url);
 
@@ -15,6 +16,8 @@ describe.each(AREAS.map((a) => [a.id, a] as const))("area %s", (id, area) => {
     // Small towns have few named places (Dundee has 8); this catches an empty or broken list.
     expect(JSON.parse(readFileSync(file(`data/${id}/places.json`), "utf8")).length).toBeGreaterThanOrEqual(5);
     expect(existsSync(file(`tiles/${id}/0/0/0.mvt`))).toBe(true);
+    // Big graphs load faster in tiles, small ones whole; the page reads which from city.ts.
+    expect(!!area.tiled, `${(buf.length / 1e6).toFixed(1)} MB`).toBe(buf.length >= TILED_FROM_BYTES);
   });
   it("matches its city config", () => {
     const config = JSON.parse(readFileSync(new URL(`../../cities/${id}.json`, import.meta.url), "utf8"));

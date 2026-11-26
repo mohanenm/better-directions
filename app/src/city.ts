@@ -12,16 +12,18 @@ export interface Area {
   labelLang: string;
   /** Deepest tile zoom shipped; the map overzooms beyond it. */
   maxTileZoom: number;
+  /** The walking graph is cut into tiles, loaded as requests need them (big areas; see graph/tiles.ts). */
+  tiled?: true;
 }
 
 export const AREAS: readonly Area[] = Object.freeze([
   { id: "lyon", name: "Lyon", bbox: { west: 4.77, south: 45.7, east: 4.93, north: 45.81 }, center: [4.835, 45.762], labelLang: "fr", maxTileZoom: 15 },
-  { id: "dc", name: "Washington, DC", bbox: { west: -77.12, south: 38.791, east: -76.909, north: 38.996 }, center: [-77.0365, 38.8977], labelLang: "en", maxTileZoom: 15 },
+  { id: "dc", name: "Washington, DC", bbox: { west: -77.12, south: 38.791, east: -76.909, north: 38.996 }, center: [-77.0365, 38.8977], labelLang: "en", maxTileZoom: 15, tiled: true },
   { id: "arlington", name: "Arlington and Alexandria", bbox: { west: -77.172, south: 38.785, east: -77.035, north: 38.935 }, center: [-77.09, 38.87], labelLang: "en", maxTileZoom: 15 },
   { id: "silver-spring", name: "Silver Spring and Bethesda", bbox: { west: -77.135, south: 38.965, east: -76.985, north: 39.025 }, center: [-77.06, 38.99], labelLang: "en", maxTileZoom: 15 },
   { id: "richmond", name: "Richmond", bbox: { west: -77.52, south: 37.5, east: -77.4, north: 37.58 }, center: [-77.44, 37.54], labelLang: "en", maxTileZoom: 15 },
   { id: "baltimore", name: "Baltimore", bbox: { west: -76.68, south: 39.25, east: -76.56, north: 39.33 }, center: [-76.61, 39.29], labelLang: "en", maxTileZoom: 15 },
-  { id: "chicago", name: "Chicago", bbox: { west: -87.725, south: 41.84, east: -87.595, north: 42.023 }, center: [-87.6278, 41.8819], labelLang: "en", maxTileZoom: 15 },
+  { id: "chicago", name: "Chicago", bbox: { west: -87.725, south: 41.84, east: -87.595, north: 42.023 }, center: [-87.6278, 41.8819], labelLang: "en", maxTileZoom: 15, tiled: true },
   { id: "newberg", name: "Newberg", bbox: { west: -122.995, south: 45.28, east: -122.92, north: 45.335 }, center: [-122.9718, 45.3006], labelLang: "en", maxTileZoom: 15 },
   { id: "dundee", name: "Dundee", bbox: { west: -123.045, south: 45.262, east: -122.99, north: 45.297 }, center: [-123.0103, 45.2779], labelLang: "en", maxTileZoom: 15 },
   { id: "copenhagen", name: "Copenhagen", bbox: { west: 12.5, south: 55.62, east: 12.66, north: 55.725 }, center: [12.5683, 55.6761], labelLang: "da", maxTileZoom: 15 },

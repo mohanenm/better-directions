@@ -24,7 +24,7 @@ Copy `cities/lyon.json` and change:
 PYTHONPATH=pipeline .venv/bin/python -m bdgraph.fetch   cities/<id>.json                  # extract and crop
 PYTHONPATH=pipeline .venv/bin/python -m bdgraph.terrain cities/<id>.json                  # elevations, if configured
 PYTHONPATH=pipeline .venv/bin/python -m bdgraph.build   cities/<id>.json                  # data/<id>/graph.bin and stats
-npm run tiles -- <id>                                                                      # what the page loads (tiles if over 10 MB)
+npm run tiles -- <id>                                                                      # what the page loads (build and dev also run this)
 PYTHONPATH=pipeline .venv/bin/python -m bdgraph.tiles   cities/<id>.json --build YYYYMMDD # basemap tiles
 PYTHONPATH=pipeline .venv/bin/python -m bdgraph.places  cities/<id>.json                  # search list
 ```
@@ -55,7 +55,7 @@ Look closely at `passage_not_public`. Passages and corridors through buildings t
 
 ## 5. Add it to the app
 
-- `app/src/city.ts`: add an entry to `AREAS` with the same `id`, `name` and `bbox` as the config (`app/test/areas.test.ts` checks they match), a centre for "nearest to me", `labelLang` (the OSM `name:<lang>` for map labels) and `maxTileZoom`.
+- `app/src/city.ts`: add an entry to `AREAS` with the same `id`, `name` and `bbox` as the config (`app/test/areas.test.ts` checks they match), a centre for "nearest to me", `labelLang` (the OSM `name:<lang>` for map labels) and `maxTileZoom`. Add `tiled: true` if `graph.bin` is 10 MB or more, so the page loads it in tiles; the same test fails if it's missing, or set on a smaller area.
 - `app/src/ui/famous.ts`: add a few famous routes under the area's id, between well-known public places. `app/test/famous.test.ts` checks each one still lives up to its pitch. Without terrain, staircases are counted but steps have no direction, so pitch stairs routes by staircases rather than steps up.
 - The footer's attribution comes from the graph (OSM date) and the terrain provider, if any.
 
@@ -76,4 +76,4 @@ The pipeline's real-data tests (`pipeline/tests/test_real_data.py`) and the prop
 
 ## Size
 
-With eleven areas the built site is about 263 MB. DC has the most tiles, 50 MB at zoom 0 to 15 for its 18 × 23 km, and the largest graph, 18 MB (5.5 MB gzipped), since it merges the Virginia and Maryland parts of its box; its first route takes about 16 seconds on the emulated phone. Chicago's is 12.8 MB (3.4 MB gzipped) for 11 × 20 km of dense grid, alleys and mapped sidewalks. Tiles grow with the area's size, roughly 1.2 to 1.7 MB per 10 km²; dropping zoom 15 cuts them by about 60% at the cost of street-level detail. The graph grows with how much is mapped: about 0.6 MB per 10 km² in Chicago, against 0.25 in DC with its parkland and river. GitHub Pages allows 1 GB per site and about 100 GB of traffic a month, and no file may exceed 100 MB (the site test keeps every file under 25 MB and the whole site under 300 MB).
+With eleven areas the built site is about 285 MB. DC has the most map tiles, 50 MB at zoom 0 to 15 for its 18 × 23 km, and the largest graph, 18 MB (5.5 MB gzipped), since it merges the Virginia and Maryland parts of its box. Loaded whole, its first route took about 16 seconds on the emulated phone; in tiles it takes about 9. Tiles repeat the edges that cross their borders, so a tiled graph takes about a third more space on the site (DC's tiles are 24 MB), though a visit downloads only a small part of it. Chicago's is 12.8 MB (3.4 MB gzipped) for 11 × 20 km of dense grid, alleys and mapped sidewalks. Tiles grow with the area's size, roughly 1.2 to 1.7 MB per 10 km²; dropping zoom 15 cuts them by about 60% at the cost of street-level detail. The graph grows with how much is mapped: about 0.6 MB per 10 km² in Chicago, against 0.25 in DC with its parkland and river. GitHub Pages allows 1 GB per site and about 100 GB of traffic a month, and no file may exceed 100 MB (the site test keeps every file under 25 MB and the whole site under 300 MB).

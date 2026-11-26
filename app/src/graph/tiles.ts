@@ -1,7 +1,7 @@
 /**
  * Tiled graphs: the build cuts a big area's graph into tiles about a kilometre square, and the page
- * loads only the tiles a request can reach (see router/region.ts), joined into one graph. Areas
- * under TILED_FROM_BYTES aren't cut up: the page loads their whole graph (whole.bin).
+ * loads only the tiles a request can reach (see router/region.ts), joined into one graph. Only
+ * areas marked `tiled` in city.ts are cut up; the page loads the others' whole graph (whole.bin).
  *
  * A tile holds the nodes inside it, every edge whose bounding box touches it, and those edges'
  * ways and far-end nodes, all with their whole-graph numbers. So a node inside a loaded tile always
@@ -21,11 +21,11 @@ const TILE_MAGIC = "BDT1";
 /** Tile height in degrees of latitude (about 1 km); width is scaled to match at the area's latitude. */
 export const TILE_DEG_LAT = 0.009;
 /**
- * Areas whose whole graph is smaller than this aren't cut up: loading it whole costs less than the
- * round trips of loading parts (measured on an emulated low-end phone). DC and Chicago are tiled.
+ * Areas whose whole graph is at least this big are marked `tiled` in city.ts (a test checks):
+ * smaller ones load faster whole than in parts (measured on an emulated low-end phone).
  */
 export const TILED_FROM_BYTES = 10_000_000;
-/** An untiled area's whole graph (graph.bin as built), next to its base file. */
+/** An untiled area's whole graph: graph.bin as built, under this name. */
 export const WHOLE_FILE = "whole";
 
 export interface TileGrid {
@@ -35,18 +35,10 @@ export interface TileGrid {
   dLat: number;
 }
 
-/** The base file of an area loaded whole: just says so; the graph carries its own meta. */
-export interface WholeBase {
-  format: typeof TILE_FORMAT;
-  version: number;
-  whole: true;
-}
-
-/** The base file of a tiled area. */
+/** A tiled area's base file. */
 export interface TiledBase {
   format: typeof TILE_FORMAT;
   version: number;
-  whole: false;
   /** The whole graph's meta, without its sections and points of interest; counts are whole-graph. */
   meta: Omit<GraphMeta, "sections" | "pois">;
   grid: TileGrid;
@@ -55,10 +47,6 @@ export interface TiledBase {
   /** The whole area's feature lists, in whole-graph numbering. */
   features: ExportedFeatures;
 }
-
-export type BaseFile = WholeBase | TiledBase;
-
-export const wholeBase = (): WholeBase => ({ format: TILE_FORMAT, version: TILE_VERSION, whole: true });
 
 export const tileId = (col: number, row: number): string => `${col}_${row}`;
 
@@ -191,7 +179,7 @@ export function tileGraph(g: Graph, features: ExportedFeatures): { base: TiledBa
   const { sections: _sections, pois: _pois, ...pageMeta } = meta; // what's per edge stays in the tiles
   void _sections;
   void _pois;
-  const base: TiledBase = { format: TILE_FORMAT, version: TILE_VERSION, whole: false, meta: pageMeta, grid, tiles: [...tiles.keys()].sort(), features };
+  const base: TiledBase = { format: TILE_FORMAT, version: TILE_VERSION, meta: pageMeta, grid, tiles: [...tiles.keys()].sort(), features };
   return { base, tiles };
 }
 
