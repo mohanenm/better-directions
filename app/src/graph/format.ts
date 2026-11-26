@@ -87,9 +87,25 @@ export interface GraphSections {
   way_opening_hours: Uint32Array;
 }
 
+/**
+ * For a graph joined from tiles (part of an area): how its numbering maps to the whole graph's,
+ * and which nodes lie in a loaded tile (the others are just far ends of edges leaving it).
+ */
+export interface TiledInfo {
+  nodeGlobal: Uint32Array;
+  edgeGlobal: Uint32Array;
+  wayGlobal: Uint32Array;
+  /** Whole-graph edge or way -> local index, or -1 when not loaded. */
+  edgeLocal: Int32Array;
+  wayLocal: Int32Array;
+  /** 1 where the node lies in a loaded tile, so all its edges are loaded. */
+  nodeOwned: Uint8Array;
+}
+
 export interface DecodedGraph {
   meta: GraphMeta;
   s: GraphSections;
+  tiled?: TiledInfo;
 }
 
 const MAGIC = "BDG1";

@@ -229,8 +229,10 @@ export function chaosWaypointRoute(
     for (let k = 0; k < count; k++) {
       const target = (0.5 + 0.4 * rand()) * tame; // share of the spare budget to use
       for (let tries = 0; tries < 400; tries++) {
-        const e = Math.floor(rand() * g.edgeCount);
-        if (!g.allowedDirs[e]) continue;
+        // Draw from the whole graph's edge numbers, so a tiled graph draws the same ones; an edge
+        // that isn't loaded is outside anything this cap can reach, so it would fail anyway.
+        const e = g.localEdge(Math.floor(rand() * g.globalEdgeCount));
+        if (e < 0 || !g.allowedDirs[e]) continue;
         // Judge the waypoint itself (the edge's first node), not the edge's middle.
         const node = g.s.edge_from[e]!;
         const m = g.nodeLonLat(node);

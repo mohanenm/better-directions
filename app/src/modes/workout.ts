@@ -9,7 +9,7 @@ import { loopRegion } from "../router/region";
 import { loopCapSeconds } from "../safety/limits";
 import { collectRoute } from "./collect";
 import type { FeatureIndex } from "./features";
-import { MODES, wayKey, type Collectible, type Mode } from "./modes";
+import { hasClimbPath, hasPath, MODES, wayKey, type Collectible, type Mode } from "./modes";
 import { chaosWaypointRoute } from "./plan-mode";
 import { costOfFun, type CostOfFun } from "./stats";
 
@@ -17,54 +17,15 @@ import type { WorkoutFocus } from "./options";
 export { WORKOUT_FOCUSES, WORKOUT_MINUTES, type WorkoutFocus } from "./options";
 /** Loops at least this long prefer lit streets. */
 const LIT_FROM_MINUTES = 30;
-/** A hill worth a detour climbs at least this much along one way. */
-const MIN_HILL_CLIMB_M = 6;
 /** Loops may double back more than point-to-point routes: you often come down the way you went up. */
 const LOOP_RETRACE_SHARE = 0.35;
 
-interface Hill {
-  way: number;
-  path: number[];
-  climbM: number;
-}
-
-const hillCache = new WeakMap<FeatureIndex, Hill[]>();
-
-/** Ways that climb at least MIN_HILL_CLIMB_M, as uphill walking paths. Steps are left to stairs. */
-export function hills(fi: FeatureIndex): Hill[] {
-  const cached = hillCache.get(fi);
-  if (cached) return cached;
-  const g = fi.g;
-  const byWay = new Map<number, number[]>();
-  for (let e = 0; e < g.edgeCount; e++) {
-    if (!g.allowedDirs[e] || g.s.edge_steps[e]! > 0) continue;
-    const way = g.s.edge_way[e]!;
-    const list = byWay.get(way);
-    if (list) list.push(e);
-    else byWay.set(way, [e]);
-  }
-  const out: Hill[] = [];
-  for (const [way, edges] of byWay) {
-    const net = edges.reduce((s, e) => {
-      const c = g.climb(e, true);
-      return s + (c ? c[0] - c[1] : 0);
-    }, 0);
-    if (Math.abs(net) < MIN_HILL_CLIMB_M) continue;
-    const path = fi.chain(edges, net > 0);
-    if (!path) continue;
-    const climbM = path.reduce((s, d) => s + (g.climb(d >>> 1, (d & 1) === 0)?.[0] ?? 0), 0);
-    if (climbM >= MIN_HILL_CLIMB_M) out.push({ way, path, climbM });
-  }
-  hillCache.set(fi, out);
-  return out;
-}
-
 function workoutMode(fi: FeatureIndex, focus: WorkoutFocus): Mode {
   const stairs = MODES.stairs;
-  const hillList = hills(fi);
+  const hillList = fi.hills.filter(hasPath);
   const hillOfWay = new Map(hillList.map((h) => [h.way, h]));
   const stairCandidates = (): Collectible[] =>
-    fi.staircases.map((s) => ({ key: `s:${wayKey(fi, s.way)}`, path: s.climbPath, value: s.climbM * 1.5 + s.steps / 20 }));
+    fi.staircases.filter(hasClimbPath).map((s) => ({ key: `s:${wayKey(fi, s.way)}`, path: s.climbPath, value: s.climbM * 1.5 + s.steps / 20 }));
   const hillCandidates = (): Collectible[] => hillList.map((h) => ({ key: `h:${wayKey(fi, h.way)}`, path: h.path, value: h.climbM }));
   return {
     id: "stairs",

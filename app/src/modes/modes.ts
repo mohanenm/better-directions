@@ -19,6 +19,10 @@ import { STRAIGHT_DEG, TURN_DEG, U_TURN_DEG } from "./stats";
  */
 export const wayKey = (fi: FeatureIndex, way: number): string => String(fi.g.s.way_osm_id[way]);
 
+/** Features usable as candidates: all their edges loaded (always, on the whole graph). */
+export const hasPath = <T extends { path: number[] | null }>(f: T): f is T & { path: number[] } => f.path !== null;
+export const hasClimbPath = <T extends { climbPath: number[] | null }>(f: T): f is T & { climbPath: number[] } => f.climbPath !== null;
+
 export type ModeId = "buildings" | "trail" | "stairs" | "parks" | "snacks" | "no-right" | "inconvenient" | "chaos";
 
 /** A feature worth a detour: walk to the start of `path`, along it, and on from its end. */
@@ -72,7 +76,7 @@ const buildings: Mode = {
     }),
   collect: {
     candidates: (fi) =>
-      fi.passages.map((p) => ({
+      fi.passages.filter((p) => p.dirEdge >= 0).map((p) => ({
         key: `b:${p.area}`,
         path: [p.dirEdge],
         value: 10 + Math.min(p.lengthM, 200) / 10,
@@ -100,7 +104,7 @@ const trail: Mode = {
     }),
   collect: {
     candidates: (fi) =>
-      fi.trails.map((t) => ({
+      fi.trails.filter(hasPath).map((t) => ({
         key: `t:${wayKey(fi, t.way)}`,
         path: t.path,
         value: Math.max(2, Math.min(t.lengthM, 1500) / 50),
@@ -128,7 +132,7 @@ const stairs: Mode = {
     }),
   collect: {
     candidates: (fi) =>
-      fi.staircases.map((s) => ({
+      fi.staircases.filter(hasClimbPath).map((s) => ({
         key: `s:${wayKey(fi, s.way)}`,
         path: s.climbPath,
         value: 5 + Math.min(s.climbM, 60) / 2 + Math.min(s.steps, 400) / 40,
@@ -156,7 +160,7 @@ const parks: Mode = {
     }),
   collect: {
     candidates: (fi) =>
-      fi.parks.map((p) => ({
+      fi.parks.filter((p) => p.dirEdge >= 0).map((p) => ({
         key: `p:${p.area}`,
         path: [p.dirEdge],
         value: 10 + Math.min(p.pathLengthM, 2000) / 200,
@@ -187,7 +191,7 @@ const snacks: Mode = {
     }),
   collect: {
     candidates: (fi) =>
-      fi.snacks.map((s) => ({ key: `k:${s.index}`, path: [s.dirEdge], value: SNACK_VALUE[s.kind] })),
+      fi.snacks.filter((s) => s.dirEdge >= 0).map((s) => ({ key: `k:${s.index}`, path: [s.dirEdge], value: SNACK_VALUE[s.kind] })),
     keysOf: (fi, d) => (fi.snacksOnEdge.get(d >>> 1) ?? []).map((i) => `k:${i}`),
     maxWaypoints: 4, // a walk with snacks, not a crawl
   },

@@ -74,7 +74,7 @@ function parkPins(route: Route): Pin[] {
   const samples = route.nodes.filter((_, i) => i % 4 === 0).map((n) => g.nodeLonLat(n));
   const pins: Pin[] = [];
   for (const park of fi.parks) {
-    const at: [number, number] = [fi.midLon[park.dirEdge >>> 1]!, fi.midLat[park.dirEdge >>> 1]!];
+    const at = park.at;
     const visited = order.indexOf(park.area) + 1;
     if (!visited && !samples.some((p) => haversineM(p, at) <= PARK_PIN_RADIUS_M)) continue;
     const hours = g.area(park.area)?.opening_hours ?? "";

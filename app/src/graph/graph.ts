@@ -6,7 +6,7 @@
  * disabled edge or direction.
  */
 
-import { decodeGraph, type AreaRef, type DecodedGraph, type GraphMeta, type GraphSections, type Tags } from "./format";
+import { decodeGraph, type AreaRef, type DecodedGraph, type GraphMeta, type GraphSections, type Tags, type TiledInfo } from "./format";
 import { bearingDeg } from "../router/geometry";
 import {
   footDirections,
@@ -38,6 +38,8 @@ export class Graph {
   readonly outStart: Uint32Array;
   /** Directed edge ids: edge * 2 + (forward ? 0 : 1). */
   readonly outDirEdge: Uint32Array;
+  /** Set for a graph joined from tiles; undefined for the whole graph. */
+  readonly tiled: TiledInfo | undefined;
   private readonly scale: number;
   private bearingCache: { start: Float32Array; end: Float32Array } | null = null;
 
@@ -47,6 +49,7 @@ export class Graph {
     this.nodeCount = this.meta.counts.nodes;
     this.edgeCount = this.meta.counts.edges;
     this.scale = this.meta.coord_scale;
+    this.tiled = decoded.tiled;
     const audit = auditGraph(decoded);
     this.allowedDirs = audit.allowedDirs;
     this.violations = audit.violations;
@@ -55,6 +58,26 @@ export class Graph {
 
   static fromBuffer(buffer: ArrayBuffer): Graph {
     return new Graph(decodeGraph(buffer));
+  }
+
+  /** Edges in the whole graph (the same as edgeCount unless tiled). */
+  get globalEdgeCount(): number {
+    return this.tiled ? this.tiled.edgeLocal.length : this.edgeCount;
+  }
+
+  /** The local index of a whole-graph edge, or -1 if it isn't loaded. */
+  localEdge(globalEdge: number): number {
+    return this.tiled ? (this.tiled.edgeLocal[globalEdge] ?? -1) : globalEdge;
+  }
+
+  /** The local index of a whole-graph way, or -1 if it isn't loaded. */
+  localWay(globalWay: number): number {
+    return this.tiled ? (this.tiled.wayLocal[globalWay] ?? -1) : globalWay;
+  }
+
+  /** Whether all of a node's edges are loaded (always, unless tiled). */
+  nodeOwned(node: number): boolean {
+    return !this.tiled || this.tiled.nodeOwned[node] === 1;
   }
 
   wayTags(way: number): Tags {

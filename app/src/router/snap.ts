@@ -10,6 +10,7 @@ export class NodeIndex {
   constructor(private readonly g: Graph) {
     for (let n = 0; n < g.nodeCount; n++) {
       if (g.outStart[n + 1]! === g.outStart[n]!) continue; // nothing walkable leaves this node
+      if (!g.nodeOwned(n)) continue; // tiled: the far end of an edge leaving the loaded part
       const [lon, lat] = g.nodeLonLat(n);
       const key = this.key(Math.floor(lon / CELL_DEG), Math.floor(lat / CELL_DEG));
       const list = this.cells.get(key);
