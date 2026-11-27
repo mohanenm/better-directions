@@ -68,7 +68,7 @@ Look closely at `passage_not_public`. Passages and corridors through buildings t
 - `app/src/ui/famous.ts`: add a few famous routes under the area's id, between well-known public places. `app/test/famous.test.ts` checks each one still lives up to its pitch. Without terrain, staircases are counted but steps have no direction, so pitch stairs routes by staircases rather than steps up.
 - The footer's attribution comes from the graph (OSM date) and the terrain provider, if any.
 
-The area list, the picker and the links (`?area=<id>`) pick the area up automatically. The heavier tests (`app/test/modes.test.ts`, the property test by default) run on Lyon.
+The area list, the picker and the links (`?area=<id>`) pick the area up automatically. `app/test/oracle.test.ts` checks every edge of the new graph against the README's promises without being told about it. The heavier tests (`app/test/modes.test.ts`, the property test by default) run on Lyon; run the property test on the new area once with `PROPERTY_AREAS=<id>`.
 
 ## 6. Check everything
 
