@@ -582,6 +582,204 @@
         "sidewalk": "separate"
       },
       "excluded": null
+    },
+    {
+      "name": "access=permit (e.g. a federal campus with ID checks)",
+      "tags": {
+        "highway": "service",
+        "access": "permit"
+      },
+      "excluded": "access"
+    },
+    {
+      "name": "access=permit with foot=yes",
+      "tags": {
+        "highway": "footway",
+        "access": "permit",
+        "foot": "yes"
+      },
+      "excluded": null
+    },
+    {
+      "name": "access=military",
+      "tags": {
+        "highway": "service",
+        "access": "military"
+      },
+      "excluded": "access"
+    },
+    {
+      "name": "access=emergency",
+      "tags": {
+        "highway": "service",
+        "access": "emergency"
+      },
+      "excluded": "access"
+    },
+    {
+      "name": "access=delivery",
+      "tags": {
+        "highway": "service",
+        "access": "delivery"
+      },
+      "excluded": "access"
+    },
+    {
+      "name": "access=unknown",
+      "tags": {
+        "highway": "footway",
+        "access": "unknown"
+      },
+      "excluded": "access"
+    },
+    {
+      "name": "access=destination is fine",
+      "tags": {
+        "highway": "residential",
+        "access": "destination"
+      },
+      "excluded": null
+    },
+    {
+      "name": "access value in capitals",
+      "tags": {
+        "highway": "footway",
+        "access": "Private"
+      },
+      "excluded": "access"
+    },
+    {
+      "name": "access list: the strictest value wins",
+      "tags": {
+        "highway": "footway",
+        "access": "yes;private"
+      },
+      "excluded": "access"
+    },
+    {
+      "name": "access with stray spaces",
+      "tags": {
+        "highway": "footway",
+        "access": " permit "
+      },
+      "excluded": "access"
+    },
+    {
+      "name": "foot=permit",
+      "tags": {
+        "highway": "footway",
+        "foot": "permit"
+      },
+      "excluded": "foot"
+    },
+    {
+      "name": "foot=discouraged",
+      "tags": {
+        "highway": "footway",
+        "foot": "discouraged"
+      },
+      "excluded": "foot"
+    },
+    {
+      "name": "foot=limited",
+      "tags": {
+        "highway": "path",
+        "foot": "limited"
+      },
+      "excluded": "foot"
+    },
+    {
+      "name": "foot=customers is fine",
+      "tags": {
+        "highway": "footway",
+        "foot": "customers"
+      },
+      "excluded": null
+    },
+    {
+      "name": "foot value that's a typo",
+      "tags": {
+        "highway": "footway",
+        "foot": "foot=use_sidepath"
+      },
+      "excluded": "foot"
+    },
+    {
+      "name": "motorroad=yes (motorway rules)",
+      "tags": {
+        "highway": "primary",
+        "motorroad": "yes"
+      },
+      "excluded": "motorroad"
+    },
+    {
+      "name": "motorroad=yes with foot=yes",
+      "tags": {
+        "highway": "primary",
+        "motorroad": "yes",
+        "foot": "yes"
+      },
+      "excluded": null
+    },
+    {
+      "name": "driveway (onto private property)",
+      "tags": {
+        "highway": "service",
+        "service": "driveway"
+      },
+      "excluded": "driveway"
+    },
+    {
+      "name": "driveway with foot=yes",
+      "tags": {
+        "highway": "service",
+        "service": "driveway",
+        "foot": "yes"
+      },
+      "excluded": null
+    },
+    {
+      "name": "driveway with access=yes",
+      "tags": {
+        "highway": "service",
+        "service": "driveway",
+        "access": "yes"
+      },
+      "excluded": null
+    },
+    {
+      "name": "parking aisle is fine",
+      "tags": {
+        "highway": "service",
+        "service": "parking_aisle"
+      },
+      "excluded": null
+    },
+    {
+      "name": "busy road, sidewalk:both=no",
+      "tags": {
+        "highway": "primary",
+        "sidewalk:both": "no"
+      },
+      "excluded": "no_sidewalk"
+    },
+    {
+      "name": "busy road, no sidewalk on either side",
+      "tags": {
+        "highway": "secondary",
+        "sidewalk:left": "no",
+        "sidewalk:right": "no"
+      },
+      "excluded": "no_sidewalk"
+    },
+    {
+      "name": "busy road, sidewalk on one side mapped separately (walked on that sidewalk)",
+      "tags": {
+        "highway": "primary",
+        "sidewalk:left": "no",
+        "sidewalk:right": "separate"
+      },
+      "excluded": null
     }
   ],
   "through_building": [
@@ -868,6 +1066,52 @@
         "on_linear_barrier": true
       },
       "excluded": null
+    },
+    {
+      "name": "gate with access=permit",
+      "tags": {
+        "barrier": "gate",
+        "access": "permit"
+      },
+      "context": {},
+      "excluded": "node_access"
+    },
+    {
+      "name": "gate with access=permit and foot=yes",
+      "tags": {
+        "barrier": "gate",
+        "access": "permit",
+        "foot": "yes"
+      },
+      "context": {},
+      "excluded": null
+    },
+    {
+      "name": "gate with access=customers",
+      "tags": {
+        "barrier": "gate",
+        "access": "customers"
+      },
+      "context": {},
+      "excluded": null
+    },
+    {
+      "name": "node with foot=permit",
+      "tags": {
+        "barrier": "gate",
+        "foot": "permit"
+      },
+      "context": {},
+      "excluded": "node_foot"
+    },
+    {
+      "name": "gate with access=badge",
+      "tags": {
+        "barrier": "gate",
+        "access": "badge"
+      },
+      "context": {},
+      "excluded": "node_access"
     }
   ],
   "directions": [
@@ -1233,7 +1477,7 @@
       "excluded": null
     },
     {
-      "name": "covered arcade isn't affected",
+      "name": "unnamed covered walkway through flats (no sign it's public)",
       "tags": {
         "highway": "footway",
         "covered": "yes"
@@ -1243,7 +1487,7 @@
         "kind": "building",
         "building": "apartments"
       },
-      "excluded": null
+      "excluded": "passage_not_public"
     },
     {
       "name": "university corridor",
@@ -1318,6 +1562,45 @@
         "building": "office"
       },
       "excluded": null
+    },
+    {
+      "name": "named covered walkway through flats",
+      "tags": {
+        "highway": "footway",
+        "covered": "yes"
+      },
+      "way_name": "Galerie Véro-Dodat",
+      "building": {
+        "kind": "building",
+        "building": "apartments"
+      },
+      "excluded": null
+    },
+    {
+      "name": "covered walkway through a shop",
+      "tags": {
+        "highway": "footway",
+        "covered": "yes"
+      },
+      "way_name": "",
+      "building": {
+        "kind": "building",
+        "building": "retail"
+      },
+      "excluded": null
+    },
+    {
+      "name": "covered walkway through a hospital",
+      "tags": {
+        "highway": "footway",
+        "covered": "yes"
+      },
+      "way_name": "",
+      "building": {
+        "kind": "building",
+        "building": "hospital"
+      },
+      "excluded": "passage_not_public"
     }
   ],
   "restricted_areas": [
@@ -1427,6 +1710,122 @@
       "area": {
         "landuse": "residential",
         "access": "destination"
+      },
+      "excluded": null
+    },
+    {
+      "name": "footway in prison grounds",
+      "way": {
+        "highway": "footway"
+      },
+      "area": {
+        "amenity": "prison"
+      },
+      "excluded": "prison_area"
+    },
+    {
+      "name": "explicitly public path past a prison",
+      "way": {
+        "highway": "footway",
+        "foot": "designated"
+      },
+      "area": {
+        "amenity": "prison"
+      },
+      "excluded": null
+    },
+    {
+      "name": "service road in a construction site",
+      "way": {
+        "highway": "service"
+      },
+      "area": {
+        "landuse": "construction"
+      },
+      "excluded": "construction_area"
+    },
+    {
+      "name": "path inside a power plant",
+      "way": {
+        "highway": "footway"
+      },
+      "area": {
+        "power": "plant"
+      },
+      "excluded": "power_area"
+    },
+    {
+      "name": "path inside a substation",
+      "way": {
+        "highway": "footway"
+      },
+      "area": {
+        "power": "substation"
+      },
+      "excluded": "power_area"
+    },
+    {
+      "name": "road inside an access=permit area",
+      "way": {
+        "highway": "service"
+      },
+      "area": {
+        "access": "permit",
+        "landuse": "institutional"
+      },
+      "excluded": "restricted_area"
+    },
+    {
+      "name": "path in an access=customers area is fine",
+      "way": {
+        "highway": "footway"
+      },
+      "area": {
+        "access": "customers",
+        "landuse": "retail"
+      },
+      "excluded": null
+    },
+    {
+      "name": "school grounds stay walkable",
+      "way": {
+        "highway": "footway"
+      },
+      "area": {
+        "amenity": "school"
+      },
+      "excluded": null
+    },
+    {
+      "name": "golf course stays walkable",
+      "way": {
+        "highway": "path"
+      },
+      "area": {
+        "leisure": "golf_course"
+      },
+      "excluded": null
+    },
+    {
+      "name": "footpath in an area the city config lists as closed",
+      "way": {
+        "highway": "footway"
+      },
+      "area": {
+        "amenity": "research_institute",
+        "bd:closed": "yes"
+      },
+      "excluded": "closed_site"
+    },
+    {
+      "name": "explicitly public path through a listed closed area",
+      "way": {
+        "highway": "footway",
+        "foot": "yes"
+      },
+      "area": {
+        "amenity": "research_institute",
+        "bd:closed": "yes"
       },
       "excluded": null
     }

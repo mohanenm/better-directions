@@ -1,81 +1,81 @@
 {
   "city": "baltimore",
   "graph": {
-    "nodes": 73858,
-    "edges": 102682,
-    "ways": 43623,
-    "length_km": 2995.2,
-    "bytes": 5164444,
-    "gzip_bytes": 1455362
+    "nodes": 72602,
+    "edges": 100823,
+    "ways": 42849,
+    "length_km": 2951.0,
+    "bytes": 5077300,
+    "gzip_bytes": 1429870
   },
   "connectivity": {
-    "nodes_before": 75090,
-    "nodes_kept": 73858,
-    "node_share": 0.9836,
-    "length_share": 0.9809
+    "nodes_before": 74130,
+    "nodes_kept": 72602,
+    "node_share": 0.9794,
+    "length_share": 0.9775
   },
   "terrain": {
     "source": "Elevation: USGS 3DEP",
     "edges_with_elevation_share": 1.0,
-    "edges_10pct_or_steeper": 255,
+    "edges_10pct_or_steeper": 244,
     "steepest_grade_pct": 41.9,
     "steepest_name": "North Calvert Street"
   },
   "edges_by_highway": {
     "footway": {
-      "edges": 51361,
-      "km": 1151.5
+      "edges": 50911,
+      "km": 1141.5
     },
     "service": {
-      "edges": 22639,
-      "km": 833.7
+      "edges": 21561,
+      "km": 804.7
     },
     "residential": {
-      "edges": 14879,
-      "km": 528.3
+      "edges": 14792,
+      "km": 528.2
     },
     "primary": {
-      "edges": 3993,
-      "km": 141.2
+      "edges": 3958,
+      "km": 140.9
     },
     "secondary": {
-      "edges": 2403,
-      "km": 82.7
+      "edges": 2371,
+      "km": 82.5
     },
     "tertiary": {
-      "edges": 2306,
-      "km": 80.4
+      "edges": 2271,
+      "km": 80.1
     },
     "path": {
-      "edges": 1570,
-      "km": 57.1
+      "edges": 1517,
+      "km": 55.4
     },
     "cycleway": {
-      "edges": 1035,
-      "km": 48.2
+      "edges": 1016,
+      "km": 48.0
     },
     "unclassified": {
-      "edges": 814,
-      "km": 35.3
+      "edges": 794,
+      "km": 34.9
     },
     "pedestrian": {
-      "edges": 891,
-      "km": 22.5
+      "edges": 854,
+      "km": 21.0
     },
     "primary_link": {
-      "edges": 116,
+      "edges": 115,
       "km": 4.4
     },
     "track": {
-      "edges": 62,
-      "km": 3.3
+      "edges": 58,
+      "km": 3.1
     },
     "steps": {
-      "edges": 500,
+      "edges": 493,
       "km": 3.0
     },
     "secondary_link": {
-      "edges": 57,
+      "edges": 56,
       "km": 1.6
     },
     "platform": {
@@ -97,63 +97,63 @@
   },
   "features": {
     "building_passage": {
-      "edges": 47,
-      "km": 1.29
+      "edges": 44,
+      "km": 1.26
     },
     "corridor": {
       "edges": 12,
       "km": 0.4
     },
     "covered": {
-      "edges": 235,
-      "km": 3.15
+      "edges": 180,
+      "km": 2.55
     },
     "through_building": {
-      "edges": 70,
-      "km": 1.31
+      "edges": 39,
+      "km": 0.89
     },
     "under_building": {
-      "edges": 2,
-      "km": 0.14
+      "edges": 36,
+      "km": 1.29
     },
     "may_close": {
-      "edges": 478,
-      "km": 23.78
+      "edges": 446,
+      "km": 23.35
     },
     "steps": {
-      "edges": 500,
-      "km": 3.02
+      "edges": 493,
+      "km": 2.95
     },
     "park_path": {
-      "edges": 5021,
-      "km": 192.41
+      "edges": 4791,
+      "km": 185.24
     },
     "unpaved": {
-      "edges": 275,
-      "km": 12.66
+      "edges": 270,
+      "km": 12.42
     },
     "lit": {
-      "edges": 8416,
-      "km": 130.35
+      "edges": 8352,
+      "km": 129.59
     },
     "informal": {
-      "edges": 201,
-      "km": 3.41
+      "edges": 199,
+      "km": 3.35
     }
   },
   "steps": {
-    "total_steps": 8081,
-    "estimated_edges": 250
+    "total_steps": 7861,
+    "estimated_edges": 244
   },
   "distinct": {
     "parks_on_paths": 196,
-    "buildings_passed_through": 42,
+    "buildings_passed_through": 26,
     "venues": {
-      "mall": 2,
+      "mall": 1,
       "station": 3
     },
     "stops": {
-      "artwork": 260,
+      "artwork": 258,
       "bakery": 32,
       "bar": 131,
       "brewery": 9,
@@ -171,33 +171,47 @@
   },
   "exclusions": {
     "ways_by_reason": {
-      "access": 1344,
+      "access": 1329,
       "construction": 24,
-      "fast_road": 106,
-      "foot": 630,
+      "driveway": 362,
+      "fast_road": 105,
+      "foot": 670,
       "highway_kind": 3,
       "indoor_not_corridor": 19,
       "no_foot_permission": 137,
-      "no_sidewalk": 17,
+      "no_sidewalk": 36,
       "railway": 9,
       "sidewalk_separate": 1020,
       "trail_visibility": 3,
-      "walkable": 44807
+      "walkable": 44402
     },
     "segments_dropped": {
+      "construction_area": 117,
       "military_area": 11,
-      "node:barrier_no_opening": 189,
-      "node:fast_road_unmarked_crossing": 111,
-      "node:node_access": 169,
-      "node:node_foot": 6,
+      "node:barrier_no_opening": 186,
+      "node:fast_road_unmarked_crossing": 108,
+      "node:node_access": 229,
+      "node:node_foot": 10,
       "node:node_locked": 22,
-      "node:railway_unmapped_crossing": 252,
-      "passage_not_public": 65,
+      "node:railway_unmapped_crossing": 250,
+      "passage_not_public": 118,
+      "power_area": 161,
+      "prison_area": 14,
       "railway_crossing_geometry": 30,
-      "restricted_area": 781,
-      "through_building_unmapped": 19
+      "restricted_area": 1060,
+      "through_building_unmapped": 184
     },
     "dropped_examples": {
+      "construction_area": [
+        6002724,
+        99251708,
+        202502984,
+        206290692,
+        216240443,
+        374846526,
+        374846527,
+        455599987
+      ],
       "military_area": [
         255161517,
         260781997,
@@ -232,7 +246,7 @@
         6013458,
         6021399,
         24775060,
-        70990384
+        70856102
       ],
       "node:node_foot": [
         6022198,
@@ -240,7 +254,9 @@
         301559753,
         336935517,
         521111791,
-        1054681243
+        1042050767,
+        1054681243,
+        1065074207
       ],
       "node:node_locked": [
         1063788204,
@@ -263,14 +279,33 @@
         6012323
       ],
       "passage_not_public": [
+        70990412,
         71543361,
+        93170806,
         107438748,
         237172883,
         242167753,
         242167769,
-        421695650,
-        421695652,
-        437369975
+        386979410
+      ],
+      "power_area": [
+        5996572,
+        5999174,
+        5999795,
+        6001526,
+        6006914,
+        6012995,
+        62046963,
+        62046967
+      ],
+      "prison_area": [
+        752527319,
+        765718911,
+        765718912,
+        765718913,
+        765718914,
+        1016264521,
+        1412546945
       ],
       "railway_crossing_geometry": [
         95911556,
@@ -290,24 +325,24 @@
         6001376,
         6001377,
         6002000,
-        6012776
+        6002039
       ],
       "through_building_unmapped": [
-        543989569,
-        543991871,
-        800947729,
-        800947730,
-        800947736,
-        800947737,
-        819475919,
-        837428184
+        6022196,
+        70990294,
+        70990430,
+        324563821,
+        451262045,
+        466277904,
+        482274206,
+        543989569
       ]
     },
     "nodes_excluded": {
-      "barrier_no_opening": 129,
-      "fast_road_unmarked_crossing": 56,
-      "node_access": 109,
-      "node_foot": 6,
+      "barrier_no_opening": 128,
+      "fast_road_unmarked_crossing": 55,
+      "node_access": 147,
+      "node_foot": 9,
       "node_locked": 13,
       "railway_unmapped_crossing": 145
     }

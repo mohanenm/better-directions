@@ -49,7 +49,7 @@ WAY_KEYS = (
     "highway", "railway", "construction", "access", "foot", "sidewalk", "sidewalk:left",
     "sidewalk:right", "sidewalk:both", "indoor", "conveying", "sac_scale", "trail_visibility",
     "tunnel", "covered", "bridge", "layer", "oneway", "oneway:foot", "foot:forward",
-    "foot:backward",
+    "foot:backward", "service", "motorroad",
     # modes and directions
     "surface", "tracktype", "smoothness", "lit", "informal", "incline", "area", "level",
     "footway", "crossing",
@@ -216,8 +216,11 @@ def _on_other_level(tags: dict[str, str]) -> bool:
     return tags.get("bridge") not in (None, "no") or tags.get("tunnel") not in (None, "no")
 
 
-def read_osm(path: Path, proj: LocalProjection) -> OsmData:
+def read_osm(
+    path: Path, proj: LocalProjection, closed: frozenset[tuple[str, int]] = frozenset()
+) -> OsmData:
     data = OsmData()
+    found_closed: set[tuple[str, int]] = set()
 
     # Pass 1: areas.
     area_filter = osmium.filter.KeyFilter(
@@ -231,6 +234,7 @@ def read_osm(path: Path, proj: LocalProjection) -> OsmData:
         "landuse",
         "military",
         "access",
+        "power",
     )
     for obj in (
         osmium.FileProcessor(str(path))
@@ -238,6 +242,10 @@ def read_osm(path: Path, proj: LocalProjection) -> OsmData:
         .with_filter(osmium.filter.EntityFilter(osmium.osm.AREA))
     ):
         tags = _tags(obj)
+        ref = ("w" if obj.from_way() else "r", obj.orig_id())
+        if ref in closed:
+            tags = {**tags, safety.CLOSED_SITE: "yes"}
+            found_closed.add(ref)
         poi = poi_kind(tags)
         if poi:
             for outer in obj.outer_rings():
@@ -254,7 +262,8 @@ def read_osm(path: Path, proj: LocalProjection) -> OsmData:
                 holes = [[proj(n.lon, n.lat) for n in inner] for inner in obj.inner_rings(outer)]
                 if len(ring) >= 4:
                     rings.append(Polygon.from_rings(ring, holes))
-            keep = {k: tags[k] for k in ("landuse", "military", "access") if k in tags}
+            keys = ("landuse", "military", "access", "amenity", "power", safety.CLOSED_SITE)
+            keep = {k: tags[k] for k in keys if k in tags}
             if rings:
                 data.restricted.append((rings, keep))
         kind = _area_kind(tags)
@@ -280,6 +289,8 @@ def read_osm(path: Path, proj: LocalProjection) -> OsmData:
                 )
             )
     data.areas.sort(key=lambda a: (a.osm_type, a.osm_id))
+    if missing := sorted(closed - found_closed):
+        raise ValueError(f"closed_areas not found as areas in {path.name}: {missing}")
 
     # Pass 2: tagged nodes and ways (locations are cached for every node, tagged or not).
     for obj in (
@@ -428,12 +439,17 @@ class _Spatial:
                 best = ai
         return best
 
-    def building_on_segment(self, a: Point, b: Point, layer: int) -> int:
-        """A building (area index) whose interior the segment passes through, or -1."""
+    def building_on_segment(self, a: Point, b: Point, layer: int | None) -> int:
+        """A building (area index) whose interior the segment passes through, or -1.
+
+        With `layer`, only buildings on that layer count (for bridges and tunnels, which really
+        are on another level). Without it, any building does: a way's layer tag alone, which is
+        often set loosely, mustn't hide the building it runs through.
+        """
         for p in sample_points(a, b, BUILDING_SAMPLE_SPACING_M):
             for pi in self.buildings.query_point(p):
                 ai, poly = self.polys[pi]
-                if self.areas[ai].layer != layer:
+                if layer is not None and self.areas[ai].layer != layer:
                     continue
                 if poly.contains(p) and poly.boundary_distance(p) > BUILDING_EDGE_TOLERANCE_M:
                     return ai
@@ -471,7 +487,7 @@ def _seg_bbox(a: Point, b: Point) -> tuple[float, float, float, float]:
 def build_graph(city: City, osm_path: Path) -> Graph:
     proj = LocalProjection((city.bbox.west + city.bbox.east) / 2,
                            (city.bbox.south + city.bbox.north) / 2)  # fmt: skip
-    data = read_osm(osm_path, proj)
+    data = read_osm(osm_path, proj, city.closed_areas)
     spatial = _Spatial(data)
     bbox: BBox = city.bbox
 
@@ -546,7 +562,7 @@ def build_graph(city: City, osm_path: Path) -> Graph:
                     drop(restricted, way.osm_id)
                     segs.append(None)
                     continue
-            building = spatial.building_on_segment(pa, pb, layer)
+            building = spatial.building_on_segment(pa, pb, layer if other_level else None)
             under = -1
             if building != -1 and not passage_ok:
                 if safety.may_pass_under_building_unmapped(tags):

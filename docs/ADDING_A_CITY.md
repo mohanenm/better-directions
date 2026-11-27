@@ -17,6 +17,7 @@ Copy `cities/lyon.json` and change:
 - `terrain`: an elevation provider with bare-earth heights. `ign-rge-alti` covers France and `usgs-3dep` the United States (1 m lidar in most cities, public domain); elsewhere, add a provider to `PROVIDERS` in `pipeline/bdgraph/terrain.py` for the country's open terrain model. Don't use surface models such as Copernicus GLO-30 or SRTM, which put city streets on rooftops. Without `terrain`, every climb is unknown and the app still works: it says there's no elevation data under the area picker, on every result and in the footer, and turns off hill and mixed workouts. The 3DEP service returns at most 1,000 samples a request and takes about 18 seconds each, so DC's 285,000 points take about 90 minutes. If a fetch is interrupted, rerun it; `--refetch-unknown` asks again for points cached as having no data. Denmark's terrain model (DHM/Terræn, through Dataforsyningen's WCS) and Sweden's (Markhöjdmodell grid 1+, from Lantmäteriet) are both true ground models under CC BY 4.0, but each needs a free personal login (a Dataforsyningen token; a Geotorget account and order), so Copenhagen and Malmö don't have one yet.
 - `places.square_name_prefixes` and `places.square_name_suffixes`: street names that mean "square" locally, so squares mapped only as streets show up in search. French and Italian names put it first ("Place ", "Piazza "); American ones put it last (" Circle", " Square", " Plaza"), and DC's NW/NE/SW/SE quadrant suffix is ignored. Danish and Swedish write it as part of one word ("Amagertorv", "Rådhuspladsen", "Stortorget"), so their suffixes have no leading space ("torv", "pladsen", "torget"). Matching is case-sensitive.
 - `confirmed_passages`: start empty. See step 4.
+- `closed_areas`: start empty. See step 4.
 
 ## 3. Build the data
 
@@ -39,9 +40,17 @@ The largest strongly connected component should cover over 90% of the network's 
 
 Spot-check the example ways for each drop reason. If a safety rule looks wrong for the city, don't loosen it to make the numbers better. A rule change is a deliberate decision, and it goes through `safety/cases.json` for both implementations.
 
-Check `military_area` and `restricted_area` too. Nothing inside military land is walkable, and inside other areas tagged `access=private` or `no` only explicitly public ways are. In DC that removes the bases, the White House grounds and Lafayette Square (tagged `access=no`), but also a great many private parking lots; a sidewalk drawn across a private lot is dropped unless it's tagged `foot=yes`. Spot-check that famous public places survived: in DC, the National Mall did and the Pentagon didn't.
+Check `military_area`, `prison_area`, `construction_area`, `power_area` and `restricted_area` too. Nothing inside military land is walkable, and inside prisons, construction sites, power plants and substations, and areas whose `access` isn't open to the public (`private`, `no`, `permit` and so on), only explicitly public ways are. Some closed sites aren't tagged as closed at all: the NIH campus in Bethesda is an `amenity=research_institute` whose roads say `access=permit` but whose polygon and footpaths say nothing. List such places in `closed_areas`, by OSM area and with a note saying why; inside them only explicitly public paths are walkable, and the build fails if a listed area isn't in the extract:
 
-In the US, busy roads usually carry `sidewalk=separate` because the sidewalks are mapped as their own ways. The router won't walk down the middle of a primary, secondary or tertiary road tagged that way, or tagged `sidewalk=no`, so check `sidewalk_separate` and `no_sidewalk` haven't cut the network (in DC connectivity stayed at 98.5%).
+```json
+"closed_areas": [
+  { "area": "w42921793", "note": "NIH campus: ID screening at every gate" }
+]
+```
+
+A cluster of `access=permit` roads in the `access` exclusions is the usual sign of one. Look at the `access` and `foot` exclusions as well: access is an allow-list, so a value the rules don't know drops the way, and a new country may use values worth a look. In DC that removes the bases, the White House grounds and Lafayette Square (tagged `access=no`), but also a great many private parking lots; a sidewalk drawn across a private lot is dropped unless it's tagged `foot=yes`. Spot-check that famous public places survived: in DC, the National Mall did and the Pentagon didn't.
+
+In the US, sidewalks are usually mapped as their own ways, and divided roads are tagged per side: most often `sidewalk:left=no` with `sidewalk:right=separate`. The router won't use a primary, secondary or tertiary road with separate sidewalks on both sides (it uses those instead), or with no sidewalk on either side; one with a separate sidewalk on one side stays routable, walked on that sidewalk. Check `sidewalk_separate` and `no_sidewalk` haven't cut the network, and that `driveway` and `motorroad` drops look right.
 
 Cemeteries are always marked as places that may close, with their hours if mapped; Arlington National Cemetery has none in OSM. Gardens and zoos count only when they have hours.
 
